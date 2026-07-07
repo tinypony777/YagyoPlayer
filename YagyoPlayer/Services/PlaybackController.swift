@@ -15,8 +15,12 @@ final class PlaybackController: ObservableObject {
         }
     }
 
+    /// いま鳴っている音の大きさ(0...1)。夜行絵巻の妖怪や提灯がこれに反応する。
+    @Published private(set) var audioLevel: Double = 0
+
     private var audioPlayer: AVAudioPlayer?
     private var timer: Timer?
+    private var meterTimer: Timer?
     private var remoteCommandsInstalled = false
     private weak var remoteLibrary: AudioLibraryStore?
 
@@ -87,6 +91,7 @@ final class PlaybackController: ObservableObject {
             let fileURL = library.fileURL(for: track)
             let player = try AVAudioPlayer(contentsOf: fileURL)
             player.volume = volume
+            player.isMeteringEnabled = true
             player.prepareToPlay()
 
             audioPlayer = player
@@ -113,6 +118,7 @@ final class PlaybackController: ObservableObject {
         audioPlayer.play()
         isPlaying = true
         startTimer()
+        startMetering()
         updateNowPlaying()
     }
 
@@ -120,6 +126,7 @@ final class PlaybackController: ObservableObject {
         audioPlayer?.pause()
         isPlaying = false
         stopTimer()
+        stopMetering()
         syncProgress()
         updateNowPlaying()
     }
@@ -155,6 +162,7 @@ final class PlaybackController: ObservableObject {
         elapsedTime = 0
         duration = 0
         stopTimer()
+        stopMetering()
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 
@@ -166,16 +174,50 @@ final class PlaybackController: ObservableObject {
 
     private func startTimer() {
         stopTimer()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: true) { [weak self] _ in
+        // .commonモードで登録 — スクロール中も進行表示が止まらないように
+        let timer = Timer(timeInterval: 0.35, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.tick()
             }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
     }
 
     private func stopTimer() {
         timer?.invalidate()
         timer = nil
+    }
+
+    private func startMetering() {
+        stopMetering()
+        // .commonモードで登録 — スクロール中も提灯と妖怪が音に付いてくるように
+        let timer = Timer(timeInterval: 1.0 / 15.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.updateMeter()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        meterTimer = timer
+    }
+
+    private func stopMetering() {
+        meterTimer?.invalidate()
+        meterTimer = nil
+        audioLevel = 0
+    }
+
+    private func updateMeter() {
+        guard let audioPlayer, isPlaying else { return }
+        audioPlayer.updateMeters()
+        let decibels = Double(audioPlayer.averagePower(forChannel: 0))
+        let normalized = min(max((decibels + 48) / 48, 0), 1)
+        // 立ち上がりは速く、引きはゆっくり — 提灯の火のように
+        if normalized > audioLevel {
+            audioLevel = audioLevel * 0.35 + normalized * 0.65
+        } else {
+            audioLevel = audioLevel * 0.82 + normalized * 0.18
+        }
     }
 
     private func tick() {

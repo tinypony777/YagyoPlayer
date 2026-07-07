@@ -6,26 +6,42 @@ struct ContentView: View {
     @EnvironmentObject private var player: PlaybackController
     @EnvironmentObject private var router: AppRouter
 
+    @StateObject private var ushimitsu = UshimitsuWatch()
+
     @State private var isImporterPresented = false
     @State private var importErrorMessage: String?
 
     var body: some View {
         NavigationStack {
             ZStack {
-                YagyoBackdrop(progress: player.progress)
+                YagyoBackdrop(isUshimitsu: ushimitsu.isNight)
 
                 ScrollView {
                     VStack(spacing: 18) {
-                        HeaderView(importAction: { isImporterPresented = true })
-                        ArtworkStage(track: player.currentTrack, progress: player.progress, isPlaying: player.isPlaying)
+                        HeaderView(isUshimitsu: ushimitsu.isNight, importAction: { isImporterPresented = true })
+                        YagyoParadeView(
+                            isPlaying: player.isPlaying,
+                            level: player.audioLevel,
+                            isUshimitsu: ushimitsu.isNight,
+                            onMoonTap: { ushimitsu.toggleForced() }
+                        )
+                        ArtworkStage(
+                            track: player.currentTrack,
+                            progress: player.progress,
+                            isPlaying: player.isPlaying,
+                            level: player.audioLevel
+                        )
                         TransportView()
                         LibrarySection(importAction: { isImporterPresented = true })
                         PlatformNote()
+                        FooterView()
                     }
                     .padding(.horizontal, 18)
                     .padding(.top, 18)
                     .padding(.bottom, 32)
                 }
+
+                AnnouncementToast(text: ushimitsu.announcement)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
@@ -71,6 +87,7 @@ struct ContentView: View {
 }
 
 private struct HeaderView: View {
+    var isUshimitsu: Bool
     var importAction: () -> Void
 
     var body: some View {
@@ -80,6 +97,11 @@ private struct HeaderView: View {
                     Text("百鬼夜行")
                         .font(.system(size: 31, weight: .semibold, design: .serif))
                         .tracking(8)
+                        .foregroundStyle(isUshimitsu ? YagyoColor.ushiTitle : YagyoColor.geppaku)
+                        .shadow(
+                            color: isUshimitsu ? YagyoColor.akaMoon.opacity(0.5) : YagyoColor.chochin.opacity(0.25),
+                            radius: 9
+                        )
                     Text("音")
                         .font(.system(size: 13, weight: .bold, design: .serif))
                         .foregroundStyle(YagyoColor.geppaku)
@@ -88,7 +110,7 @@ private struct HeaderView: View {
                         .rotationEffect(.degrees(-4))
                 }
 
-                Text("Local audio procession")
+                Text("Hyakki Yagyō · Local Procession")
                     .font(.caption.weight(.semibold))
                     .tracking(3.1)
                     .textCase(.uppercase)
@@ -110,6 +132,7 @@ private struct HeaderView: View {
             .accessibilityLabel("Import audio")
         }
         .foregroundStyle(YagyoColor.geppaku)
+        .animation(.easeInOut(duration: 1.2), value: isUshimitsu)
     }
 }
 
@@ -117,6 +140,7 @@ private struct ArtworkStage: View {
     var track: AudioTrack?
     var progress: Double
     var isPlaying: Bool
+    var level: Double
 
     var body: some View {
         VStack(spacing: 16) {
@@ -132,24 +156,25 @@ private struct ArtworkStage: View {
                             .stroke(YagyoColor.line.opacity(0.9), lineWidth: 1)
                     }
 
-                CircularWaveform(progress: progress, isPlaying: isPlaying)
+                CircularWaveform(progress: progress, isPlaying: isPlaying, level: level)
                     .padding(28)
             }
 
             VStack(spacing: 5) {
-                Text(track?.title ?? "No audio in the procession")
+                Text(track?.title ?? "行列はまだ静か")
                     .font(.title2.weight(.semibold))
                     .foregroundStyle(YagyoColor.geppaku)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
 
-                Text(track?.originalFilename ?? "Import a track to start")
+                Text(track?.originalFilename ?? "Import a track to start the procession")
                     .font(.footnote)
                     .foregroundStyle(YagyoColor.dim)
                     .lineLimit(1)
             }
         }
         .ritualPanel(radius: 32, padding: 12, tint: YagyoColor.kitsunebi.opacity(0.08))
+        .shadow(color: YagyoColor.chochin.opacity(isPlaying ? 0.1 + level * 0.15 : 0), radius: 24)
     }
 }
 
@@ -175,11 +200,15 @@ private struct TransportView: View {
                     }
                 } label: {
                     Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.system(size: 26, weight: .bold))
                         .frame(width: 72, height: 72)
-                        .background(YagyoColor.chochin, in: Circle())
-                        .foregroundStyle(YagyoColor.sumi)
-                        .shadow(color: YagyoColor.chochin.opacity(player.isPlaying ? 0.52 : 0.18), radius: 18)
+                        .background(YagyoColor.yoiyami, in: Circle())
+                        .foregroundStyle(YagyoColor.chochin)
+                        .overlay(Circle().stroke(YagyoColor.chochin, lineWidth: 2))
+                        .shadow(
+                            color: YagyoColor.chochin.opacity(player.isPlaying ? 0.3 + player.audioLevel * 0.35 : 0.15),
+                            radius: 16
+                        )
                 }
                 .disabled(!library.hasTracks)
                 .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
@@ -196,9 +225,12 @@ private struct TransportView: View {
             .foregroundStyle(YagyoColor.geppaku)
 
             VStack(spacing: 8) {
-                Slider(value: progressBinding, in: 0...max(player.duration, 1))
-                    .tint(YagyoColor.chochin)
-                    .disabled(player.currentTrack == nil)
+                StepProgressBar(
+                    progress: player.progress,
+                    isEnabled: player.currentTrack != nil
+                ) { fraction in
+                    player.seek(to: fraction * player.duration)
+                }
 
                 HStack {
                     Text(player.elapsedText)
@@ -222,14 +254,6 @@ private struct TransportView: View {
         .ritualPanel(radius: 24, padding: 16)
     }
 
-    private var progressBinding: Binding<Double> {
-        Binding {
-            player.elapsedTime
-        } set: { value in
-            player.seek(to: value)
-        }
-    }
-
     private var volumeBinding: Binding<Double> {
         Binding {
             Double(player.volume)
@@ -249,10 +273,11 @@ private struct LibrarySection: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Library")
-                        .font(.headline)
+                    Text("行列")
+                        .font(.system(.headline, design: .serif))
+                        .tracking(4)
                         .foregroundStyle(YagyoColor.geppaku)
-                    Text("Files copied into the app folder")
+                    Text("Library · Files copied into the app folder")
                         .font(.caption)
                         .foregroundStyle(YagyoColor.dim)
                 }
@@ -292,26 +317,41 @@ private struct TrackRow: View {
     }
 
     var body: some View {
+        let sprite = YokaiGallery.sprite(for: track.id)
+
         Button {
             player.load(track, from: library, autoplay: true)
         } label: {
             HStack(spacing: 12) {
                 ZStack {
-                    Circle()
-                        .fill(isCurrent ? YagyoColor.chochin : YagyoColor.yoiyami2)
-                    Image(systemName: isCurrent && player.isPlaying ? "waveform" : "music.note")
-                        .foregroundStyle(isCurrent ? YagyoColor.sumi : YagyoColor.kitsunebi)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(YagyoColor.yoiyami2.opacity(isCurrent ? 1 : 0.7))
+                    sprite.frames[0].image
+                        .resizable()
+                        .scaledToFit()
+                        .padding(5)
+                        .accessibilityHidden(true)
                 }
-                .frame(width: 42, height: 42)
+                .frame(width: 46, height: 46)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(isCurrent ? YagyoColor.chochin.opacity(0.7) : YagyoColor.line, lineWidth: 1)
+                }
+                .shadow(color: isCurrent && player.isPlaying ? YagyoColor.chochin.opacity(0.4) : .clear, radius: 7)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(track.title)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(YagyoColor.geppaku)
                         .lineLimit(1)
-                    Text("\(track.durationText) · \(track.importedDateText)")
-                        .font(.caption)
-                        .foregroundStyle(YagyoColor.dim)
+                    HStack(spacing: 4) {
+                        Text(sprite.name)
+                            .font(.system(size: 11, design: .serif))
+                            .foregroundStyle(isCurrent ? YagyoColor.chochin : YagyoColor.dim)
+                        Text("· \(track.durationText) · \(track.importedDateText)")
+                            .font(.caption)
+                            .foregroundStyle(YagyoColor.dim)
+                    }
                 }
 
                 Spacer()
@@ -344,15 +384,16 @@ private struct EmptyLibraryView: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Image(systemName: "folder.badge.plus")
-                .font(.system(size: 34, weight: .semibold))
-                .foregroundStyle(YagyoColor.chochin)
-                .frame(width: 70, height: 70)
-                .background(YagyoColor.sumi.opacity(0.48), in: Circle())
+            YokaiGallery.parade[4].frames[0].image
+                .resizable()
+                .scaledToFit()
+                .frame(width: 54, height: 54)
+                .accessibilityHidden(true)
 
             VStack(spacing: 5) {
-                Text("The procession is quiet")
-                    .font(.headline)
+                Text("行列はまだ静か")
+                    .font(.system(.headline, design: .serif))
+                    .tracking(3)
                     .foregroundStyle(YagyoColor.geppaku)
                 Text("Choose MP3, M4A, WAV, AIFF, AAC, CAF, or FLAC files. They will be copied into this app.")
                     .font(.footnote)
@@ -361,14 +402,23 @@ private struct EmptyLibraryView: View {
             }
 
             Button(action: importAction) {
-                Label("Import audio", systemImage: "square.and.arrow.down")
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 11)
-                    .background(YagyoColor.chochin, in: Capsule())
-                    .foregroundStyle(YagyoColor.sumi)
+                HStack(spacing: 5) {
+                    Text("納める")
+                        .font(.system(size: 14, design: .serif))
+                        .tracking(2)
+                    Text("import")
+                        .font(.system(size: 9))
+                        .tracking(1)
+                        .foregroundStyle(YagyoColor.dim)
+                }
+                .padding(.horizontal, 17)
+                .padding(.vertical, 11)
+                .background(YagyoColor.yoiyami, in: Capsule())
+                .overlay(Capsule().stroke(Color(yagyoHex: 0x6a4a20), lineWidth: 1))
+                .foregroundStyle(YagyoColor.chochin)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Import audio")
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 18)
@@ -386,6 +436,46 @@ private struct PlatformNote: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .ritualPanel(radius: 18, padding: 12, tint: YagyoColor.kitsunebi.opacity(0.07))
+    }
+}
+
+private struct FooterView: View {
+    var body: some View {
+        Text("絵巻は右から左へ流れる")
+            .font(.system(size: 11, design: .serif))
+            .tracking(3)
+            .foregroundStyle(YagyoColor.footerInk)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.top, 2)
+    }
+}
+
+/// Web版のトースト — 丑三つ時の入り・明けを告げる。
+private struct AnnouncementToast: View {
+    var text: String?
+
+    var body: some View {
+        VStack {
+            Spacer()
+            if let text {
+                Text(text)
+                    .font(.system(size: 15, design: .serif))
+                    .tracking(2)
+                    .foregroundStyle(YagyoColor.geppaku)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 12)
+                    .background(Color(yagyoHex: 0x20233a), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(YagyoColor.line, lineWidth: 1)
+                    }
+                    .shadow(color: .black.opacity(0.5), radius: 15, y: 8)
+                    .padding(.bottom, 26)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeOut(duration: 0.25), value: text)
+        .allowsHitTesting(false)
     }
 }
 
