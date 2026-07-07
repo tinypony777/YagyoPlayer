@@ -208,9 +208,13 @@ final class PlaybackController: ObservableObject {
     }
 
     private func updateMeter() {
-        guard let audioPlayer, isPlaying else { return }
+        guard let audioPlayer, isPlaying, audioPlayer.numberOfChannels > 0 else { return }
         audioPlayer.updateMeters()
-        let decibels = Double(audioPlayer.averagePower(forChannel: 0))
+        // 片チャンネルが無音のステレオ音源でも反応するよう、全チャンネルの最大値を取る
+        var decibels = -160.0
+        for channel in 0..<audioPlayer.numberOfChannels {
+            decibels = max(decibels, Double(audioPlayer.averagePower(forChannel: channel)))
+        }
         let normalized = min(max((decibels + 48) / 48, 0), 1)
         // 立ち上がりは速く、引きはゆっくり — 提灯の火のように
         if normalized > audioLevel {
