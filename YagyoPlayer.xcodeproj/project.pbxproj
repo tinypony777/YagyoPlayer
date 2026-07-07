@@ -1,0 +1,511 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		250E9A7346FB7374DD1960B8 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = D79B2B99B83398BAB69DC334 /* DesignTokens.swift */; };
+		6AB494FB98028D7497DCC50C /* MusicKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 301E9CBCD2076B4C94F2C87F /* MusicKit.framework */; };
+		6CF615A930DE9D845F3F57C3 /* PlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81C4BE9E308A1B398FCC749 /* PlaybackController.swift */; };
+		8D11AB6599E537AB3E159AEF /* AudioTrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25089FD8B7B3584C1950CD9B /* AudioTrackTests.swift */; };
+		A703B0828489B95B8B9FB869 /* YagyoPlayerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25C215A13FBD2FF5FA19ECFB /* YagyoPlayerApp.swift */; };
+		B19BADCB0624C48620272C1D /* VisualComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B13D8A65B01B04F9BD642237 /* VisualComponents.swift */; };
+		B4C130EA40CACEAF7872EDED /* YagyoPlayerIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 025BE94FAA9D790E8896BF44 /* YagyoPlayerIntents.swift */; };
+		E1F12D8AB5237C46EB410996 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7FEEC5F390CD3E9B6E288C6F /* AVFoundation.framework */; };
+		E208F7A31178FF01D3AF158D /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDC21A8FC3FC543E1CAE93C0 /* AppRouter.swift */; };
+		E94E4371E099F8F5F912DF8E /* AudioLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33D8F8BED25A829B3E5EF537 /* AudioLibraryStore.swift */; };
+		ED30E11EDA4E3545119F08D0 /* AudioTrack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76389A5952E76C7CE5A22B96 /* AudioTrack.swift */; };
+		F553274643EE8B8A838C9B97 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A3693A3D5090FDEC93959BD /* ContentView.swift */; };
+		F9991556DDF047A16C7EABDD /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66B26F6B600C8B8FB1995EFA /* MediaPlayer.framework */; };
+		FAF6648B6E5D6DFA7E4E2B98 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7C108546297C058BDF30B16F /* AppIntents.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		0D3D16D39FD3B9E1CD06C5DF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CF8CB9810328B181900DCC11 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 40BC8A4B934A441D483F9151;
+			remoteInfo = YagyoPlayer;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		025BE94FAA9D790E8896BF44 /* YagyoPlayerIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YagyoPlayerIntents.swift; sourceTree = "<group>"; };
+		25089FD8B7B3584C1950CD9B /* AudioTrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTrackTests.swift; sourceTree = "<group>"; };
+		25C215A13FBD2FF5FA19ECFB /* YagyoPlayerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YagyoPlayerApp.swift; sourceTree = "<group>"; };
+		2A3693A3D5090FDEC93959BD /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		301E9CBCD2076B4C94F2C87F /* MusicKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MusicKit.framework; path = System/Library/Frameworks/MusicKit.framework; sourceTree = SDKROOT; };
+		33D8F8BED25A829B3E5EF537 /* AudioLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLibraryStore.swift; sourceTree = "<group>"; };
+		52B6474115C670A861E1F6EC /* YagyoPlayer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = YagyoPlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		66B26F6B600C8B8FB1995EFA /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
+		76389A5952E76C7CE5A22B96 /* AudioTrack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTrack.swift; sourceTree = "<group>"; };
+		7C108546297C058BDF30B16F /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
+		7FEEC5F390CD3E9B6E288C6F /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		817E3E6F64CD12B7179418DF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		B13D8A65B01B04F9BD642237 /* VisualComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualComponents.swift; sourceTree = "<group>"; };
+		B81C4BE9E308A1B398FCC749 /* PlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackController.swift; sourceTree = "<group>"; };
+		D79B2B99B83398BAB69DC334 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
+		DDC21A8FC3FC543E1CAE93C0 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
+		E3041BBBEE3EE97F35C80624 /* YagyoPlayerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = YagyoPlayerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		EA706A94AFF32D4A08A9A32F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1594231853BD2D3BACEC17AD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E1F12D8AB5237C46EB410996 /* AVFoundation.framework in Frameworks */,
+				F9991556DDF047A16C7EABDD /* MediaPlayer.framework in Frameworks */,
+				6AB494FB98028D7497DCC50C /* MusicKit.framework in Frameworks */,
+				FAF6648B6E5D6DFA7E4E2B98 /* AppIntents.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2905E51C924926504868ECF7 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				7C108546297C058BDF30B16F /* AppIntents.framework */,
+				7FEEC5F390CD3E9B6E288C6F /* AVFoundation.framework */,
+				66B26F6B600C8B8FB1995EFA /* MediaPlayer.framework */,
+				301E9CBCD2076B4C94F2C87F /* MusicKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		46D09D35FB3796467FB77045 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				DDC21A8FC3FC543E1CAE93C0 /* AppRouter.swift */,
+				D79B2B99B83398BAB69DC334 /* DesignTokens.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		9107913FF838CD33DB0B5CD7 = {
+			isa = PBXGroup;
+			children = (
+				97FCC1944622139E6A50FB14 /* YagyoPlayer */,
+				E513368DB58CA9D28D6F55F9 /* YagyoPlayerTests */,
+				2905E51C924926504868ECF7 /* Frameworks */,
+				EB1A7F895A7907D277D0D6F6 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		93A657406EDC74EC63CF6A6E /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				2A3693A3D5090FDEC93959BD /* ContentView.swift */,
+				B13D8A65B01B04F9BD642237 /* VisualComponents.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		97FCC1944622139E6A50FB14 /* YagyoPlayer */ = {
+			isa = PBXGroup;
+			children = (
+				EA706A94AFF32D4A08A9A32F /* Info.plist */,
+				25C215A13FBD2FF5FA19ECFB /* YagyoPlayerApp.swift */,
+				CF410E415ACC3F8C3E52F9F0 /* Intents */,
+				F0F88FD17940D815B43BB257 /* Models */,
+				DAA607FD6A61C2602213E678 /* Services */,
+				46D09D35FB3796467FB77045 /* Support */,
+				93A657406EDC74EC63CF6A6E /* Views */,
+			);
+			path = YagyoPlayer;
+			sourceTree = "<group>";
+		};
+		CF410E415ACC3F8C3E52F9F0 /* Intents */ = {
+			isa = PBXGroup;
+			children = (
+				025BE94FAA9D790E8896BF44 /* YagyoPlayerIntents.swift */,
+			);
+			path = Intents;
+			sourceTree = "<group>";
+		};
+		DAA607FD6A61C2602213E678 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				33D8F8BED25A829B3E5EF537 /* AudioLibraryStore.swift */,
+				B81C4BE9E308A1B398FCC749 /* PlaybackController.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		E513368DB58CA9D28D6F55F9 /* YagyoPlayerTests */ = {
+			isa = PBXGroup;
+			children = (
+				25089FD8B7B3584C1950CD9B /* AudioTrackTests.swift */,
+				817E3E6F64CD12B7179418DF /* Info.plist */,
+			);
+			path = YagyoPlayerTests;
+			sourceTree = "<group>";
+		};
+		EB1A7F895A7907D277D0D6F6 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				52B6474115C670A861E1F6EC /* YagyoPlayer.app */,
+				E3041BBBEE3EE97F35C80624 /* YagyoPlayerTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		F0F88FD17940D815B43BB257 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				76389A5952E76C7CE5A22B96 /* AudioTrack.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		40BC8A4B934A441D483F9151 /* YagyoPlayer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F55F04C9E29F856C395DA820 /* Build configuration list for PBXNativeTarget "YagyoPlayer" */;
+			buildPhases = (
+				B3A5B20598C2FB3AC113FD0B /* Sources */,
+				1594231853BD2D3BACEC17AD /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = YagyoPlayer;
+			packageProductDependencies = (
+			);
+			productName = YagyoPlayer;
+			productReference = 52B6474115C670A861E1F6EC /* YagyoPlayer.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D6F1D001A9F4932966B529B4 /* YagyoPlayerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 82FAA49B5082355F835F648F /* Build configuration list for PBXNativeTarget "YagyoPlayerTests" */;
+			buildPhases = (
+				174B075A6A809C65629887D3 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				09F05F85E10A1A2310D22DE0 /* PBXTargetDependency */,
+			);
+			name = YagyoPlayerTests;
+			packageProductDependencies = (
+			);
+			productName = YagyoPlayerTests;
+			productReference = E3041BBBEE3EE97F35C80624 /* YagyoPlayerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CF8CB9810328B181900DCC11 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					40BC8A4B934A441D483F9151 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					D6F1D001A9F4932966B529B4 = {
+						DevelopmentTeam = "";
+					};
+				};
+			};
+			buildConfigurationList = 1D7D1BCD7A820DC04A0AAA1B /* Build configuration list for PBXProject "YagyoPlayer" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 9107913FF838CD33DB0B5CD7;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = EB1A7F895A7907D277D0D6F6 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				40BC8A4B934A441D483F9151 /* YagyoPlayer */,
+				D6F1D001A9F4932966B529B4 /* YagyoPlayerTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		174B075A6A809C65629887D3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8D11AB6599E537AB3E159AEF /* AudioTrackTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B3A5B20598C2FB3AC113FD0B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E208F7A31178FF01D3AF158D /* AppRouter.swift in Sources */,
+				E94E4371E099F8F5F912DF8E /* AudioLibraryStore.swift in Sources */,
+				ED30E11EDA4E3545119F08D0 /* AudioTrack.swift in Sources */,
+				F553274643EE8B8A838C9B97 /* ContentView.swift in Sources */,
+				250E9A7346FB7374DD1960B8 /* DesignTokens.swift in Sources */,
+				6CF615A930DE9D845F3F57C3 /* PlaybackController.swift in Sources */,
+				B19BADCB0624C48620272C1D /* VisualComponents.swift in Sources */,
+				A703B0828489B95B8B9FB869 /* YagyoPlayerApp.swift in Sources */,
+				B4C130EA40CACEAF7872EDED /* YagyoPlayerIntents.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		09F05F85E10A1A2310D22DE0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 40BC8A4B934A441D483F9151 /* YagyoPlayer */;
+			targetProxy = 0D3D16D39FD3B9E1CD06C5DF /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		030C3C5E415F0B324CE85434 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				INFOPLIST_FILE = YagyoPlayerTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.yagyoplayer.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/YagyoPlayer.app/YagyoPlayer";
+			};
+			name = Release;
+		};
+		0C75C7C28F69CBC8C17BAE83 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		1732539E0C25AF8D31175E77 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = YagyoPlayer/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.yagyoplayer;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		7179409AA91E9BE338232D13 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = YagyoPlayer/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.yagyoplayer;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		756D50DEA88FBFE59108FCFC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				INFOPLIST_FILE = YagyoPlayerTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.yagyoplayer.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/YagyoPlayer.app/YagyoPlayer";
+			};
+			name = Debug;
+		};
+		823D02C804E00EA5009D80A6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1D7D1BCD7A820DC04A0AAA1B /* Build configuration list for PBXProject "YagyoPlayer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				823D02C804E00EA5009D80A6 /* Debug */,
+				0C75C7C28F69CBC8C17BAE83 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		82FAA49B5082355F835F648F /* Build configuration list for PBXNativeTarget "YagyoPlayerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				756D50DEA88FBFE59108FCFC /* Debug */,
+				030C3C5E415F0B324CE85434 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F55F04C9E29F856C395DA820 /* Build configuration list for PBXNativeTarget "YagyoPlayer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7179409AA91E9BE338232D13 /* Debug */,
+				1732539E0C25AF8D31175E77 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = CF8CB9810328B181900DCC11 /* Project object */;
+}

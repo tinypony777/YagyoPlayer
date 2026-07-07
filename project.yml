@@ -1,0 +1,46 @@
+name: YagyoPlayer
+options:
+  bundleIdPrefix: com.codex
+  deploymentTarget:
+    iOS: "27.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: ""
+    SWIFT_VERSION: "6.0"
+targets:
+  YagyoPlayer:
+    type: application
+    platform: iOS
+    deploymentTarget: "27.0"
+    sources:
+      - path: YagyoPlayer
+        excludes:
+          - Resources
+    resources:
+      - path: YagyoPlayer/Resources
+    dependencies:
+      - sdk: AVFoundation.framework
+      - sdk: MediaPlayer.framework
+      - sdk: MusicKit.framework
+      - sdk: AppIntents.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.codex.yagyoplayer
+        INFOPLIST_FILE: YagyoPlayer/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+  YagyoPlayerTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "27.0"
+    sources:
+      - path: YagyoPlayerTests
+    dependencies:
+      - target: YagyoPlayer
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.codex.yagyoplayer.tests
+        INFOPLIST_FILE: YagyoPlayerTests/Info.plist
