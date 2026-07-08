@@ -56,7 +56,7 @@ struct ContentView: View {
                     case .success(let urls):
                         await library.importAudioFiles(from: urls)
                         if let selectedTrack = library.selectedTrack {
-                            player.load(selectedTrack, from: library, autoplay: false)
+                            player.load(selectedTrack, from: library, autoplay: false, context: .library)
                         }
                     case .failure(let error):
                         importErrorMessage = error.localizedDescription
@@ -195,7 +195,7 @@ private struct TransportView: View {
 
                 Button {
                     if player.currentTrack == nil, let selectedTrack = library.selectedTrack {
-                        player.load(selectedTrack, from: library, autoplay: true)
+                        player.load(selectedTrack, from: library, autoplay: true, context: .library)
                     } else {
                         player.togglePlayPause()
                     }
@@ -321,8 +321,7 @@ private struct TrackRow: View {
         let sprite = YokaiGallery.sprite(for: track.id)
 
         Button {
-            library.activePlaylistID = nil
-            player.load(track, from: library, autoplay: true)
+            player.load(track, from: library, autoplay: true, context: .library)
         } label: {
             HStack(spacing: 12) {
                 ZStack {
@@ -374,16 +373,17 @@ private struct TrackRow: View {
             if !library.playlists.isEmpty {
                 Menu {
                     ForEach(library.playlists) { playlist in
+                        let alreadyInPlaylist = playlist.contains(track.id)
                         Button {
                             library.addTrack(track, to: playlist)
                         } label: {
-                            if playlist.contains(track.id) {
+                            if alreadyInPlaylist {
                                 Label(playlist.name, systemImage: "checkmark")
                             } else {
                                 Text(playlist.name)
                             }
                         }
-                        .disabled(playlist.contains(track.id))
+                        .disabled(alreadyInPlaylist)
                     }
                 } label: {
                     Label("Add to playlist", systemImage: "text.badge.plus")

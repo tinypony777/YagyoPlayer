@@ -217,8 +217,7 @@ private struct PlaylistRow: View {
 
     private func playFromStart() {
         guard let first = library.tracks(in: playlist).first else { return }
-        library.activePlaylistID = playlist.id
-        player.load(first, from: library, autoplay: true)
+        player.load(first, from: library, autoplay: true, context: .playlist(playlist.id))
     }
 }
 
@@ -237,8 +236,7 @@ private struct PlaylistTrackRow: View {
 
     var body: some View {
         Button {
-            library.activePlaylistID = playlist.id
-            player.load(track, from: library, autoplay: true)
+            player.load(track, from: library, autoplay: true, context: .playlist(playlist.id))
         } label: {
             HStack(spacing: 10) {
                 Text("\(position + 1)")

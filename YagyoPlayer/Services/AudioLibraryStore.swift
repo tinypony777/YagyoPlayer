@@ -18,11 +18,13 @@ final class AudioLibraryStore: ObservableObject {
     @Published var importState: ImportState = .idle
 
     private let fileManager: FileManager
+    private let documentsDirectoryOverride: URL?
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    init(fileManager: FileManager = .default) {
+    init(fileManager: FileManager = .default, documentsDirectory: URL? = nil) {
         self.fileManager = fileManager
+        self.documentsDirectoryOverride = documentsDirectory
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         decoder.dateDecodingStrategy = .iso8601
@@ -134,9 +136,8 @@ final class AudioLibraryStore: ObservableObject {
     }
 
     func tracks(in playlist: Playlist) -> [AudioTrack] {
-        playlist.trackIDs.compactMap { id in
-            tracks.first { $0.id == id }
-        }
+        let trackByID = Dictionary(uniqueKeysWithValues: tracks.map { ($0.id, $0) })
+        return playlist.trackIDs.compactMap { trackByID[$0] }
     }
 
     @discardableResult
@@ -166,7 +167,8 @@ final class AudioLibraryStore: ObservableObject {
     }
 
     func addTrack(_ track: AudioTrack, to playlist: Playlist) {
-        guard let index = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
+        guard tracks.contains(where: { $0.id == track.id }),
+              let index = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
         playlists[index].add(track.id)
         try? savePlaylists()
     }
@@ -184,7 +186,10 @@ final class AudioLibraryStore: ObservableObject {
     }
 
     private var documentsDirectory: URL {
-        fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        if let documentsDirectoryOverride {
+            return documentsDirectoryOverride
+        }
+        return fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 
     private var libraryDirectory: URL {
@@ -211,14 +216,17 @@ final class AudioLibraryStore: ObservableObject {
     private func loadPlaylists() {
         guard fileManager.fileExists(atPath: playlistsURL.path) else {
             playlists = []
+            activePlaylistID = nil
             return
         }
 
         do {
             let data = try Data(contentsOf: playlistsURL)
             playlists = try decoder.decode([Playlist].self, from: data)
+            sanitizePlaylistsAgainstCurrentLibrary()
         } catch {
             playlists = []
+            activePlaylistID = nil
         }
     }
 
@@ -226,6 +234,29 @@ final class AudioLibraryStore: ObservableObject {
         try ensureLibraryDirectory()
         let data = try encoder.encode(playlists)
         try data.write(to: playlistsURL, options: [.atomic])
+    }
+
+    private func sanitizePlaylistsAgainstCurrentLibrary() {
+        let validTrackIDs = Set(tracks.map(\.id))
+        var didChange = false
+
+        for index in playlists.indices {
+            let originalTrackIDs = playlists[index].trackIDs
+            let sanitizedTrackIDs = originalTrackIDs.filter(validTrackIDs.contains)
+            if sanitizedTrackIDs != originalTrackIDs {
+                playlists[index].trackIDs = sanitizedTrackIDs
+                didChange = true
+            }
+        }
+
+        if let activePlaylistID,
+           !playlists.contains(where: { $0.id == activePlaylistID }) {
+            self.activePlaylistID = nil
+        }
+
+        if didChange {
+            try? savePlaylists()
+        }
     }
 
     private func copyIntoLibrary(_ sourceURL: URL) async throws -> AudioTrack? {
