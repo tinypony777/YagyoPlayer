@@ -46,17 +46,35 @@ jobs:
           echo "${runtimes}"
           echo "${devices}"
 
-          if ! grep -Eq "iOS ${IOS_VERSION}([.[:space:]]|$)" <<< "${runtimes}"; then
-            echo "::error::Required iOS simulator runtime ${IOS_VERSION} is not installed."
+          # IOS_VERSION is a preference, not a hard pin: runner images rotate
+          # point releases (e.g. 26.0 -> 26.0.1) faster than this file changes,
+          # and xcodebuild only matches installed runtimes exactly. Resolve to
+          # the newest installed runtime matching IOS_VERSION as a version
+          # prefix, falling back to the newest installed iOS runtime.
+          resolved="$(sed -nE 's/^iOS ([0-9][0-9.]*).*/\1/p' <<< "${runtimes}" | sort -V | awk -v want="${IOS_VERSION}" '
+            { latest = $0 }
+            index($0 ".", want ".") == 1 { best = $0 }
+            END {
+              if (best != "") { print best }
+              else if (latest != "") { print latest }
+            }
+          ')"
+
+          if [[ -z "${resolved}" ]]; then
+            echo "::error::No iOS simulator runtime is installed."
             exit 1
           fi
 
-          if ! awk -v runtime="iOS ${IOS_VERSION}" -v device="${SIMULATOR_DEVICE}" '
+          if [[ "${resolved}" != "${IOS_VERSION}" ]]; then
+            echo "::warning::iOS ${IOS_VERSION} simulator runtime is not installed; using iOS ${resolved} instead."
+          fi
+
+          if ! awk -v runtime="iOS ${resolved}" -v device="${SIMULATOR_DEVICE}" '
             /^-- / {
               header = $0
               sub(/^-- /, "", header)
               sub(/ --$/, "", header)
-              in_runtime = index(header, runtime) == 1
+              in_runtime = (header == runtime)
               next
             }
 
@@ -73,11 +91,11 @@ jobs:
               exit(found ? 0 : 1)
             }
           ' <<< "${devices}"; then
-            echo "::error::Required simulator device ${SIMULATOR_DEVICE} is not available for iOS ${IOS_VERSION}."
+            echo "::error::Required simulator device ${SIMULATOR_DEVICE} is not available for iOS ${resolved}."
             exit 1
           fi
 
-          destination="platform=${PLATFORM},name=${SIMULATOR_DEVICE},OS=${IOS_VERSION}"
+          destination="platform=${PLATFORM},name=${SIMULATOR_DEVICE},OS=${resolved}"
           echo "destination=${destination}" >> "$GITHUB_OUTPUT"
           echo "Using destination: ${destination}"
 
