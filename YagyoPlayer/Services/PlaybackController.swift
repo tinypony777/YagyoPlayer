@@ -123,7 +123,7 @@ final class PlaybackController: ObservableObject {
             if autoplay {
                 play()
             } else {
-                pause()
+                transitionToPausedStateAfterLoad()
             }
         } catch {
             pause()
@@ -259,6 +259,15 @@ final class PlaybackController: ObservableObject {
     private func syncProgress() {
         elapsedTime = audioPlayer?.currentTime ?? 0
         duration = audioPlayer?.duration ?? duration
+    }
+
+    private func transitionToPausedStateAfterLoad() {
+        audioPlayer?.pause()
+        isPlaying = false
+        stopTimer()
+        stopMetering()
+        syncProgress()
+        updateNowPlaying()
     }
 
     private func updateNowPlaying() {
