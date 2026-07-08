@@ -54,26 +54,35 @@ final class PlaylistTests: XCTestCase {
         XCTAssertEqual(decoded, playlist)
     }
 
-    func testAddTrackIgnoresTrackMissingFromLibrary() throws {
+    func testAddTrackIgnoresTrackMissingFromLibrary() async throws {
         let documentsDirectory = try makeTemporaryDocumentsDirectory()
         defer { try? FileManager.default.removeItem(at: documentsDirectory) }
 
-        let store = AudioLibraryStore(fileManager: .default, documentsDirectory: documentsDirectory)
-        store.load()
+        let store = await MainActor.run {
+            AudioLibraryStore(fileManager: .default, documentsDirectory: documentsDirectory)
+        }
+        await MainActor.run {
+            store.load()
+        }
 
-        let playlist = try XCTUnwrap(store.createPlaylist(named: "Night Parade"))
+        let playlist = try await MainActor.run {
+            try XCTUnwrap(store.createPlaylist(named: "Night Parade"))
+        }
         let orphanTrack = AudioTrack(
             title: "Orphan",
             originalFilename: "orphan.mp3",
             storedFilename: "orphan.mp3"
         )
 
-        store.addTrack(orphanTrack, to: playlist)
+        await MainActor.run {
+            store.addTrack(orphanTrack, to: playlist)
+        }
 
-        XCTAssertEqual(store.playlists.first?.trackIDs, [])
+        let trackIDs = await MainActor.run { store.playlists.first?.trackIDs }
+        XCTAssertEqual(trackIDs, [])
     }
 
-    func testLoadSanitizesMissingTrackIDsFromPlaylists() throws {
+    func testLoadSanitizesMissingTrackIDsFromPlaylists() async throws {
         let documentsDirectory = try makeTemporaryDocumentsDirectory()
         defer { try? FileManager.default.removeItem(at: documentsDirectory) }
 
@@ -102,12 +111,18 @@ final class PlaylistTests: XCTestCase {
             options: [.atomic]
         )
 
-        let store = AudioLibraryStore(fileManager: fileManager, documentsDirectory: documentsDirectory)
-        store.activePlaylistID = UUID()
-        store.load()
+        let store = await MainActor.run {
+            AudioLibraryStore(fileManager: fileManager, documentsDirectory: documentsDirectory)
+        }
+        await MainActor.run {
+            store.activePlaylistID = UUID()
+            store.load()
+        }
 
-        XCTAssertEqual(store.playlists.first?.trackIDs, [validTrack.id])
-        XCTAssertNil(store.activePlaylistID)
+        let playlists = await MainActor.run { store.playlists }
+        let activePlaylistID = await MainActor.run { store.activePlaylistID }
+        XCTAssertEqual(playlists.first?.trackIDs, [validTrack.id])
+        XCTAssertNil(activePlaylistID)
 
         let reloaded = try configuredDecoder().decode(
             [Playlist].self,
