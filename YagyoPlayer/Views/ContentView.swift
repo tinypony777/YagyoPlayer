@@ -371,9 +371,14 @@ private struct TrackRow: View {
         .buttonStyle(.plain)
         .contextMenu {
             if !library.playlists.isEmpty {
+                let playlistsContainingTrack = Set(
+                    library.playlists
+                        .filter { $0.contains(track.id) }
+                        .map(\.id)
+                )
                 Menu {
                     ForEach(library.playlists) { playlist in
-                        let alreadyInPlaylist = playlist.contains(track.id)
+                        let alreadyInPlaylist = playlistsContainingTrack.contains(playlist.id)
                         Button {
                             library.addTrack(track, to: playlist)
                         } label: {

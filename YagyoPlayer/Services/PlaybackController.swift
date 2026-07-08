@@ -123,9 +123,7 @@ final class PlaybackController: ObservableObject {
             if autoplay {
                 play()
             } else {
-                isPlaying = false
-                stopTimer()
-                stopMetering()
+                pause()
             }
         } catch {
             pause()
