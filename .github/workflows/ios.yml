@@ -8,6 +8,7 @@ on:
 
 env:
   XCODE_VERSION: "26.3"
+  DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
   IOS_VERSION: "26.0"
   SIMULATOR_DEVICE: "iPhone 16"
 
@@ -21,7 +22,6 @@ jobs:
     runs-on: macos-15
 
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
       PLATFORM: iOS Simulator
 
     steps:
