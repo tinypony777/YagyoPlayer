@@ -41,7 +41,7 @@ jobs:
         run: |
           set -euo pipefail
           xcodebuild -showsdks
-          runtimes="$(xcrun simctl list runtimes)"
+          runtimes="$(xcrun simctl list runtimes available)"
           devices="$(xcrun simctl list devices available)"
           echo "${runtimes}"
           echo "${devices}"
@@ -51,7 +51,7 @@ jobs:
           # and xcodebuild only matches installed runtimes exactly. Resolve to
           # the newest installed runtime matching IOS_VERSION as a version
           # prefix, falling back to the newest installed iOS runtime.
-          resolved="$(sed -nE 's/^iOS ([0-9][0-9.]*).*/\1/p' <<< "${runtimes}" | sort -V | awk -v want="${IOS_VERSION}" '
+          resolved="$(sed -nE '/unavailable/d; s/^iOS ([0-9][0-9.]*).*/\1/p' <<< "${runtimes}" | sort -V | awk -v want="${IOS_VERSION}" '
             { latest = $0 }
             index($0 ".", want ".") == 1 { best = $0 }
             END {
