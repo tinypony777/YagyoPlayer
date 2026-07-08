@@ -1,44 +1,117 @@
-name: iOS starter workflow
+name: iOS CI (YagyoPlayer)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+
+concurrency:
+  group: ios-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build and Test default scheme using any available iPhone simulator
-    runs-on: macos-latest
+  build-and-test:
+    name: Build & Test (Swift / iOS Simulator)
+    runs-on: macos-15
+
+    env:
+      # 必要に応じて 16.4 -> 16.3 などに調整してください
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      PLATFORM: iOS Simulator
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set Default Scheme
+
+      - name: Show Xcode version
         run: |
-          scheme_list=$(xcodebuild -list -json | tr -d "\n")
-          default=$(echo $scheme_list | ruby -e "require 'json'; puts JSON.parse(STDIN.gets)['project']['targets'][0]")
-          echo $default | cat >default
-          echo Using default scheme: $default
-      - name: Build
-        env:
-          scheme: ${{ 'default' }}
-          platform: ${{ 'iOS Simulator' }}
+          set -euo pipefail
+          xcodebuild -version
+          xcode-select -p
+
+      - name: Detect scheme and container
+        id: detect
+        shell: bash
         run: |
-          # xcrun xctrace returns via stderr, not the expected stdout (see https://developer.apple.com/forums/thread/663959)
-          device=`xcrun xctrace list devices 2>&1 | grep -oE 'iPhone.*?[^\(]+' | head -1 | awk '{$1=$1;print}' | sed -e "s/ Simulator$//"`
-          if [ $scheme = default ]; then scheme=$(cat default); fi
-          if [ "`ls -A | grep -i \\.xcworkspace\$`" ]; then filetype_parameter="workspace" && file_to_build="`ls -A | grep -i \\.xcworkspace\$`"; else filetype_parameter="project" && file_to_build="`ls -A | grep -i \\.xcodeproj\$`"; fi
-          file_to_build=`echo $file_to_build | awk '{$1=$1;print}'`
-          xcodebuild build-for-testing -scheme "$scheme" -"$filetype_parameter" "$file_to_build" -destination "platform=$platform,name=$device"
-      - name: Test
-        env:
-          scheme: ${{ 'default' }}
-          platform: ${{ 'iOS Simulator' }}
+          set -euo pipefail
+
+          # workspace 優先
+          workspace="$(find . -maxdepth 1 -name "*.xcworkspace" -print -quit | sed 's|^\./||')"
+          project="$(find . -maxdepth 1 -name "*.xcodeproj" -print -quit | sed 's|^\./||')"
+
+          if [[ -n "${workspace}" ]]; then
+            container_flag="-workspace"
+            container_path="${workspace}"
+            list_json="$(xcodebuild -list -json -workspace "${workspace}")"
+          elif [[ -n "${project}" ]]; then
+            container_flag="-project"
+            container_path="${project}"
+            list_json="$(xcodebuild -list -json -project "${project}")"
+          else
+            echo "No .xcworkspace or .xcodeproj found at repository root."
+            exit 1
+          fi
+
+          scheme="$(ruby -rjson -e '
+            data = JSON.parse(STDIN.read)
+            schemes = data["workspace"] && data["workspace"]["schemes"]
+            schemes = data["project"]["schemes"] if (schemes.nil? || schemes.empty?) && data["project"]
+            abort("No scheme found") if schemes.nil? || schemes.empty?
+            puts schemes.first
+          ' <<< "${list_json}")"
+
+          echo "container_flag=${container_flag}" >> "$GITHUB_OUTPUT"
+          echo "container_path=${container_path}" >> "$GITHUB_OUTPUT"
+          echo "scheme=${scheme}" >> "$GITHUB_OUTPUT"
+
+          echo "Detected: ${container_flag} ${container_path}"
+          echo "Detected scheme: ${scheme}"
+
+      - name: Detect simulator device
+        id: sim
+        shell: bash
         run: |
-          # xcrun xctrace returns via stderr, not the expected stdout (see https://developer.apple.com/forums/thread/663959)
-          device=`xcrun xctrace list devices 2>&1 | grep -oE 'iPhone.*?[^\(]+' | head -1 | awk '{$1=$1;print}' | sed -e "s/ Simulator$//"`
-          if [ $scheme = default ]; then scheme=$(cat default); fi
-          if [ "`ls -A | grep -i \\.xcworkspace\$`" ]; then filetype_parameter="workspace" && file_to_build="`ls -A | grep -i \\.xcworkspace\$`"; else filetype_parameter="project" && file_to_build="`ls -A | grep -i \\.xcodeproj\$`"; fi
-          file_to_build=`echo $file_to_build | awk '{$1=$1;print}'`
-          xcodebuild test-without-building -scheme "$scheme" -"$filetype_parameter" "$file_to_build" -destination "platform=$platform,name=$device"
+          set -euo pipefail
+          # xctrace は stderr に出すため 2>&1
+          device="$(xcrun xctrace list devices 2>&1 \
+            | grep -Eo 'iPhone[^()]+' \
+            | head -n 1 \
+            | sed 's/[[:space:]]*$//; s/ Simulator$//')"
+
+          if [[ -z "${device}" ]]; then
+            echo "Failed to detect iPhone simulator device."
+            exit 1
+          fi
+
+          echo "device=${device}" >> "$GITHUB_OUTPUT"
+          echo "Using simulator: ${device}"
+
+      - name: Build for testing
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild build-for-testing \
+            -scheme "${{ steps.detect.outputs.scheme }}" \
+            "${{ steps.detect.outputs.container_flag }}" "${{ steps.detect.outputs.container_path }}" \
+            -destination "platform=${PLATFORM},name=${{ steps.sim.outputs.device }}" \
+            | xcpretty
+
+      - name: Test without building
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild test-without-building \
+            -scheme "${{ steps.detect.outputs.scheme }}" \
+            "${{ steps.detect.outputs.container_flag }}" "${{ steps.detect.outputs.container_path }}" \
+            -destination "platform=${PLATFORM},name=${{ steps.sim.outputs.device }}" \
+            -resultBundlePath TestResults.xcresult \
+            | xcpretty
+
+      - name: Upload xcresult (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcresult
+          path: TestResults.xcresult
+          if-no-files-found: ignore
