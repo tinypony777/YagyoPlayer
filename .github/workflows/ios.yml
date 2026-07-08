@@ -31,6 +31,7 @@ jobs:
   build-and-test:
     name: Build & Test (Swift / iOS Simulator)
     runs-on: macos-15
+    timeout-minutes: 30
 
     env:
       PLATFORM: iOS Simulator
@@ -173,6 +174,7 @@ jobs:
             "${{ steps.detect.outputs.container_flag }}" "${{ steps.detect.outputs.container_path }}" \
             -destination "${{ steps.preflight.outputs.destination }}" \
             -resultBundlePath TestResults.xcresult \
+            -maximum-test-execution-time-allowance 120 \
             | xcpretty
 
       - name: Upload xcresult (on failure)
