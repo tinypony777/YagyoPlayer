@@ -1,0 +1,53 @@
+name: CodeQL
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "YagyoPlayer/**/*.swift"
+      - "YagyoPlayerTests/**/*.swift"
+      - "YagyoPlayer.xcodeproj/**"
+      - "project.yml"
+      - ".github/workflows/codeql.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "YagyoPlayer/**/*.swift"
+      - "YagyoPlayerTests/**/*.swift"
+      - "YagyoPlayer.xcodeproj/**"
+      - "project.yml"
+      - ".github/workflows/codeql.yml"
+  schedule:
+    # Run every Monday at 07:00 UTC to catch new CVEs even without code changes
+    - cron: "0 7 * * 1"
+
+jobs:
+  analyze:
+    name: Analyze (swift)
+    runs-on: macos-15
+
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: swift
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:swift"
