@@ -21,6 +21,10 @@ The visual language is ported directly from the Hyakki Yagyo Beat Machine web ap
 - **Step-cell seek bar** — the transport progress bar is drawn as 16 sequencer cells; played cells burn 朱 (vermilion), the current cell glows 提灯 (lantern amber).
 - **Yokai library icons** — every imported track is assigned a resident yokai sprite, stable across launches.
 
+## Design Nav
+
+See [docs/DESIGN_NAV.md](docs/DESIGN_NAV.md) for a visual companion to the product direction — screenshots of the current implementation, a translation-ledger preview, design tokens, and two proposals not yet in the charter (hitodama artwork visualizer, a witching-hour-only Gashadokuro).
+
 ## Product Direction
 
 See [docs/PRODUCT_DIRECTION.md](docs/PRODUCT_DIRECTION.md) for the product direction (v3, the author's charter) — what this app is and who it is for, the craft at its heart, playback-trust criteria, build order, and the decision rubric used to judge new features.
