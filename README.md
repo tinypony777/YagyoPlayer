@@ -1,6 +1,6 @@
 # Yagyo Player
 
-Yagyo Player is a SwiftUI audio player for iOS 27 and later. It takes the dark folklore palette of the provided Hyakki Yagyo web app and turns it into a local-first music library.
+Yagyo Player is a SwiftUI audio player for iOS 26 and later. It takes the dark folklore palette of the provided Hyakki Yagyo web app and turns it into a local-first music library.
 
 ## What It Does
 

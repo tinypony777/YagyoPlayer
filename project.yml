@@ -2,7 +2,7 @@ name: YagyoPlayer
 options:
   bundleIdPrefix: com.codex
   deploymentTarget:
-    iOS: "27.0"
+    iOS: "26.0"
 settings:
   base:
     DEVELOPMENT_TEAM: ""
@@ -11,7 +11,7 @@ targets:
   YagyoPlayer:
     type: application
     platform: iOS
-    deploymentTarget: "27.0"
+    deploymentTarget: "26.0"
     sources:
       - path: YagyoPlayer
         excludes:
@@ -35,7 +35,7 @@ targets:
   YagyoPlayerTests:
     type: bundle.unit-test
     platform: iOS
-    deploymentTarget: "27.0"
+    deploymentTarget: "26.0"
     sources:
       - path: YagyoPlayerTests
     dependencies:
