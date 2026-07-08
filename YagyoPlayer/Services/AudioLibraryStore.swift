@@ -417,12 +417,18 @@ final class AudioLibraryStore: ObservableObject {
     private func audioDuration(for url: URL) async -> TimeInterval? {
         let asset = AVURLAsset(url: url)
 
-        do {
-            let duration = try await asset.load(.duration)
-            let seconds = CMTimeGetSeconds(duration)
-            return seconds.isFinite ? seconds : nil
-        } catch {
-            return nil
+        return try? await withThrowingTaskGroup(of: TimeInterval?.self) { group in
+            group.addTask {
+                let duration = try await asset.load(.duration)
+                let seconds = CMTimeGetSeconds(duration)
+                return seconds.isFinite ? seconds : nil
+            }
+            group.addTask {
+                try await Task.sleep(for: .seconds(10))
+                throw CancellationError()
+            }
+            defer { group.cancelAll() }
+            return try await group.next() ?? nil
         }
     }
 
