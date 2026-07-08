@@ -174,6 +174,7 @@ jobs:
             "${{ steps.detect.outputs.container_flag }}" "${{ steps.detect.outputs.container_path }}" \
             -destination "${{ steps.preflight.outputs.destination }}" \
             -resultBundlePath TestResults.xcresult \
+            -test-timeouts-enabled YES \
             -maximum-test-execution-time-allowance 120 \
             | xcpretty
 
