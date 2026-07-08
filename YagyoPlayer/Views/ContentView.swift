@@ -10,6 +10,7 @@ struct ContentView: View {
 
     @State private var isImporterPresented = false
     @State private var importErrorMessage: String?
+    @State private var importSummary: ImportSummary?
 
     var body: some View {
         NavigationStack {
@@ -55,6 +56,9 @@ struct ContentView: View {
                     switch result {
                     case .success(let urls):
                         await library.importAudioFiles(from: urls)
+                        if case .finished(let summary) = library.importState {
+                            importSummary = summary
+                        }
                         if let selectedTrack = library.selectedTrack {
                             player.load(selectedTrack, from: library, autoplay: false, context: .library)
                         }
@@ -67,6 +71,16 @@ struct ContentView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(importErrorMessage ?? "The selected files could not be imported.")
+            }
+            .alert("取込結果", isPresented: importSummaryBinding) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(importSummaryMessage)
+            }
+            .alert("保存に失敗しました", isPresented: persistenceErrorBinding) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(library.persistenceErrorMessage ?? "")
             }
             .onChange(of: router.pendingAction) { _, action in
                 guard action == .continueLastTrack else { return }
@@ -84,6 +98,42 @@ struct ContentView: View {
                 importErrorMessage = nil
             }
         }
+    }
+
+    private var importSummaryBinding: Binding<Bool> {
+        Binding {
+            importSummary != nil
+        } set: { isPresented in
+            if !isPresented {
+                importSummary = nil
+            }
+        }
+    }
+
+    private var persistenceErrorBinding: Binding<Bool> {
+        Binding {
+            library.persistenceErrorMessage != nil
+        } set: { isPresented in
+            if !isPresented {
+                library.persistenceErrorMessage = nil
+            }
+        }
+    }
+
+    private var importSummaryMessage: String {
+        guard let summary = importSummary else { return "" }
+
+        var lines: [String] = ["\(summary.imported) 曲を納めました。"]
+        if summary.duplicates > 0 {
+            lines.append("重複のため見送り: \(summary.duplicates) 件(同じ音源は既に行列にいます)")
+        }
+        if !summary.failures.isEmpty {
+            lines.append("失敗: \(summary.failures.count) 件")
+            for failure in summary.failures {
+                lines.append("・\(failure.filename) — \(failure.reason)")
+            }
+        }
+        return lines.joined(separator: "\n")
     }
 }
 
@@ -313,6 +363,8 @@ private struct TrackRow: View {
 
     var track: AudioTrack
 
+    @State private var isDeleteConfirmationPresented = false
+
     private var isCurrent: Bool {
         player.currentTrack?.id == track.id
     }
@@ -396,11 +448,23 @@ private struct TrackRow: View {
             }
 
             Button(role: .destructive) {
-                player.stopForDeletedTrack(track)
-                library.delete(track)
+                isDeleteConfirmationPresented = true
             } label: {
                 Label("Delete from app folder", systemImage: "trash")
             }
+        }
+        .confirmationDialog(
+            "「\(track.title)」を行列から外しますか?",
+            isPresented: $isDeleteConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button("削除する", role: .destructive) {
+                player.stopForDeletedTrack(track)
+                library.delete(track)
+            }
+            Button("キャンセル", role: .cancel) {}
+        } message: {
+            Text("消えるのはアプリ内にコピーされた音源だけです。取込元のファイルには影響しません。")
         }
     }
 }

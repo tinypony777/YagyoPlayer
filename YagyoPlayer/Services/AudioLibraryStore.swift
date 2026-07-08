@@ -1,13 +1,32 @@
 import AVFoundation
+import CryptoKit
 import Foundation
 import UniformTypeIdentifiers
+
+/// 取込 1 件分の失敗記録。
+struct ImportFailure: Equatable, Identifiable, Sendable {
+    var id: String { filename }
+    let filename: String
+    let reason: String
+}
+
+/// 取込結果の集計 — 成功・重複スキップ・失敗を個別に数える。
+struct ImportSummary: Equatable, Sendable {
+    var imported: Int = 0
+    var duplicates: Int = 0
+    var failures: [ImportFailure] = []
+
+    var hasIssues: Bool {
+        duplicates > 0 || !failures.isEmpty
+    }
+}
 
 @MainActor
 final class AudioLibraryStore: ObservableObject {
     enum ImportState: Equatable {
         case idle
         case importing(Int)
-        case finished(Int)
+        case finished(ImportSummary)
         case failed(String)
     }
 
@@ -16,6 +35,8 @@ final class AudioLibraryStore: ObservableObject {
     @Published var selectedTrackID: AudioTrack.ID?
     @Published var activePlaylistID: Playlist.ID?
     @Published var importState: ImportState = .idle
+    /// library.json への保存失敗をUIに知らせる(再生統計など、取込以外の書き込み用)。
+    @Published var persistenceErrorMessage: String?
 
     private let fileManager: FileManager
     private let documentsDirectoryOverride: URL?
@@ -63,22 +84,91 @@ final class AudioLibraryStore: ObservableObject {
         guard !urls.isEmpty else { return }
 
         importState = .importing(urls.count)
-        var importedTracks: [AudioTrack] = []
 
         do {
             try ensureLibraryDirectory()
-            for url in urls {
-                if let track = try await copyIntoLibrary(url) {
-                    importedTracks.append(track)
-                }
-            }
-
-            tracks.insert(contentsOf: importedTracks, at: 0)
-            selectedTrackID = importedTracks.first?.id ?? selectedTrackID
-            try save()
-            importState = .finished(importedTracks.count)
         } catch {
             importState = .failed(error.localizedDescription)
+            return
+        }
+
+        var summary = ImportSummary()
+        var importedTracks: [AudioTrack] = []
+        backfillContentHashesIfNeeded()
+        var knownHashes = Set(tracks.compactMap(\.contentHash))
+
+        for url in urls {
+            do {
+                switch try await copyIntoLibrary(url, knownHashes: knownHashes) {
+                case .imported(let track):
+                    importedTracks.append(track)
+                    summary.imported += 1
+                    if let hash = track.contentHash {
+                        knownHashes.insert(hash)
+                    }
+                case .duplicate:
+                    summary.duplicates += 1
+                case .unsupported:
+                    summary.failures.append(
+                        ImportFailure(filename: url.lastPathComponent, reason: "Unsupported file type")
+                    )
+                }
+            } catch {
+                summary.failures.append(
+                    ImportFailure(filename: url.lastPathComponent, reason: error.localizedDescription)
+                )
+            }
+        }
+
+        if !importedTracks.isEmpty {
+            tracks.insert(contentsOf: importedTracks, at: 0)
+            do {
+                try save()
+                selectedTrackID = importedTracks.first?.id ?? selectedTrackID
+            } catch {
+                // 保存できなければ成功扱いにしない: メモリとコピー済みファイルを巻き戻し、失敗として報告する。
+                let importedIDs = Set(importedTracks.map(\.id))
+                tracks.removeAll { importedIDs.contains($0.id) }
+                for track in importedTracks {
+                    try? fileManager.removeItem(at: fileURL(for: track))
+                }
+                summary.imported = 0
+                summary.failures.append(contentsOf: importedTracks.map { track in
+                    ImportFailure(
+                        filename: track.originalFilename,
+                        reason: "Library could not be saved: \(error.localizedDescription)"
+                    )
+                })
+            }
+        }
+        importState = .finished(summary)
+    }
+
+    /// PR適用前に取り込まれた曲は contentHash を持たないため、保存済みファイルから補完する。
+    private func backfillContentHashesIfNeeded() {
+        var didChange = false
+        for index in tracks.indices where tracks[index].contentHash == nil {
+            let url = fileURL(for: tracks[index])
+            guard fileManager.fileExists(atPath: url.path),
+                  let hash = try? Self.sha256Hex(of: url) else { continue }
+            tracks[index].contentHash = hash
+            didChange = true
+        }
+        if didChange {
+            // 保存に失敗してもメモリ上のハッシュで重複判定は機能する。
+            try? save()
+        }
+    }
+
+    /// 再生イベント(半分以上の再生または完走)を統計に記録し、永続化する。
+    func recordPlayback(for trackID: AudioTrack.ID, at date: Date = Date()) {
+        guard let index = tracks.firstIndex(where: { $0.id == trackID }) else { return }
+        tracks[index].recordPlayback(at: date)
+        do {
+            try save()
+            persistenceErrorMessage = nil
+        } catch {
+            persistenceErrorMessage = "Playback stats could not be saved: \(error.localizedDescription)"
         }
     }
 
@@ -259,7 +349,13 @@ final class AudioLibraryStore: ObservableObject {
         }
     }
 
-    private func copyIntoLibrary(_ sourceURL: URL) async throws -> AudioTrack? {
+    private enum ImportOutcome {
+        case imported(AudioTrack)
+        case duplicate
+        case unsupported
+    }
+
+    private func copyIntoLibrary(_ sourceURL: URL, knownHashes: Set<String>) async throws -> ImportOutcome {
         let hasSecurityScope = sourceURL.startAccessingSecurityScopedResource()
         defer {
             if hasSecurityScope {
@@ -267,7 +363,12 @@ final class AudioLibraryStore: ObservableObject {
             }
         }
 
-        guard sourceURL.conformsToAudioType else { return nil }
+        guard sourceURL.conformsToAudioType else { return .unsupported }
+
+        let contentHash = try Self.sha256Hex(of: sourceURL)
+        if knownHashes.contains(contentHash) {
+            return .duplicate
+        }
 
         let originalFilename = sourceURL.lastPathComponent
         let baseTitle = sourceURL.deletingPathExtension().lastPathComponent
@@ -280,12 +381,28 @@ final class AudioLibraryStore: ObservableObject {
         try fileManager.copyItem(at: sourceURL, to: destinationURL)
 
         let duration = await audioDuration(for: destinationURL)
-        return AudioTrack(
+        let track = AudioTrack(
             title: baseTitle.isEmpty ? originalFilename : baseTitle,
             originalFilename: originalFilename,
             storedFilename: destinationFilename,
-            duration: duration
+            duration: duration,
+            contentHash: contentHash
         )
+        return .imported(track)
+    }
+
+    /// ファイル全体の SHA-256 をチャンク読みで計算する(大きな音源でもメモリを圧迫しない)。
+    private static let hashChunkSize = 1_048_576
+
+    private static func sha256Hex(of url: URL) throws -> String {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+
+        var hasher = SHA256()
+        while let chunk = try handle.read(upToCount: hashChunkSize), !chunk.isEmpty {
+            hasher.update(data: chunk)
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
     private func uniqueFilename(for url: URL) -> String {
