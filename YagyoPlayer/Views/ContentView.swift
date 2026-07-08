@@ -430,7 +430,7 @@ private struct PlatformNote: View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "music.note.list")
                 .foregroundStyle(YagyoColor.kitsunebi)
-            Text("Built for iOS 27+. Local files stay inside the app folder; Apple Music catalog features can be layered on later with MusicKit.")
+            Text("Built for iOS 26+. Local files stay inside the app folder; Apple Music catalog features can be layered on later with MusicKit.")
                 .font(.caption)
                 .foregroundStyle(YagyoColor.dim)
         }
