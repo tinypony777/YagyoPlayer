@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: ["main"]
 
+env:
+  XCODE_VERSION: "26.3"
+  IOS_VERSION: "26.0"
+  SIMULATOR_DEVICE: "iPhone 16"
+
 concurrency:
   group: ios-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -16,8 +21,7 @@ jobs:
     runs-on: macos-15
 
     env:
-      # iOS 26 simulator runtimes ship with the Xcode 26 image on macOS 15 runners.
-      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
       PLATFORM: iOS Simulator
 
     steps:
@@ -29,6 +33,53 @@ jobs:
           set -euo pipefail
           xcodebuild -version
           xcode-select -p
+          echo "Expected Xcode: ${XCODE_VERSION}"
+
+      - name: Preflight SDK and simulator runtime
+        id: preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -showsdks
+          runtimes="$(xcrun simctl list runtimes)"
+          devices="$(xcrun simctl list devices available)"
+          echo "${runtimes}"
+          echo "${devices}"
+
+          if ! grep -Eq "iOS ${IOS_VERSION}([.[:space:]]|$)" <<< "${runtimes}"; then
+            echo "::error::Required iOS simulator runtime ${IOS_VERSION} is not installed."
+            exit 1
+          fi
+
+          if ! ruby -e '
+            runtime = ENV.fetch("IOS_VERSION")
+            device = ENV.fetch("SIMULATOR_DEVICE")
+            in_runtime = false
+            found = false
+
+            STDIN.each_line do |line|
+              if line =~ /^-- (.+) --$/
+                in_runtime = Regexp.last_match(1).start_with?("iOS #{runtime}")
+                next
+              end
+
+              next unless in_runtime
+
+              if line.include?(device)
+                found = true
+                break
+              end
+            end
+
+            exit(found ? 0 : 1)
+          ' <<< "${devices}"; then
+            echo "::error::Required simulator device ${SIMULATOR_DEVICE} is not available for iOS ${IOS_VERSION}."
+            exit 1
+          fi
+
+          destination="platform=${PLATFORM},name=${SIMULATOR_DEVICE},OS=${IOS_VERSION}"
+          echo "destination=${destination}" >> "$GITHUB_OUTPUT"
+          echo "Using destination: ${destination}"
 
       - name: Detect scheme and container
         id: detect
@@ -68,25 +119,6 @@ jobs:
           echo "Detected: ${container_flag} ${container_path}"
           echo "Detected scheme: ${scheme}"
 
-      - name: Detect simulator device
-        id: sim
-        shell: bash
-        run: |
-          set -euo pipefail
-          # xctrace は stderr に出すため 2>&1
-          device="$(xcrun xctrace list devices 2>&1 \
-            | grep -Eo 'iPhone[^()]+' \
-            | head -n 1 \
-            | sed 's/[[:space:]]*$//; s/ Simulator$//')"
-
-          if [[ -z "${device}" ]]; then
-            echo "Failed to detect iPhone simulator device."
-            exit 1
-          fi
-
-          echo "device=${device}" >> "$GITHUB_OUTPUT"
-          echo "Using simulator: ${device}"
-
       - name: Build for testing
         shell: bash
         run: |
@@ -94,7 +126,7 @@ jobs:
           xcodebuild build-for-testing \
             -scheme "${{ steps.detect.outputs.scheme }}" \
             "${{ steps.detect.outputs.container_flag }}" "${{ steps.detect.outputs.container_path }}" \
-            -destination "platform=${PLATFORM},name=${{ steps.sim.outputs.device }}" \
+            -destination "${{ steps.preflight.outputs.destination }}" \
             | xcpretty
 
       - name: Test without building
@@ -104,7 +136,7 @@ jobs:
           xcodebuild test-without-building \
             -scheme "${{ steps.detect.outputs.scheme }}" \
             "${{ steps.detect.outputs.container_flag }}" "${{ steps.detect.outputs.container_path }}" \
-            -destination "platform=${PLATFORM},name=${{ steps.sim.outputs.device }}" \
+            -destination "${{ steps.preflight.outputs.destination }}" \
             -resultBundlePath TestResults.xcresult \
             | xcpretty
 
