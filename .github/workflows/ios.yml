@@ -69,7 +69,11 @@ jobs:
             echo "::warning::iOS ${IOS_VERSION} simulator runtime is not installed; using iOS ${resolved} instead."
           fi
 
-          if ! awk -v runtime="iOS ${resolved}" -v device="${SIMULATOR_DEVICE}" '
+          # Address the device by UDID rather than name+OS: simctl reports the
+          # runtime's marketing name (e.g. "iOS 26.0" for the 26.0.1 runtime)
+          # while xcodebuild's OS= specifier matches the product version
+          # (26.0.1), so version strings cannot be passed through reliably.
+          udid="$(awk -v runtime="iOS ${resolved}" -v device="${SIMULATOR_DEVICE}" '
             /^-- / {
               header = $0
               sub(/^-- /, "", header)
@@ -82,20 +86,22 @@ jobs:
               line = $0
               sub(/^[[:space:]]+/, "", line)
               if (index(line, device " (") == 1) {
-                found = 1
-                exit 0
+                rest = substr(line, length(device) + 2)
+                if (match(rest, /\([0-9A-Fa-f][0-9A-Fa-f-]*\)/)) {
+                  print substr(rest, RSTART + 1, RLENGTH - 2)
+                  exit 0
+                }
               }
             }
+          ' <<< "${devices}")"
 
-            END {
-              exit(found ? 0 : 1)
-            }
-          ' <<< "${devices}"; then
+          if [[ -z "${udid}" ]]; then
             echo "::error::Required simulator device ${SIMULATOR_DEVICE} is not available for iOS ${resolved}."
             exit 1
           fi
 
-          destination="platform=${PLATFORM},name=${SIMULATOR_DEVICE},OS=${resolved}"
+          echo "Resolved ${SIMULATOR_DEVICE} (iOS ${resolved}) to UDID ${udid}"
+          destination="platform=${PLATFORM},id=${udid}"
           echo "destination=${destination}" >> "$GITHUB_OUTPUT"
           echo "Using destination: ${destination}"
 
