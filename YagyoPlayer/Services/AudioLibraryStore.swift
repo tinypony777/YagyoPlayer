@@ -12,15 +12,19 @@ final class AudioLibraryStore: ObservableObject {
     }
 
     @Published private(set) var tracks: [AudioTrack] = []
+    @Published private(set) var playlists: [Playlist] = []
     @Published var selectedTrackID: AudioTrack.ID?
+    @Published var activePlaylistID: Playlist.ID?
     @Published var importState: ImportState = .idle
 
     private let fileManager: FileManager
+    private let documentsDirectoryOverride: URL?
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    init(fileManager: FileManager = .default) {
+    init(fileManager: FileManager = .default, documentsDirectory: URL? = nil) {
         self.fileManager = fileManager
+        self.documentsDirectoryOverride = documentsDirectory
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         decoder.dateDecodingStrategy = .iso8601
@@ -40,6 +44,7 @@ final class AudioLibraryStore: ObservableObject {
             try ensureLibraryDirectory()
             guard fileManager.fileExists(atPath: manifestURL.path) else {
                 tracks = []
+                loadPlaylists()
                 return
             }
 
@@ -47,6 +52,7 @@ final class AudioLibraryStore: ObservableObject {
             tracks = try decoder.decode([AudioTrack].self, from: data)
                 .sorted { $0.importedAt > $1.importedAt }
             selectedTrackID = tracks.first?.id
+            loadPlaylists()
         } catch {
             importState = .failed("Library could not be loaded.")
             tracks = []
@@ -82,6 +88,15 @@ final class AudioLibraryStore: ObservableObject {
             selectedTrackID = tracks.first?.id
         }
 
+        var playlistsChanged = false
+        for index in playlists.indices where playlists[index].contains(track.id) {
+            playlists[index].remove(track.id)
+            playlistsChanged = true
+        }
+        if playlistsChanged {
+            try? savePlaylists()
+        }
+
         try? fileManager.removeItem(at: fileURL(for: track))
         try? save()
     }
@@ -106,8 +121,75 @@ final class AudioLibraryStore: ObservableObject {
         tracks.sorted { $0.importedAt > $1.importedAt }.first
     }
 
+    // MARK: - Playlists
+
+    var activePlaylist: Playlist? {
+        guard let activePlaylistID else { return nil }
+        return playlists.first { $0.id == activePlaylistID }
+    }
+
+    /// 次曲・前曲の巡回対象。巻物が選ばれていればその並び、なければ行列全体。
+    var playbackQueue: [AudioTrack] {
+        guard let activePlaylist else { return tracks }
+        let queue = tracks(in: activePlaylist)
+        return queue.isEmpty ? tracks : queue
+    }
+
+    func tracks(in playlist: Playlist) -> [AudioTrack] {
+        let trackByID = Dictionary(uniqueKeysWithValues: tracks.map { ($0.id, $0) })
+        return playlist.trackIDs.compactMap { trackByID[$0] }
+    }
+
+    @discardableResult
+    func createPlaylist(named name: String) -> Playlist? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let playlist = Playlist(name: trimmed)
+        playlists.append(playlist)
+        try? savePlaylists()
+        return playlist
+    }
+
+    func renamePlaylist(_ playlist: Playlist, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let index = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
+        playlists[index].name = trimmed
+        try? savePlaylists()
+    }
+
+    func deletePlaylist(_ playlist: Playlist) {
+        playlists.removeAll { $0.id == playlist.id }
+        if activePlaylistID == playlist.id {
+            activePlaylistID = nil
+        }
+        try? savePlaylists()
+    }
+
+    func addTrack(_ track: AudioTrack, to playlist: Playlist) {
+        guard tracks.contains(where: { $0.id == track.id }),
+              let index = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
+        playlists[index].add(track.id)
+        try? savePlaylists()
+    }
+
+    func removeTrack(_ track: AudioTrack, from playlist: Playlist) {
+        guard let index = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
+        playlists[index].remove(track.id)
+        try? savePlaylists()
+    }
+
+    func moveTrack(_ track: AudioTrack, in playlist: Playlist, by offset: Int) {
+        guard let index = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
+        playlists[index].move(track.id, by: offset)
+        try? savePlaylists()
+    }
+
     private var documentsDirectory: URL {
-        fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        if let documentsDirectoryOverride {
+            return documentsDirectoryOverride
+        }
+        return fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 
     private var libraryDirectory: URL {
@@ -118,6 +200,10 @@ final class AudioLibraryStore: ObservableObject {
         libraryDirectory.appending(path: "library.json", directoryHint: .notDirectory)
     }
 
+    private var playlistsURL: URL {
+        libraryDirectory.appending(path: "playlists.json", directoryHint: .notDirectory)
+    }
+
     private func ensureLibraryDirectory() throws {
         try fileManager.createDirectory(at: libraryDirectory, withIntermediateDirectories: true)
     }
@@ -125,6 +211,52 @@ final class AudioLibraryStore: ObservableObject {
     private func save() throws {
         let data = try encoder.encode(tracks)
         try data.write(to: manifestURL, options: [.atomic])
+    }
+
+    private func loadPlaylists() {
+        guard fileManager.fileExists(atPath: playlistsURL.path) else {
+            playlists = []
+            activePlaylistID = nil
+            return
+        }
+
+        do {
+            let data = try Data(contentsOf: playlistsURL)
+            playlists = try decoder.decode([Playlist].self, from: data)
+            sanitizePlaylistsAgainstCurrentLibrary()
+        } catch {
+            playlists = []
+            activePlaylistID = nil
+        }
+    }
+
+    private func savePlaylists() throws {
+        try ensureLibraryDirectory()
+        let data = try encoder.encode(playlists)
+        try data.write(to: playlistsURL, options: [.atomic])
+    }
+
+    private func sanitizePlaylistsAgainstCurrentLibrary() {
+        let validTrackIDs = Set(tracks.map(\.id))
+        var didChange = false
+
+        for index in playlists.indices {
+            let originalTrackIDs = playlists[index].trackIDs
+            let sanitizedTrackIDs = originalTrackIDs.filter(validTrackIDs.contains)
+            if sanitizedTrackIDs != originalTrackIDs {
+                playlists[index].trackIDs = sanitizedTrackIDs
+                didChange = true
+            }
+        }
+
+        if let activePlaylistID,
+           !playlists.contains(where: { $0.id == activePlaylistID }) {
+            self.activePlaylistID = nil
+        }
+
+        if didChange {
+            try? savePlaylists()
+        }
     }
 
     private func copyIntoLibrary(_ sourceURL: URL) async throws -> AudioTrack? {
@@ -178,13 +310,14 @@ final class AudioLibraryStore: ObservableObject {
     }
 
     private func trackByOffset(_ offset: Int, from track: AudioTrack?) -> AudioTrack? {
-        guard !tracks.isEmpty else { return nil }
-        guard let track, let index = tracks.firstIndex(where: { $0.id == track.id }) else {
-            return tracks.first
+        let queue = playbackQueue
+        guard !queue.isEmpty else { return nil }
+        guard let track, let index = queue.firstIndex(where: { $0.id == track.id }) else {
+            return queue.first
         }
 
-        let nextIndex = (index + offset + tracks.count) % tracks.count
-        return tracks[nextIndex]
+        let nextIndex = (index + offset + queue.count) % queue.count
+        return queue[nextIndex]
     }
 }
 

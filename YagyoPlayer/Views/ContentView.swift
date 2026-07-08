@@ -33,6 +33,7 @@ struct ContentView: View {
                         )
                         TransportView()
                         LibrarySection(importAction: { isImporterPresented = true })
+                        PlaylistSection()
                         PlatformNote()
                         FooterView()
                     }
@@ -55,7 +56,7 @@ struct ContentView: View {
                     case .success(let urls):
                         await library.importAudioFiles(from: urls)
                         if let selectedTrack = library.selectedTrack {
-                            player.load(selectedTrack, from: library, autoplay: false)
+                            player.load(selectedTrack, from: library, autoplay: false, context: .library)
                         }
                     case .failure(let error):
                         importErrorMessage = error.localizedDescription
@@ -194,7 +195,7 @@ private struct TransportView: View {
 
                 Button {
                     if player.currentTrack == nil, let selectedTrack = library.selectedTrack {
-                        player.load(selectedTrack, from: library, autoplay: true)
+                        player.load(selectedTrack, from: library, autoplay: true, context: .library)
                     } else {
                         player.togglePlayPause()
                     }
@@ -320,7 +321,7 @@ private struct TrackRow: View {
         let sprite = YokaiGallery.sprite(for: track.id)
 
         Button {
-            player.load(track, from: library, autoplay: true)
+            player.load(track, from: library, autoplay: true, context: .library)
         } label: {
             HStack(spacing: 12) {
                 ZStack {
@@ -369,6 +370,31 @@ private struct TrackRow: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
+            if !library.playlists.isEmpty {
+                let playlistsContainingTrack = Set(
+                    library.playlists
+                        .filter { $0.contains(track.id) }
+                        .map(\.id)
+                )
+                Menu {
+                    ForEach(library.playlists) { playlist in
+                        let alreadyInPlaylist = playlistsContainingTrack.contains(playlist.id)
+                        Button {
+                            library.addTrack(track, to: playlist)
+                        } label: {
+                            if alreadyInPlaylist {
+                                Label(playlist.name, systemImage: "checkmark")
+                            } else {
+                                Text(playlist.name)
+                            }
+                        }
+                        .disabled(alreadyInPlaylist)
+                    }
+                } label: {
+                    Label("Add to playlist", systemImage: "text.badge.plus")
+                }
+            }
+
             Button(role: .destructive) {
                 player.stopForDeletedTrack(track)
                 library.delete(track)

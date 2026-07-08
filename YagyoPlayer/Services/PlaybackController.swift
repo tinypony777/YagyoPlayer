@@ -3,6 +3,11 @@ import Foundation
 import MediaPlayer
 import UIKit
 
+enum PlaybackContext: Equatable {
+    case library
+    case playlist(Playlist.ID)
+}
+
 @MainActor
 final class PlaybackController: ObservableObject {
     @Published var currentTrack: AudioTrack?
@@ -85,7 +90,21 @@ final class PlaybackController: ObservableObject {
         }
     }
 
-    func load(_ track: AudioTrack, from library: AudioLibraryStore, autoplay: Bool = false) {
+    func load(
+        _ track: AudioTrack,
+        from library: AudioLibraryStore,
+        autoplay: Bool = false,
+        context: PlaybackContext? = nil
+    ) {
+        if let context {
+            switch context {
+            case .library:
+                library.activePlaylistID = nil
+            case .playlist(let playlistID):
+                library.activePlaylistID = playlistID
+            }
+        }
+
         do {
             try configureAudioSession()
             let fileURL = library.fileURL(for: track)
@@ -103,6 +122,8 @@ final class PlaybackController: ObservableObject {
 
             if autoplay {
                 play()
+            } else {
+                transitionToPausedStateAfterLoad()
             }
         } catch {
             pause()
@@ -150,7 +171,7 @@ final class PlaybackController: ObservableObject {
 
     func playMostRecent(from library: AudioLibraryStore) {
         guard let track = library.mostRecentTrack() else { return }
-        load(track, from: library, autoplay: true)
+        load(track, from: library, autoplay: true, context: .library)
     }
 
     func stopForDeletedTrack(_ track: AudioTrack) {
@@ -238,6 +259,15 @@ final class PlaybackController: ObservableObject {
     private func syncProgress() {
         elapsedTime = audioPlayer?.currentTime ?? 0
         duration = audioPlayer?.duration ?? duration
+    }
+
+    private func transitionToPausedStateAfterLoad() {
+        audioPlayer?.pause()
+        isPlaying = false
+        stopTimer()
+        stopMetering()
+        syncProgress()
+        updateNowPlaying()
     }
 
     private func updateNowPlaying() {
