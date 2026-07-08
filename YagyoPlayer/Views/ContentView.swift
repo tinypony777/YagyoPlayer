@@ -33,6 +33,7 @@ struct ContentView: View {
                         )
                         TransportView()
                         LibrarySection(importAction: { isImporterPresented = true })
+                        PlaylistSection()
                         PlatformNote()
                         FooterView()
                     }
@@ -320,6 +321,7 @@ private struct TrackRow: View {
         let sprite = YokaiGallery.sprite(for: track.id)
 
         Button {
+            library.activePlaylistID = nil
             player.load(track, from: library, autoplay: true)
         } label: {
             HStack(spacing: 12) {
@@ -369,6 +371,25 @@ private struct TrackRow: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
+            if !library.playlists.isEmpty {
+                Menu {
+                    ForEach(library.playlists) { playlist in
+                        Button {
+                            library.addTrack(track, to: playlist)
+                        } label: {
+                            if playlist.contains(track.id) {
+                                Label(playlist.name, systemImage: "checkmark")
+                            } else {
+                                Text(playlist.name)
+                            }
+                        }
+                        .disabled(playlist.contains(track.id))
+                    }
+                } label: {
+                    Label("Add to playlist", systemImage: "text.badge.plus")
+                }
+            }
+
             Button(role: .destructive) {
                 player.stopForDeletedTrack(track)
                 library.delete(track)
