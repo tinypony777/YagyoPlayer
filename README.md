@@ -23,7 +23,7 @@ The visual language is ported directly from the Hyakki Yagyo Beat Machine web ap
 
 ## Product Direction
 
-See [docs/PRODUCT_DIRECTION.md](docs/PRODUCT_DIRECTION.md) for the product direction (v3) — positioning, the durable-advantage ledger, build order, and the decision rubric used to judge new features.
+See [docs/PRODUCT_DIRECTION.md](docs/PRODUCT_DIRECTION.md) for the product direction (v3, the author's charter) — what this app is and who it is for, the craft at its heart, playback-trust criteria, build order, and the decision rubric used to judge new features.
 
 ## WWDC26 / SDK Notes
 
