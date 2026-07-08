@@ -77,6 +77,11 @@ struct ContentView: View {
             } message: {
                 Text(importSummaryMessage)
             }
+            .alert("保存に失敗しました", isPresented: persistenceErrorBinding) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(library.persistenceErrorMessage ?? "")
+            }
             .onChange(of: router.pendingAction) { _, action in
                 guard action == .continueLastTrack else { return }
                 player.playMostRecent(from: library)
@@ -101,6 +106,16 @@ struct ContentView: View {
         } set: { isPresented in
             if !isPresented {
                 importSummary = nil
+            }
+        }
+    }
+
+    private var persistenceErrorBinding: Binding<Bool> {
+        Binding {
+            library.persistenceErrorMessage != nil
+        } set: { isPresented in
+            if !isPresented {
+                library.persistenceErrorMessage = nil
             }
         }
     }

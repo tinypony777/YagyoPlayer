@@ -98,6 +98,94 @@ final class AudioLibraryStoreTests: XCTestCase {
         XCTAssertEqual(persisted.playHourCounts?[hourKey], 2)
     }
 
+    func testReimportingLegacyTrackWithoutHashIsDetectedAsDuplicate() async throws {
+        // PR前に取り込まれた曲(contentHash なし)が library.json と保存済みファイルにある状態を再現
+        let libraryDirectory = temporaryDirectory.appending(path: "YagyoLibrary", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: libraryDirectory, withIntermediateDirectories: true)
+        try Data("legacy-audio-bytes".utf8)
+            .write(to: libraryDirectory.appending(path: "old-abc.wav", directoryHint: .notDirectory))
+        let legacyJSON = """
+        [
+          {
+            "id": "6F9619FF-8B86-D011-B42D-00C04FC964FF",
+            "title": "Old Track",
+            "originalFilename": "old.wav",
+            "storedFilename": "old-abc.wav",
+            "importedAt": "2025-01-01T00:00:00Z",
+            "duration": 120
+          }
+        ]
+        """
+        try Data(legacyJSON.utf8)
+            .write(to: libraryDirectory.appending(path: "library.json", directoryHint: .notDirectory))
+
+        let store = makeStore()
+        store.load()
+        XCTAssertNil(store.tracks.first?.contentHash)
+
+        // 同じ内容の音源を再取込しても、バックフィルしたハッシュにより重複として弾かれる
+        let source = try writeSourceFile(named: "old.wav", contents: "legacy-audio-bytes")
+        await store.importAudioFiles(from: [source])
+
+        XCTAssertEqual(store.tracks.count, 1)
+        XCTAssertEqual(store.importState, .finished(ImportSummary(imported: 0, duplicates: 1)))
+        XCTAssertEqual(store.tracks.first?.contentHash?.count, 64)
+
+        // バックフィルしたハッシュが永続化されている
+        let reloaded = makeStore()
+        reloaded.load()
+        XCTAssertEqual(reloaded.tracks.first?.contentHash?.count, 64)
+    }
+
+    func testImportDoesNotReportSuccessWhenSaveFails() async throws {
+        let store = makeStore()
+        store.load()
+
+        // library.json のパスを中身のあるディレクトリにして保存を失敗させる
+        let manifestURL = temporaryDirectory
+            .appending(path: "YagyoLibrary", directoryHint: .isDirectory)
+            .appending(path: "library.json", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: manifestURL, withIntermediateDirectories: true)
+        try Data("block".utf8).write(to: manifestURL.appending(path: "blocker", directoryHint: .notDirectory))
+
+        let source = try writeSourceFile(named: "song.wav", contents: "audio-bytes")
+        await store.importAudioFiles(from: [source])
+
+        XCTAssertTrue(store.tracks.isEmpty)
+        guard case .finished(let summary) = store.importState else {
+            return XCTFail("Expected finished import state")
+        }
+        XCTAssertEqual(summary.imported, 0)
+        XCTAssertEqual(summary.duplicates, 0)
+        XCTAssertEqual(summary.failures.count, 1)
+        XCTAssertEqual(summary.failures.first?.filename, "song.wav")
+    }
+
+    func testRecordPlaybackSurfacesSaveFailure() async throws {
+        let store = makeStore()
+        store.load()
+
+        let source = try writeSourceFile(named: "song.wav", contents: "audio-bytes")
+        await store.importAudioFiles(from: [source])
+        let track = try XCTUnwrap(store.tracks.first)
+
+        // 取込後に library.json を書き込めない状態にする
+        let manifestURL = temporaryDirectory
+            .appending(path: "YagyoLibrary", directoryHint: .isDirectory)
+            .appending(path: "library.json", directoryHint: .notDirectory)
+        try FileManager.default.removeItem(at: manifestURL)
+        let blockedManifest = temporaryDirectory
+            .appending(path: "YagyoLibrary", directoryHint: .isDirectory)
+            .appending(path: "library.json", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: blockedManifest, withIntermediateDirectories: true)
+        try Data("block".utf8).write(to: blockedManifest.appending(path: "blocker", directoryHint: .notDirectory))
+
+        store.recordPlayback(for: track.id)
+
+        XCTAssertNotNil(store.persistenceErrorMessage)
+        XCTAssertEqual(store.tracks.first?.playCount, 1)
+    }
+
     func testDecodingLegacyManifestWithoutStatsFields() throws {
         // 新フィールド追加前の library.json がそのまま読めること(後方互換)
         let legacyJSON = """

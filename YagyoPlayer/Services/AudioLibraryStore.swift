@@ -35,6 +35,8 @@ final class AudioLibraryStore: ObservableObject {
     @Published var selectedTrackID: AudioTrack.ID?
     @Published var activePlaylistID: Playlist.ID?
     @Published var importState: ImportState = .idle
+    /// library.json への保存失敗をUIに知らせる(再生統計など、取込以外の書き込み用)。
+    @Published var persistenceErrorMessage: String?
 
     private let fileManager: FileManager
     private let documentsDirectoryOverride: URL?
@@ -92,6 +94,7 @@ final class AudioLibraryStore: ObservableObject {
 
         var summary = ImportSummary()
         var importedTracks: [AudioTrack] = []
+        backfillContentHashesIfNeeded()
         var knownHashes = Set(tracks.compactMap(\.contentHash))
 
         for url in urls {
@@ -119,17 +122,54 @@ final class AudioLibraryStore: ObservableObject {
 
         if !importedTracks.isEmpty {
             tracks.insert(contentsOf: importedTracks, at: 0)
-            selectedTrackID = importedTracks.first?.id ?? selectedTrackID
-            try? save()
+            do {
+                try save()
+                selectedTrackID = importedTracks.first?.id ?? selectedTrackID
+            } catch {
+                // 保存できなければ成功扱いにしない: メモリとコピー済みファイルを巻き戻し、失敗として報告する。
+                let importedIDs = Set(importedTracks.map(\.id))
+                tracks.removeAll { importedIDs.contains($0.id) }
+                for track in importedTracks {
+                    try? fileManager.removeItem(at: fileURL(for: track))
+                }
+                summary.imported = 0
+                summary.failures.append(contentsOf: importedTracks.map { track in
+                    ImportFailure(
+                        filename: track.originalFilename,
+                        reason: "Library could not be saved: \(error.localizedDescription)"
+                    )
+                })
+            }
         }
         importState = .finished(summary)
+    }
+
+    /// PR適用前に取り込まれた曲は contentHash を持たないため、保存済みファイルから補完する。
+    private func backfillContentHashesIfNeeded() {
+        var didChange = false
+        for index in tracks.indices where tracks[index].contentHash == nil {
+            let url = fileURL(for: tracks[index])
+            guard fileManager.fileExists(atPath: url.path),
+                  let hash = try? Self.sha256Hex(of: url) else { continue }
+            tracks[index].contentHash = hash
+            didChange = true
+        }
+        if didChange {
+            // 保存に失敗してもメモリ上のハッシュで重複判定は機能する。
+            try? save()
+        }
     }
 
     /// 再生イベント(半分以上の再生または完走)を統計に記録し、永続化する。
     func recordPlayback(for trackID: AudioTrack.ID, at date: Date = Date()) {
         guard let index = tracks.firstIndex(where: { $0.id == trackID }) else { return }
         tracks[index].recordPlayback(at: date)
-        try? save()
+        do {
+            try save()
+            persistenceErrorMessage = nil
+        } catch {
+            persistenceErrorMessage = "Playback stats could not be saved: \(error.localizedDescription)"
+        }
     }
 
     func delete(_ track: AudioTrack) {
