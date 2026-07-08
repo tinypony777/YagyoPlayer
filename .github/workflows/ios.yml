@@ -51,27 +51,27 @@ jobs:
             exit 1
           fi
 
-          if ! ruby -e '
-            runtime = ENV.fetch("IOS_VERSION")
-            device = ENV.fetch("SIMULATOR_DEVICE")
-            in_runtime = false
-            found = false
+          if ! awk -v runtime="iOS ${IOS_VERSION}" -v device="${SIMULATOR_DEVICE}" '
+            /^-- / {
+              header = $0
+              sub(/^-- /, "", header)
+              sub(/ --$/, "", header)
+              in_runtime = index(header, runtime) == 1
+              next
+            }
 
-            STDIN.each_line do |line|
-              if line =~ /^-- (.+) --$/
-                in_runtime = Regexp.last_match(1).start_with?("iOS #{runtime}")
-                next
-              end
+            in_runtime {
+              line = $0
+              sub(/^[[:space:]]+/, "", line)
+              if (index(line, device " (") == 1) {
+                found = 1
+                exit 0
+              }
+            }
 
-              next unless in_runtime
-
-              if line.include?(device)
-                found = true
-                break
-              end
-            end
-
-            exit(found ? 0 : 1)
+            END {
+              exit(found ? 0 : 1)
+            }
           ' <<< "${devices}"; then
             echo "::error::Required simulator device ${SIMULATOR_DEVICE} is not available for iOS ${IOS_VERSION}."
             exit 1
