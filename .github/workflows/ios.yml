@@ -3,8 +3,20 @@ name: iOS CI (YagyoPlayer)
 on:
   push:
     branches: ["main"]
+    paths:
+      - ".github/workflows/ios.yml"
+      - "project.yml"
+      - "YagyoPlayer/**"
+      - "YagyoPlayerTests/**"
+      - "YagyoPlayer.xcodeproj/**"
   pull_request:
     branches: ["main"]
+    paths:
+      - ".github/workflows/ios.yml"
+      - "project.yml"
+      - "YagyoPlayer/**"
+      - "YagyoPlayerTests/**"
+      - "YagyoPlayer.xcodeproj/**"
 
 env:
   DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
@@ -32,6 +44,7 @@ jobs:
           set -euo pipefail
           xcodebuild -version
           xcode-select -p
+          echo "Expected developer dir: ${DEVELOPER_DIR}"
 
       - name: Preflight SDK and simulator runtime
         id: preflight
@@ -39,22 +52,44 @@ jobs:
         run: |
           set -euo pipefail
           xcodebuild -showsdks
-          runtimes="$(xcrun simctl list runtimes)"
+          runtimes="$(xcrun simctl list runtimes available)"
           devices="$(xcrun simctl list devices available)"
           echo "${runtimes}"
           echo "${devices}"
 
-          if ! grep -Eq "iOS ${IOS_VERSION}([.[:space:]]|$)" <<< "${runtimes}"; then
-            echo "::error::Required iOS simulator runtime ${IOS_VERSION} is not installed."
+          # IOS_VERSION is a preference, not a hard pin: runner images rotate
+          # point releases (e.g. 26.0 -> 26.0.1) faster than this file changes,
+          # and xcodebuild only matches installed runtimes exactly. Resolve to
+          # the newest installed runtime matching IOS_VERSION as a version
+          # prefix, falling back to the newest installed iOS runtime.
+          resolved="$(sed -nE '/unavailable/d; s/^iOS ([0-9][0-9.]*).*/\1/p' <<< "${runtimes}" | sort -V | awk -v want="${IOS_VERSION}" '
+            { latest = $0 }
+            index($0 ".", want ".") == 1 { best = $0 }
+            END {
+              if (best != "") { print best }
+              else if (latest != "") { print latest }
+            }
+          ')"
+
+          if [[ -z "${resolved}" ]]; then
+            echo "::error::No iOS simulator runtime is installed."
             exit 1
           fi
 
-          if ! awk -v runtime="iOS ${IOS_VERSION}" -v device="${SIMULATOR_DEVICE}" '
+          if [[ "${resolved}" != "${IOS_VERSION}" ]]; then
+            echo "::warning::iOS ${IOS_VERSION} simulator runtime is not installed; using iOS ${resolved} instead."
+          fi
+
+          # Address the device by UDID rather than name+OS: simctl reports the
+          # runtime's marketing name (e.g. "iOS 26.0" for the 26.0.1 runtime)
+          # while xcodebuild's OS= specifier matches the product version
+          # (26.0.1), so version strings cannot be passed through reliably.
+          udid="$(awk -v runtime="iOS ${resolved}" -v device="${SIMULATOR_DEVICE}" '
             /^-- / {
               header = $0
               sub(/^-- /, "", header)
               sub(/ --$/, "", header)
-              in_runtime = index(header, runtime) == 1
+              in_runtime = (header == runtime)
               next
             }
 
@@ -62,20 +97,22 @@ jobs:
               line = $0
               sub(/^[[:space:]]+/, "", line)
               if (index(line, device " (") == 1) {
-                found = 1
-                exit 0
+                rest = substr(line, length(device) + 2)
+                if (match(rest, /\([0-9A-Fa-f][0-9A-Fa-f-]*\)/)) {
+                  print substr(rest, RSTART + 1, RLENGTH - 2)
+                  exit 0
+                }
               }
             }
+          ' <<< "${devices}")"
 
-            END {
-              exit(found ? 0 : 1)
-            }
-          ' <<< "${devices}"; then
-            echo "::error::Required simulator device ${SIMULATOR_DEVICE} is not available for iOS ${IOS_VERSION}."
+          if [[ -z "${udid}" ]]; then
+            echo "::error::Required simulator device ${SIMULATOR_DEVICE} is not available for iOS ${resolved}."
             exit 1
           fi
 
-          destination="platform=${PLATFORM},name=${SIMULATOR_DEVICE},OS=${IOS_VERSION}"
+          echo "Resolved ${SIMULATOR_DEVICE} (iOS ${resolved}) to UDID ${udid}"
+          destination="platform=${PLATFORM},id=${udid}"
           echo "destination=${destination}" >> "$GITHUB_OUTPUT"
           echo "Using destination: ${destination}"
 
