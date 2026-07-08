@@ -8,13 +8,32 @@ struct AudioTrack: Identifiable, Codable, Hashable, Sendable {
     var importedAt: Date
     var duration: TimeInterval?
 
+    /// SHA-256(hex)。取込時に計算し、重複検出・バージョン束・A/B比較の土台になる。
+    var contentHash: String?
+
+    // MARK: 住み着きの統計(§4.3)— すべて optional で library.json 後方互換
+
+    /// 再生イベント(半分以上の再生または完走)の累計回数。
+    var playCount: Int?
+    /// 最後に再生イベントが記録された日時。
+    var lastPlayedAt: Date?
+    /// 聴いた時間帯の記録。キーは "0"〜"23"(時)、値はその時間帯の再生イベント数。
+    var playHourCounts: [String: Int]?
+    /// ユーザーのメモ。
+    var notes: String?
+
     init(
         id: UUID = UUID(),
         title: String,
         originalFilename: String,
         storedFilename: String,
         importedAt: Date = Date(),
-        duration: TimeInterval? = nil
+        duration: TimeInterval? = nil,
+        contentHash: String? = nil,
+        playCount: Int? = nil,
+        lastPlayedAt: Date? = nil,
+        playHourCounts: [String: Int]? = nil,
+        notes: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -22,6 +41,21 @@ struct AudioTrack: Identifiable, Codable, Hashable, Sendable {
         self.storedFilename = storedFilename
         self.importedAt = importedAt
         self.duration = duration
+        self.contentHash = contentHash
+        self.playCount = playCount
+        self.lastPlayedAt = lastPlayedAt
+        self.playHourCounts = playHourCounts
+        self.notes = notes
+    }
+
+    /// 再生イベントを 1 回分記録する。
+    mutating func recordPlayback(at date: Date = Date(), calendar: Calendar = .current) {
+        playCount = (playCount ?? 0) + 1
+        lastPlayedAt = date
+        let hourKey = String(calendar.component(.hour, from: date))
+        var counts = playHourCounts ?? [:]
+        counts[hourKey, default: 0] += 1
+        playHourCounts = counts
     }
 
     var durationText: String {

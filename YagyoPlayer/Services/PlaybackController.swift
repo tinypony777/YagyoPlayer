@@ -28,6 +28,8 @@ final class PlaybackController: ObservableObject {
     private var meterTimer: Timer?
     private var remoteCommandsInstalled = false
     private weak var remoteLibrary: AudioLibraryStore?
+    /// 現在のロードで再生イベント(半分以上の再生または完走)を記録済みか。
+    private var hasRecordedPlaybackEvent = false
 
     var progress: Double {
         guard duration > 0 else { return 0 }
@@ -96,6 +98,7 @@ final class PlaybackController: ObservableObject {
         autoplay: Bool = false,
         context: PlaybackContext? = nil
     ) {
+        remoteLibrary = library
         if let context {
             switch context {
             case .library:
@@ -117,6 +120,7 @@ final class PlaybackController: ObservableObject {
             currentTrack = track
             duration = player.duration
             elapsedTime = 0
+            hasRecordedPlaybackEvent = false
             library.select(track)
             updateNowPlaying()
 
@@ -247,13 +251,24 @@ final class PlaybackController: ObservableObject {
 
     private func tick() {
         syncProgress()
+        recordPlaybackEventIfNeeded()
         if let audioPlayer, !audioPlayer.isPlaying, isPlaying {
             if elapsedTime >= max(duration - 0.25, 0) {
+                recordPlaybackEventIfNeeded(didFinish: true)
                 playNext()
             } else {
                 pause()
             }
         }
+    }
+
+    /// 再生イベント(半分以上の再生または完走)を、ロードごとに一度だけ統計へ記録する。
+    private func recordPlaybackEventIfNeeded(didFinish: Bool = false) {
+        guard !hasRecordedPlaybackEvent, let currentTrack else { return }
+        let passedHalf = duration > 0 && elapsedTime >= duration / 2
+        guard didFinish || passedHalf else { return }
+        hasRecordedPlaybackEvent = true
+        remoteLibrary?.recordPlayback(for: currentTrack.id)
     }
 
     private func syncProgress() {
