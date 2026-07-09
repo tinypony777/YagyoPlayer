@@ -23,6 +23,9 @@ final class PlaybackController: ObservableObject {
     /// いま鳴っている音の大きさ(0...1)。夜行絵巻の妖怪や提灯がこれに反応する。
     @Published private(set) var audioLevel: Double = 0
 
+    /// 読み込み・再生に失敗したとき、無言で止まらずユーザーに伝えるためのメッセージ。
+    @Published var playbackErrorMessage: String?
+
     private var audioPlayer: AVAudioPlayer?
     private var timer: Timer?
     private var meterTimer: Timer?
@@ -30,6 +33,24 @@ final class PlaybackController: ObservableObject {
     private weak var remoteLibrary: AudioLibraryStore?
     /// 現在のロードで再生イベント(半分以上の再生または完走)を記録済みか。
     private var hasRecordedPlaybackEvent = false
+
+    /// 割り込み(電話・Siri)開始時点で再生中だったか。割り込み終了時、これが true の場合のみ再開する。
+    private var wasPlayingBeforeInterruption = false
+    private var interruptionObserverToken: NSObjectProtocol?
+    private var routeChangeObserverToken: NSObjectProtocol?
+
+    init() {
+        installAudioSessionObservers()
+    }
+
+    deinit {
+        if let interruptionObserverToken {
+            NotificationCenter.default.removeObserver(interruptionObserverToken)
+        }
+        if let routeChangeObserverToken {
+            NotificationCenter.default.removeObserver(routeChangeObserverToken)
+        }
+    }
 
     var progress: Double {
         guard duration > 0 else { return 0 }
@@ -42,6 +63,69 @@ final class PlaybackController: ObservableObject {
 
     var durationText: String {
         Self.timeText(duration)
+    }
+
+    /// AVAudioSession の割り込み・ルート変更を監視する。トラック未読込の時点から効くよう init で登録する。
+    private func installAudioSessionObservers() {
+        let center = NotificationCenter.default
+
+        interruptionObserverToken = center.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] notification in
+            Task { @MainActor in
+                self?.handleInterruption(notification)
+            }
+        }
+
+        routeChangeObserverToken = center.addObserver(
+            forName: AVAudioSession.routeChangeNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] notification in
+            Task { @MainActor in
+                self?.handleRouteChange(notification)
+            }
+        }
+    }
+
+    /// 電話・Siri等の割り込みから復帰する。中断前に再生中だった場合のみ再開する。
+    private func handleInterruption(_ notification: Notification) {
+        guard let info = notification.userInfo,
+              let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+
+        switch type {
+        case .began:
+            wasPlayingBeforeInterruption = isPlaying
+            pause()
+
+        case .ended:
+            defer { wasPlayingBeforeInterruption = false }
+            guard wasPlayingBeforeInterruption else { return }
+            let optionsValue = info[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+            let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+            guard options.contains(.shouldResume) else { return }
+            do {
+                try AVAudioSession.sharedInstance().setActive(true)
+                play()
+            } catch {
+                playbackErrorMessage = "Playback could not resume after the interruption: \(error.localizedDescription)"
+            }
+
+        @unknown default:
+            break
+        }
+    }
+
+    /// イヤホン・Bluetoothが外れたら一時停止する。スピーカーで自動継続しない — 音を意図せず外に出さないための約束。
+    private func handleRouteChange(_ notification: Notification) {
+        guard let info = notification.userInfo,
+              let reasonValue = info[AVAudioSessionRouteChangeReasonKey] as? UInt,
+              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue),
+              reason == .oldDeviceUnavailable else { return }
+        pause()
     }
 
     func installRemoteCommands(library: AudioLibraryStore) {
@@ -121,6 +205,7 @@ final class PlaybackController: ObservableObject {
             duration = player.duration
             elapsedTime = 0
             hasRecordedPlaybackEvent = false
+            playbackErrorMessage = nil
             library.select(track)
             updateNowPlaying()
 
@@ -131,6 +216,7 @@ final class PlaybackController: ObservableObject {
             }
         } catch {
             pause()
+            playbackErrorMessage = "\(track.title) could not be played: \(error.localizedDescription)"
         }
     }
 
@@ -140,7 +226,11 @@ final class PlaybackController: ObservableObject {
 
     func play() {
         guard let audioPlayer else { return }
-        audioPlayer.play()
+        guard audioPlayer.play() else {
+            playbackErrorMessage = "Playback could not start."
+            return
+        }
+        playbackErrorMessage = nil
         isPlaying = true
         startTimer()
         startMetering()

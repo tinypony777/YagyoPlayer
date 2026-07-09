@@ -188,7 +188,12 @@ final class AudioLibraryStore: ObservableObject {
         }
 
         try? fileManager.removeItem(at: fileURL(for: track))
-        try? save()
+        do {
+            try save()
+            persistenceErrorMessage = nil
+        } catch {
+            persistenceErrorMessage = "Library could not be saved after delete: \(error.localizedDescription)"
+        }
     }
 
     func select(_ track: AudioTrack) {

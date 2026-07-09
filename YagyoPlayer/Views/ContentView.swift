@@ -56,8 +56,13 @@ struct ContentView: View {
                     switch result {
                     case .success(let urls):
                         await library.importAudioFiles(from: urls)
-                        if case .finished(let summary) = library.importState {
+                        switch library.importState {
+                        case .finished(let summary):
                             importSummary = summary
+                        case .failed(let message):
+                            importErrorMessage = message
+                        case .idle, .importing:
+                            break
                         }
                         if let selectedTrack = library.selectedTrack {
                             player.load(selectedTrack, from: library, autoplay: false, context: .library)
@@ -81,6 +86,11 @@ struct ContentView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(library.persistenceErrorMessage ?? "")
+            }
+            .alert("再生できません", isPresented: playbackErrorBinding) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(player.playbackErrorMessage ?? "")
             }
             .onChange(of: router.pendingAction) { _, action in
                 guard action == .continueLastTrack else { return }
@@ -116,6 +126,16 @@ struct ContentView: View {
         } set: { isPresented in
             if !isPresented {
                 library.persistenceErrorMessage = nil
+            }
+        }
+    }
+
+    private var playbackErrorBinding: Binding<Bool> {
+        Binding {
+            player.playbackErrorMessage != nil
+        } set: { isPresented in
+            if !isPresented {
+                player.playbackErrorMessage = nil
             }
         }
     }
