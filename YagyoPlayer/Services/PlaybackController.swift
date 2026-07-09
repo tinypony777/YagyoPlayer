@@ -27,8 +27,11 @@ final class PlaybackController: ObservableObject {
     @Published var playbackErrorMessage: String?
 
     private var audioPlayer: AVAudioPlayer?
-    private var timer: Timer?
-    private var meterTimer: Timer?
+    // deinit は nonisolated かつ Timer/観測トークンは Sendable ではないため、
+    // 後始末を安全に行うために nonisolated(unsafe) にする(実際のアクセスは常に MainActor 上、
+    // deinit 時点では他に参照が無く競合しない)。
+    private nonisolated(unsafe) var timer: Timer?
+    private nonisolated(unsafe) var meterTimer: Timer?
     private var remoteCommandsInstalled = false
     private weak var remoteLibrary: AudioLibraryStore?
     /// 現在のロードで再生イベント(半分以上の再生または完走)を記録済みか。
@@ -38,7 +41,7 @@ final class PlaybackController: ObservableObject {
     private var wasPlayingBeforeInterruption = false
     /// 入れ子の割り込み(通話中にさらに別の割り込みが重なる等)に対応する深さ。0に戻ったときだけ再開を検討する。
     private var interruptionDepth = 0
-    private var notificationObserverTokens: [NSObjectProtocol] = []
+    private nonisolated(unsafe) var notificationObserverTokens: [NSObjectProtocol] = []
 
     init() {
         installAudioSessionObservers()
@@ -69,13 +72,17 @@ final class PlaybackController: ObservableObject {
     private func installAudioSessionObservers() {
         let center = NotificationCenter.default
 
+        // Notification 自体は Sendable を保証できない(userInfo が [AnyHashable: Any])ため、
+        // アクター境界を越える前にコールバック側で Sendable な値へ分解しておく。
         notificationObserverTokens.append(center.addObserver(
             forName: AVAudioSession.interruptionNotification,
             object: nil,
             queue: nil
         ) { [weak self] notification in
+            let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+            let optionsValue = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt
             Task { @MainActor in
-                self?.handleInterruption(notification)
+                self?.handleInterruption(typeValue: typeValue, optionsValue: optionsValue)
             }
         })
 
@@ -84,17 +91,16 @@ final class PlaybackController: ObservableObject {
             object: nil,
             queue: nil
         ) { [weak self] notification in
+            let reasonValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
             Task { @MainActor in
-                self?.handleRouteChange(notification)
+                self?.handleRouteChange(reasonValue: reasonValue)
             }
         })
     }
 
     /// 電話・Siri等の割り込みから復帰する。中断前に再生中だった場合のみ、かつ入れ子の割り込みがすべて終わったときだけ再開する。
-    private func handleInterruption(_ notification: Notification) {
-        guard let info = notification.userInfo,
-              let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
-              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+    private func handleInterruption(typeValue: UInt?, optionsValue: UInt?) {
+        guard let typeValue, let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
 
         switch type {
         case .began:
@@ -109,8 +115,7 @@ final class PlaybackController: ObservableObject {
             guard interruptionDepth == 0 else { return }
             defer { wasPlayingBeforeInterruption = false }
             guard wasPlayingBeforeInterruption else { return }
-            let optionsValue = info[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
-            let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+            let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue ?? 0)
             guard options.contains(.shouldResume) else { return }
             do {
                 try AVAudioSession.sharedInstance().setActive(true)
@@ -126,9 +131,8 @@ final class PlaybackController: ObservableObject {
 
     /// イヤホン・Bluetoothが外れたら一時停止する。スピーカーで自動継続しない — 音を意図せず外に出さないための約束。
     /// 割り込み中に出力先を失った場合は、割り込みが終わってもスピーカーへ自動再開しない。
-    private func handleRouteChange(_ notification: Notification) {
-        guard let info = notification.userInfo,
-              let reasonValue = info[AVAudioSessionRouteChangeReasonKey] as? UInt,
+    private func handleRouteChange(reasonValue: UInt?) {
+        guard let reasonValue,
               let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue),
               reason == .oldDeviceUnavailable else { return }
         wasPlayingBeforeInterruption = false
