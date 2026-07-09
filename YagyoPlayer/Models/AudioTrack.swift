@@ -8,6 +8,11 @@ struct AudioTrack: Identifiable, Codable, Hashable, Sendable {
     var importedAt: Date
     var duration: TimeInterval?
 
+    /// ユーザーが編集できる任意のアーティスト名。
+    var artist: String?
+    /// artwork の参照名。画像ファイルの実体導入は後続で扱い、ここでは library.json に残るメタデータとして保持する。
+    var artworkFilename: String?
+
     /// SHA-256(hex)。取込時に計算し、重複検出・バージョン束・A/B比較の土台になる。
     var contentHash: String?
 
@@ -29,6 +34,8 @@ struct AudioTrack: Identifiable, Codable, Hashable, Sendable {
         storedFilename: String,
         importedAt: Date = Date(),
         duration: TimeInterval? = nil,
+        artist: String? = nil,
+        artworkFilename: String? = nil,
         contentHash: String? = nil,
         playCount: Int? = nil,
         lastPlayedAt: Date? = nil,
@@ -41,6 +48,8 @@ struct AudioTrack: Identifiable, Codable, Hashable, Sendable {
         self.storedFilename = storedFilename
         self.importedAt = importedAt
         self.duration = duration
+        self.artist = artist
+        self.artworkFilename = artworkFilename
         self.contentHash = contentHash
         self.playCount = playCount
         self.lastPlayedAt = lastPlayedAt
@@ -71,5 +80,12 @@ struct AudioTrack: Identifiable, Codable, Hashable, Sendable {
 
     var importedDateText: String {
         importedAt.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    var searchIndexText: String {
+        [title, artist, originalFilename, storedFilename, artworkFilename, notes]
+            .compactMap { $0 }
+            .joined(separator: "\n")
+            .lowercased()
     }
 }
