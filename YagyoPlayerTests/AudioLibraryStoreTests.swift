@@ -270,10 +270,17 @@ final class AudioLibraryStoreTests: XCTestCase {
         )
         XCTAssertNotNil(store.persistenceErrorMessage)
 
-        // playlists.json はまだ書き換えていないはずなので、再読込しても所属が残っている
-        let reloaded = makeStore()
-        reloaded.load()
-        XCTAssertTrue(reloaded.playlists.first?.contains(track.id) ?? false)
+        // playlists.json はまだ書き換えていないはずなので、永続化済みの所属が残っている。
+        // このテストでは library.json 自体を壊しているため、store.load() ではなく
+        // playlists.json を直接確認する。
+        let playlistsURL = temporaryDirectory
+            .appending(path: "YagyoLibrary", directoryHint: .isDirectory)
+            .appending(path: "playlists.json", directoryHint: .notDirectory)
+        let playlistData = try Data(contentsOf: playlistsURL)
+        let playlistDecoder = JSONDecoder()
+        playlistDecoder.dateDecodingStrategy = .iso8601
+        let persistedPlaylists = try playlistDecoder.decode([Playlist].self, from: playlistData)
+        XCTAssertTrue(persistedPlaylists.first?.contains(track.id) ?? false)
     }
 
     func testDecodingLegacyManifestWithoutStatsFields() throws {
