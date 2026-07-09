@@ -166,14 +166,17 @@ jobs:
 
       - name: Test without building
         shell: bash
+        # timeout-minutes bounds a hung test run so it fails fast instead of idling for hours;
+        # xcpretty is skipped here (raw xcodebuild output only) so a hang's log tail names the
+        # exact "started." test case instead of showing nothing until a buffered flush.
+        timeout-minutes: 15
         run: |
           set -euo pipefail
           xcodebuild test-without-building \
             -scheme "${{ steps.detect.outputs.scheme }}" \
             "${{ steps.detect.outputs.container_flag }}" "${{ steps.detect.outputs.container_path }}" \
             -destination "${{ steps.preflight.outputs.destination }}" \
-            -resultBundlePath TestResults.xcresult \
-            | xcpretty
+            -resultBundlePath TestResults.xcresult
 
       - name: Upload xcresult (on failure)
         if: failure()
