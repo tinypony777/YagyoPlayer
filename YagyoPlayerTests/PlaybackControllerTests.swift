@@ -1,4 +1,5 @@
 import AVFoundation
+import MediaPlayer
 import XCTest
 @testable import YagyoPlayer
 
@@ -13,6 +14,7 @@ final class PlaybackControllerTests: XCTestCase {
     }
 
     override func tearDown() async throws {
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
         try? FileManager.default.removeItem(at: temporaryDirectory)
     }
 
@@ -69,6 +71,27 @@ final class PlaybackControllerTests: XCTestCase {
 
         XCTAssertFalse(player.isPlaying)
         XCTAssertNotNil(player.playbackErrorMessage)
+    }
+
+    func testRefreshingCurrentTrackMetadataUpdatesLoadedTrackAndNowPlayingInfo() async throws {
+        let store = makeStore()
+        store.load()
+        let track = try await importPlayableTrack(into: store)
+
+        let player = PlaybackController()
+        player.load(track, from: store)
+
+        var updatedTrack = track
+        updatedTrack.title = "月下のデモ"
+        updatedTrack.artist = "Ryusei"
+
+        player.refreshCurrentTrackMetadata(updatedTrack)
+
+        XCTAssertEqual(player.currentTrack?.title, "月下のデモ")
+        XCTAssertEqual(player.currentTrack?.artist, "Ryusei")
+        let nowPlayingInfo = try XCTUnwrap(MPNowPlayingInfoCenter.default().nowPlayingInfo)
+        XCTAssertEqual(nowPlayingInfo[MPMediaItemPropertyTitle] as? String, "月下のデモ")
+        XCTAssertEqual(nowPlayingInfo[MPMediaItemPropertyArtist] as? String, "Ryusei")
     }
 
     // MARK: - 割り込み(電話・Siri)からの復帰は、中断前に再生中だった場合のみ

@@ -684,6 +684,7 @@ private struct TrackRow: View {
 
 private struct TrackMetadataEditor: View {
     @EnvironmentObject private var library: AudioLibraryStore
+    @EnvironmentObject private var player: PlaybackController
     @Environment(\.dismiss) private var dismiss
 
     var track: AudioTrack
@@ -738,6 +739,9 @@ private struct TrackMetadataEditor: View {
                             artworkFilename: artworkFilename,
                             notes: notes
                         )
+                        if let updatedTrack = library.tracks.first(where: { $0.id == track.id }) {
+                            player.refreshCurrentTrackMetadata(updatedTrack)
+                        }
                         dismiss()
                     }
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
