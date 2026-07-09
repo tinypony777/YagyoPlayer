@@ -417,10 +417,37 @@ final class AudioLibraryStore: ObservableObject {
     private func audioDuration(for url: URL) async -> TimeInterval? {
         let asset = AVURLAsset(url: url)
 
+        // asset.load(.duration) does not respond to cooperative cancellation, so we run it
+        // in an unstructured Task and call asset.cancelLoading() explicitly on timeout.
+        // withTaskCancellationHandler ensures the cancellation handler runs synchronously
+        // when the group is cancelled, allowing the group to exit promptly.
+        let loadTask = Task<TimeInterval?, Never> {
+            do {
+                let duration = try await asset.load(.duration)
+                let seconds = CMTimeGetSeconds(duration)
+                return seconds.isFinite ? seconds : nil
+            } catch {
+                return nil
+            }
+        }
+
         do {
-            let duration = try await asset.load(.duration)
-            let seconds = CMTimeGetSeconds(duration)
-            return seconds.isFinite ? seconds : nil
+            return try await withThrowingTaskGroup(of: TimeInterval?.self) { group in
+                group.addTask {
+                    await withTaskCancellationHandler {
+                        await loadTask.value
+                    } onCancel: {
+                        loadTask.cancel()
+                        asset.cancelLoading()
+                    }
+                }
+                group.addTask {
+                    try await Task.sleep(for: .seconds(10))
+                    throw CancellationError()
+                }
+                defer { group.cancelAll() }
+                return try await group.next() ?? nil
+            }
         } catch {
             return nil
         }
