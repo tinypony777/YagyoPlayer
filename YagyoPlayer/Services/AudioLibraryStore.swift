@@ -312,8 +312,10 @@ final class AudioLibraryStore: ObservableObject {
         playlistID: Playlist.ID? = nil
     ) -> [AudioTrack] {
         let scopedTracks: [AudioTrack]
-        if let playlistID,
-           let playlist = playlists.first(where: { $0.id == playlistID }) {
+        if let playlistID {
+            guard let playlist = playlists.first(where: { $0.id == playlistID }) else {
+                return []
+            }
             scopedTracks = tracks(in: playlist)
         } else {
             scopedTracks = tracks

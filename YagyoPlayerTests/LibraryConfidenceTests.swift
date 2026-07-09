@@ -152,6 +152,7 @@ final class LibraryConfidenceTests: XCTestCase {
             store.filteredTracks(sort: .playlistOrder, playlistID: playlist.id).map(\.title),
             ["Short Take", "Long Take"]
         )
+        XCTAssertTrue(store.filteredTracks(playlistID: Playlist.ID()).isEmpty)
     }
 
     func testDuplicateTrackGroupsExposeLegacyDuplicates() throws {

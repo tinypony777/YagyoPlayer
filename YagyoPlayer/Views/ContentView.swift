@@ -407,6 +407,13 @@ private struct LibrarySection: View {
                 sort = .newest
             }
         }
+        .onChange(of: library.playlists.map(\.id)) { _, playlistIDs in
+            guard let selectedPlaylistID, !playlistIDs.contains(selectedPlaylistID) else { return }
+            self.selectedPlaylistID = nil
+            if sort == .playlistOrder {
+                sort = .newest
+            }
+        }
     }
 
     @ViewBuilder
