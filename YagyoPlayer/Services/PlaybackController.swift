@@ -304,6 +304,12 @@ final class PlaybackController: ObservableObject {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 
+    func refreshCurrentTrackMetadata(_ track: AudioTrack) {
+        guard currentTrack?.id == track.id else { return }
+        currentTrack = track
+        updateNowPlaying()
+    }
+
     private func configureAudioSession() throws {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playback, mode: .default)
@@ -404,9 +410,16 @@ final class PlaybackController: ObservableObject {
             return
         }
 
+        let nowPlayingArtist: String
+        if let artist = currentTrack.artist?.trimmingCharacters(in: .whitespacesAndNewlines), !artist.isEmpty {
+            nowPlayingArtist = artist
+        } else {
+            nowPlayingArtist = "Yagyo Player"
+        }
+
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: currentTrack.title,
-            MPMediaItemPropertyArtist: "Yagyo Player",
+            MPMediaItemPropertyArtist: nowPlayingArtist,
             MPMediaItemPropertyPlaybackDuration: duration,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: elapsedTime,
             MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,

@@ -21,6 +21,26 @@ struct ImportSummary: Equatable, Sendable {
     }
 }
 
+/// ライブラリ一覧の並び替え。妖怪起点の並び替えは Product Direction §6 に従い持たない。
+enum LibrarySort: String, CaseIterable, Identifiable, Sendable {
+    case newest = "追加日の新しい順"
+    case oldest = "追加日の古い順"
+    case titleAscending = "タイトル A-Z"
+    case titleDescending = "タイトル Z-A"
+    case durationAscending = "長さの短い順"
+    case durationDescending = "長さの長い順"
+    case playlistOrder = "巻物の並び"
+
+    var id: String { rawValue }
+}
+
+/// 既存 manifest に残っている同一ハッシュの重複を UI に出すための読み取りモデル。
+struct DuplicateTrackGroup: Equatable, Identifiable, Sendable {
+    var id: String { contentHash }
+    let contentHash: String
+    let tracks: [AudioTrack]
+}
+
 @MainActor
 final class AudioLibraryStore: ObservableObject {
     enum ImportState: Equatable {
@@ -58,6 +78,27 @@ final class AudioLibraryStore: ObservableObject {
     var selectedTrack: AudioTrack? {
         guard let selectedTrackID else { return tracks.first }
         return tracks.first { $0.id == selectedTrackID } ?? tracks.first
+    }
+
+    /// import 時に弾けなかった legacy manifest の重複を利用者へ見せる。
+    var duplicateTrackGroups: [DuplicateTrackGroup] {
+        let groups = Dictionary(grouping: tracks.compactMap { track -> (String, AudioTrack)? in
+            guard let contentHash = track.contentHash, !contentHash.isEmpty else { return nil }
+            return (contentHash, track)
+        }, by: { $0.0 })
+
+        return groups.compactMap { contentHash, entries -> DuplicateTrackGroup? in
+            let duplicateTracks = entries.map { $0.1 }
+            guard duplicateTracks.count > 1 else { return nil }
+            return DuplicateTrackGroup(
+                contentHash: contentHash,
+                tracks: duplicateTracks.sorted { $0.importedAt < $1.importedAt }
+            )
+        }
+        .sorted { lhs, rhs in
+            (lhs.tracks.first?.title ?? "")
+                .localizedStandardCompare(rhs.tracks.first?.title ?? "") == .orderedAscending
+        }
     }
 
     func load() {
@@ -172,6 +213,37 @@ final class AudioLibraryStore: ObservableObject {
         }
     }
 
+    /// Step 2 — Library Confidence: title / artist / artwork / notes を編集して永続化する。
+    @discardableResult
+    func updateMetadata(
+        for trackID: AudioTrack.ID,
+        title: String,
+        artist: String?,
+        artworkFilename: String?,
+        notes: String?
+    ) -> Bool {
+        guard let index = tracks.firstIndex(where: { $0.id == trackID }) else { return false }
+
+        let previousTrack = tracks[index]
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return false }
+
+        tracks[index].title = trimmedTitle
+        tracks[index].artist = Self.nilIfBlank(artist)
+        tracks[index].artworkFilename = Self.nilIfBlank(artworkFilename)
+        tracks[index].notes = Self.nilIfBlank(notes)
+
+        do {
+            try save()
+            persistenceErrorMessage = nil
+            return true
+        } catch {
+            tracks[index] = previousTrack
+            persistenceErrorMessage = "Track metadata could not be saved: \(error.localizedDescription)"
+            return false
+        }
+    }
+
     func delete(_ track: AudioTrack) {
         let previousTracks = tracks
         let previousSelectedTrackID = selectedTrackID
@@ -231,6 +303,53 @@ final class AudioLibraryStore: ObservableObject {
 
     func mostRecentTrack() -> AudioTrack? {
         tracks.sorted { $0.importedAt > $1.importedAt }.first
+    }
+
+    /// 検索・スコープ・並び替えを一つの入口にまとめる。UI はここだけを読めばよい。
+    func filteredTracks(
+        searchText: String = "",
+        sort: LibrarySort = .newest,
+        playlistID: Playlist.ID? = nil
+    ) -> [AudioTrack] {
+        let scopedTracks: [AudioTrack]
+        if let playlistID {
+            guard let playlist = playlists.first(where: { $0.id == playlistID }) else {
+                return []
+            }
+            scopedTracks = tracks(in: playlist)
+        } else {
+            scopedTracks = tracks
+        }
+
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let filteredTracks = query.isEmpty
+            ? scopedTracks
+            : scopedTracks.filter { $0.searchIndexText.contains(query) }
+
+        switch sort {
+        case .newest:
+            return filteredTracks.sorted { $0.importedAt > $1.importedAt }
+        case .oldest:
+            return filteredTracks.sorted { $0.importedAt < $1.importedAt }
+        case .titleAscending:
+            return filteredTracks.sorted { Self.titleComesBefore($0, $1) }
+        case .titleDescending:
+            return filteredTracks.sorted { Self.titleComesBefore($1, $0) }
+        case .durationAscending:
+            return filteredTracks.sorted { lhs, rhs in
+                Self.durationSortValue(lhs, nilValue: .greatestFiniteMagnitude)
+                    < Self.durationSortValue(rhs, nilValue: .greatestFiniteMagnitude)
+            }
+        case .durationDescending:
+            return filteredTracks.sorted { lhs, rhs in
+                Self.durationSortValue(lhs, nilValue: -.greatestFiniteMagnitude)
+                    > Self.durationSortValue(rhs, nilValue: -.greatestFiniteMagnitude)
+            }
+        case .playlistOrder:
+            return playlistID == nil
+                ? filteredTracks.sorted { $0.importedAt > $1.importedAt }
+                : filteredTracks
+        }
     }
 
     // MARK: - Playlists
@@ -457,6 +576,27 @@ final class AudioLibraryStore: ObservableObject {
 
         let nextIndex = (index + offset + queue.count) % queue.count
         return queue[nextIndex]
+    }
+
+    private static func nilIfBlank(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private static func titleComesBefore(_ lhs: AudioTrack, _ rhs: AudioTrack) -> Bool {
+        let result = lhs.title.localizedStandardCompare(rhs.title)
+        if result == .orderedSame {
+            return lhs.importedAt > rhs.importedAt
+        }
+        return result == .orderedAscending
+    }
+
+    private static func durationSortValue(_ track: AudioTrack, nilValue: TimeInterval) -> TimeInterval {
+        guard let duration = track.duration, duration.isFinite, duration >= 0 else {
+            return nilValue
+        }
+        return duration
     }
 }
 

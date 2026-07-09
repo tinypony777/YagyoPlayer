@@ -8,6 +8,7 @@ Yagyo Player is a SwiftUI audio player for iOS 26 and later. It takes the dark f
 - Copies selected files into the app's Documents/YagyoLibrary folder.
 - Persists a small JSON library manifest.
 - Lets you organize tracks into playlists (巻物) — create, rename, delete, reorder, and play them; playlists persist in `playlists.json`.
+- Helps you trust a growing library with duplicate import feedback, search, playlist-scoped sorting, and editable track metadata.
 - Plays local files with AVFoundation.
 - Publishes Now Playing metadata and remote play/pause/skip controls through MediaPlayer.
 - Exposes small App Shortcuts for opening the player or jumping back to now playing.

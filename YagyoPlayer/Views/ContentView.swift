@@ -239,6 +239,13 @@ private struct ArtworkStage: View {
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
 
+                if let artist = track?.artist, !artist.isEmpty {
+                    Text(artist)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(YagyoColor.kitsunebi)
+                        .lineLimit(1)
+                }
+
                 Text(track?.originalFilename ?? "Import a track to start the procession")
                     .font(.footnote)
                     .foregroundStyle(YagyoColor.dim)
@@ -341,7 +348,15 @@ private struct LibrarySection: View {
 
     var importAction: () -> Void
 
+    @State private var searchText = ""
+    @State private var sort = LibrarySort.newest
+    @State private var selectedPlaylistID: Playlist.ID?
+    @State private var editingTrack: AudioTrack?
+
     var body: some View {
+        let visibleTracks = library.filteredTracks(searchText: searchText, sort: sort, playlistID: selectedPlaylistID)
+        let duplicateTrackGroups = library.duplicateTrackGroups
+
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
@@ -364,17 +379,201 @@ private struct LibrarySection: View {
                 .accessibilityLabel("Import audio")
             }
 
+            libraryFeedback(duplicateTrackGroups: duplicateTrackGroups)
+            libraryControls(visibleCount: visibleTracks.count)
+
             if library.tracks.isEmpty {
                 EmptyLibraryView(importAction: importAction)
+            } else if visibleTracks.isEmpty {
+                EmptyFilteredLibraryView(clearFilters: clearFilters)
             } else {
                 LazyVStack(spacing: 8) {
-                    ForEach(library.tracks) { track in
-                        TrackRow(track: track)
+                    ForEach(visibleTracks) { track in
+                        TrackRow(
+                            track: track,
+                            playbackContext: playbackContext,
+                            editAction: { editingTrack = track }
+                        )
                     }
                 }
             }
         }
         .ritualPanel(radius: 24, padding: 16, tint: YagyoColor.shu.opacity(0.08))
+        .sheet(item: $editingTrack) { track in
+            TrackMetadataEditor(track: track)
+        }
+        .onChange(of: selectedPlaylistID) { _, playlistID in
+            if playlistID == nil, sort == .playlistOrder {
+                sort = .newest
+            }
+        }
+        .onChange(of: library.playlists.map(\.id)) { _, playlistIDs in
+            guard let selectedPlaylistID, !playlistIDs.contains(selectedPlaylistID) else { return }
+            self.selectedPlaylistID = nil
+            if sort == .playlistOrder {
+                sort = .newest
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func libraryFeedback(duplicateTrackGroups: [DuplicateTrackGroup]) -> some View {
+        switch library.importState {
+        case .importing(let count):
+            LibraryStatusBanner(
+                icon: "square.and.arrow.down",
+                title: "取込中",
+                message: "\(count) 件の音源を行列へ納めています。"
+            )
+        case .finished(let summary) where summary.hasIssues:
+            LibraryStatusBanner(
+                icon: "exclamationmark.octagon",
+                title: "取込結果を確認",
+                message: importFeedbackMessage(summary)
+            )
+        case .failed(let message):
+            LibraryStatusBanner(
+                icon: "exclamationmark.triangle.fill",
+                title: "ライブラリを読み込めません",
+                message: message
+            )
+        case .idle, .finished:
+            EmptyView()
+        }
+
+        if !duplicateTrackGroups.isEmpty {
+            LibraryStatusBanner(
+                icon: "doc.on.doc.fill",
+                title: "重複候補があります",
+                message: duplicateFeedbackMessage(duplicateTrackGroups)
+            )
+        }
+
+        if library.tracks.count >= 24 {
+            LibraryStatusBanner(
+                icon: "magnifyingglass",
+                title: "長い行列を整理できます",
+                message: "検索、巻物スコープ、追加日・タイトル・長さ・巻物順の並び替えで探せます。"
+            )
+        }
+    }
+
+    private func libraryControls(visibleCount: Int) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(YagyoColor.dim)
+                TextField("Search title, artist, file, notes", text: $searchText)
+                    .textInputAutocapitalization(.never)
+                    .disableAutocorrection(true)
+                    .foregroundStyle(YagyoColor.geppaku)
+            }
+            .font(.footnote)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 9)
+            .background(YagyoColor.yoiyami.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(YagyoColor.line.opacity(0.6), lineWidth: 1)
+            }
+
+            HStack(spacing: 10) {
+                Picker("Scope", selection: $selectedPlaylistID) {
+                    Text("行列すべて").tag(Playlist.ID?.none)
+                    ForEach(library.playlists) { playlist in
+                        Text(playlist.name).tag(Optional(playlist.id))
+                    }
+                }
+                .pickerStyle(.menu)
+
+                Picker("Sort", selection: $sort) {
+                    ForEach(availableSorts) { sort in
+                        Text(sort.rawValue).tag(sort)
+                    }
+                }
+                .pickerStyle(.menu)
+
+                Spacer()
+
+                Text("\(visibleCount) / \(library.tracks.count) 曲")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(YagyoColor.dim)
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(YagyoColor.chochin)
+        }
+    }
+
+    private var availableSorts: [LibrarySort] {
+        if selectedPlaylistID == nil {
+            return LibrarySort.allCases.filter { $0 != .playlistOrder }
+        }
+        return LibrarySort.allCases
+    }
+
+    private var playbackContext: PlaybackContext {
+        guard let selectedPlaylistID else { return .library }
+        return .playlist(selectedPlaylistID)
+    }
+
+    private func clearFilters() {
+        searchText = ""
+        selectedPlaylistID = nil
+        sort = .newest
+    }
+
+    private func importFeedbackMessage(_ summary: ImportSummary) -> String {
+        var parts: [String] = []
+        if summary.duplicates > 0 {
+            parts.append("重複見送り \(summary.duplicates) 件")
+        }
+        if !summary.failures.isEmpty {
+            parts.append("失敗 \(summary.failures.count) 件")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private func duplicateFeedbackMessage(_ groups: [DuplicateTrackGroup]) -> String {
+        let visibleGroups = groups.prefix(3).map { group in
+            group.tracks
+                .map { "\($0.title) (\($0.originalFilename))" }
+                .joined(separator: " / ")
+        }
+        var message = "同じ SHA-256 の音源が \(groups.count) 組あります: \(visibleGroups.joined(separator: " · "))"
+        if groups.count > visibleGroups.count {
+            message += " 他 \(groups.count - visibleGroups.count) 組"
+        }
+        return message
+    }
+}
+
+private struct LibraryStatusBanner: View {
+    var icon: String
+    var title: String
+    var message: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 9) {
+            Image(systemName: icon)
+                .foregroundStyle(YagyoColor.kitsunebi)
+                .frame(width: 18)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(YagyoColor.geppaku)
+                Text(message)
+                    .font(.caption2)
+                    .foregroundStyle(YagyoColor.dim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(YagyoColor.yoiyami.opacity(0.64), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(YagyoColor.line.opacity(0.55), lineWidth: 1)
+        }
     }
 }
 
@@ -383,6 +582,8 @@ private struct TrackRow: View {
     @EnvironmentObject private var player: PlaybackController
 
     var track: AudioTrack
+    var playbackContext: PlaybackContext = .library
+    var editAction: () -> Void
 
     @State private var isDeleteConfirmationPresented = false
 
@@ -394,7 +595,7 @@ private struct TrackRow: View {
         let sprite = YokaiGallery.sprite(for: track.id)
 
         Button {
-            player.load(track, from: library, autoplay: true, context: .library)
+            player.load(track, from: library, autoplay: true, context: playbackContext)
         } label: {
             HStack(spacing: 12) {
                 ZStack {
@@ -418,6 +619,14 @@ private struct TrackRow: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(YagyoColor.geppaku)
                         .lineLimit(1)
+
+                    if let artist = track.artist, !artist.isEmpty {
+                        Text(artist)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(YagyoColor.kitsunebi)
+                            .lineLimit(1)
+                    }
+
                     HStack(spacing: 4) {
                         Text(sprite.name)
                             .font(.system(size: 11, design: .serif))
@@ -425,6 +634,16 @@ private struct TrackRow: View {
                         Text("· \(track.durationText) · \(track.importedDateText)")
                             .font(.caption)
                             .foregroundStyle(YagyoColor.dim)
+                        if track.notes != nil {
+                            Image(systemName: "note.text")
+                                .font(.caption2)
+                                .foregroundStyle(YagyoColor.dim)
+                        }
+                        if track.artworkFilename != nil {
+                            Image(systemName: "photo")
+                                .font(.caption2)
+                                .foregroundStyle(YagyoColor.dim)
+                        }
                     }
                 }
 
@@ -443,6 +662,10 @@ private struct TrackRow: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
+            Button(action: editAction) {
+                Label("Edit metadata", systemImage: "pencil")
+            }
+
             if !library.playlists.isEmpty {
                 let playlistsContainingTrack = Set(
                     library.playlists
@@ -490,6 +713,76 @@ private struct TrackRow: View {
     }
 }
 
+private struct TrackMetadataEditor: View {
+    @EnvironmentObject private var library: AudioLibraryStore
+    @EnvironmentObject private var player: PlaybackController
+    @Environment(\.dismiss) private var dismiss
+
+    var track: AudioTrack
+
+    @State private var title: String
+    @State private var artist: String
+    @State private var artworkFilename: String
+    @State private var notes: String
+
+    init(track: AudioTrack) {
+        self.track = track
+        _title = State(initialValue: track.title)
+        _artist = State(initialValue: track.artist ?? "")
+        _artworkFilename = State(initialValue: track.artworkFilename ?? "")
+        _notes = State(initialValue: track.notes ?? "")
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("音源の札") {
+                    TextField("Title", text: $title)
+                    TextField("Artist", text: $artist)
+                    TextField("Artwork filename or reference", text: $artworkFilename)
+                        .textInputAutocapitalization(.never)
+                        .disableAutocorrection(true)
+                }
+
+                Section("Notes") {
+                    TextEditor(text: $notes)
+                        .frame(minHeight: 120)
+                }
+
+                Section("Stored copy") {
+                    Text(track.storedFilename)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("札を直す")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        let didSave = library.updateMetadata(
+                            for: track.id,
+                            title: title,
+                            artist: artist,
+                            artworkFilename: artworkFilename,
+                            notes: notes
+                        )
+                        if didSave,
+                           let updatedTrack = library.tracks.first(where: { $0.id == track.id }) {
+                            player.refreshCurrentTrackMetadata(updatedTrack)
+                            dismiss()
+                        }
+                    }
+                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+}
+
 private struct EmptyLibraryView: View {
     var importAction: () -> Void
 
@@ -533,6 +826,35 @@ private struct EmptyLibraryView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 18)
+    }
+}
+
+private struct EmptyFilteredLibraryView: View {
+    var clearFilters: () -> Void
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.title3)
+                .foregroundStyle(YagyoColor.dim)
+            Text("該当する音源が見つかりません")
+                .font(.system(.subheadline, design: .serif))
+                .tracking(2)
+                .foregroundStyle(YagyoColor.geppaku)
+            Text("検索語、巻物スコープ、並び替えを変えて探せます。")
+                .font(.footnote)
+                .foregroundStyle(YagyoColor.dim)
+                .multilineTextAlignment(.center)
+            Button("条件を戻す", action: clearFilters)
+                .font(.caption.weight(.semibold))
+                .buttonStyle(.plain)
+                .foregroundStyle(YagyoColor.chochin)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(YagyoColor.yoiyami, in: Capsule())
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
     }
 }
 
