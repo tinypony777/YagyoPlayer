@@ -15,6 +15,7 @@
 		6CF615A930DE9D845F3F57C3 /* PlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81C4BE9E308A1B398FCC749 /* PlaybackController.swift */; };
 		8D11AB6599E537AB3E159AEF /* AudioTrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25089FD8B7B3584C1950CD9B /* AudioTrackTests.swift */; };
 		9A1B2C3D4E5F60718293A4B5 /* AudioLibraryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F2E3D4C5B6A798081920A3B /* AudioLibraryStoreTests.swift */; };
+		3F8A2C1D9B4E5678AFC01234 /* PlaybackControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F8A2C1D9B4E5678AFC05678 /* PlaybackControllerTests.swift */; };
 		A703B0828489B95B8B9FB869 /* YagyoPlayerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25C215A13FBD2FF5FA19ECFB /* YagyoPlayerApp.swift */; };
 		B19BADCB0624C48620272C1D /* VisualComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B13D8A65B01B04F9BD642237 /* VisualComponents.swift */; };
 		B4C130EA40CACEAF7872EDED /* YagyoPlayerIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 025BE94FAA9D790E8896BF44 /* YagyoPlayerIntents.swift */; };
@@ -44,6 +45,7 @@
 		025BE94FAA9D790E8896BF44 /* YagyoPlayerIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YagyoPlayerIntents.swift; sourceTree = "<group>"; };
 		25089FD8B7B3584C1950CD9B /* AudioTrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTrackTests.swift; sourceTree = "<group>"; };
 		1F2E3D4C5B6A798081920A3B /* AudioLibraryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLibraryStoreTests.swift; sourceTree = "<group>"; };
+		3F8A2C1D9B4E5678AFC05678 /* PlaybackControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackControllerTests.swift; sourceTree = "<group>"; };
 		25C215A13FBD2FF5FA19ECFB /* YagyoPlayerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YagyoPlayerApp.swift; sourceTree = "<group>"; };
 		2A3693A3D5090FDEC93959BD /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		301E9CBCD2076B4C94F2C87F /* MusicKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MusicKit.framework; path = System/Library/Frameworks/MusicKit.framework; sourceTree = SDKROOT; };
@@ -162,6 +164,7 @@
 			children = (
 				25089FD8B7B3584C1950CD9B /* AudioTrackTests.swift */,
 				1F2E3D4C5B6A798081920A3B /* AudioLibraryStoreTests.swift */,
+				3F8A2C1D9B4E5678AFC05678 /* PlaybackControllerTests.swift */,
 				817E3E6F64CD12B7179418DF /* Info.plist */,
 				C3D4E5F60718293A4B5C6D7E /* PlaylistTests.swift */,
 			);
@@ -270,6 +273,7 @@
 			files = (
 				8D11AB6599E537AB3E159AEF /* AudioTrackTests.swift in Sources */,
 				9A1B2C3D4E5F60718293A4B5 /* AudioLibraryStoreTests.swift in Sources */,
+				3F8A2C1D9B4E5678AFC01234 /* PlaybackControllerTests.swift in Sources */,
 				7E6D5C4B3A2918070F6E5D4C /* PlaylistTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

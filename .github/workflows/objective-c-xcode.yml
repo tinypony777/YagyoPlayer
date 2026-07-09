@@ -5,9 +5,10 @@ on:
 
 jobs:
   disabled:
-    name: Disabled (replaced by ios.yml)
-    runs-on: macos-15
+    name: Disabled in favor of Xcode Cloud
+    runs-on: ubuntu-latest
     steps:
-      - run: |
-          echo "This workflow is intentionally disabled for push/pull_request."
-          echo "Use .github/workflows/ios.yml as the single source of CI truth."
+      - name: Xcode Cloud is the CI source of truth
+        run: |
+          echo "This legacy workflow is intentionally disabled for push/pull_request."
+          echo "Use Xcode Cloud for PR and main build/test validation."
