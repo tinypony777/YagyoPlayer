@@ -64,6 +64,33 @@ final class LibraryConfidenceTests: XCTestCase {
         XCTAssertEqual(persisted.notes, "Aメロの低域を確認")
     }
 
+    func testUpdateMetadataRollsBackAndReportsFailureWhenManifestCannotBeSaved() async throws {
+        let store = makeStore()
+        store.load()
+
+        let source = try writeSourceFile(named: "blocked-save.wav", contents: "metadata-audio")
+        await store.importAudioFiles(from: [source])
+        let track = try XCTUnwrap(store.tracks.first)
+
+        let libraryDirectory = temporaryDirectory.appending(path: "YagyoLibrary", directoryHint: .isDirectory)
+        let manifestURL = libraryDirectory.appending(path: "library.json", directoryHint: .notDirectory)
+        try FileManager.default.removeItem(at: manifestURL)
+        try FileManager.default.createDirectory(at: manifestURL, withIntermediateDirectories: false)
+
+        let didSave = store.updateMetadata(
+            for: track.id,
+            title: "保存できない札",
+            artist: "Ryusei",
+            artworkFilename: nil,
+            notes: "should roll back"
+        )
+
+        XCTAssertFalse(didSave)
+        XCTAssertEqual(store.tracks.first?.title, track.title)
+        XCTAssertEqual(store.tracks.first?.artist, track.artist)
+        XCTAssertNotNil(store.persistenceErrorMessage)
+    }
+
     func testFilteredTracksSearchesTitleArtistFilenameAndNotes() async throws {
         let store = makeStore()
         store.load()

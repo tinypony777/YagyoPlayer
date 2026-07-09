@@ -355,6 +355,7 @@ private struct LibrarySection: View {
 
     var body: some View {
         let visibleTracks = library.filteredTracks(searchText: searchText, sort: sort, playlistID: selectedPlaylistID)
+        let duplicateTrackGroups = library.duplicateTrackGroups
 
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -378,7 +379,7 @@ private struct LibrarySection: View {
                 .accessibilityLabel("Import audio")
             }
 
-            libraryFeedback
+            libraryFeedback(duplicateTrackGroups: duplicateTrackGroups)
             libraryControls(visibleCount: visibleTracks.count)
 
             if library.tracks.isEmpty {
@@ -388,7 +389,11 @@ private struct LibrarySection: View {
             } else {
                 LazyVStack(spacing: 8) {
                     ForEach(visibleTracks) { track in
-                        TrackRow(track: track, editAction: { editingTrack = track })
+                        TrackRow(
+                            track: track,
+                            playbackContext: playbackContext,
+                            editAction: { editingTrack = track }
+                        )
                     }
                 }
             }
@@ -405,7 +410,7 @@ private struct LibrarySection: View {
     }
 
     @ViewBuilder
-    private var libraryFeedback: some View {
+    private func libraryFeedback(duplicateTrackGroups: [DuplicateTrackGroup]) -> some View {
         switch library.importState {
         case .importing(let count):
             LibraryStatusBanner(
@@ -429,11 +434,11 @@ private struct LibrarySection: View {
             EmptyView()
         }
 
-        if !library.duplicateTrackGroups.isEmpty {
+        if !duplicateTrackGroups.isEmpty {
             LibraryStatusBanner(
                 icon: "doc.on.doc.fill",
                 title: "重複候補があります",
-                message: "同じ SHA-256 の音源が \(library.duplicateTrackGroups.count) 組あります。不要なコピーは行列から削除できます。"
+                message: duplicateFeedbackMessage(duplicateTrackGroups)
             )
         }
 
@@ -499,6 +504,11 @@ private struct LibrarySection: View {
         return LibrarySort.allCases
     }
 
+    private var playbackContext: PlaybackContext {
+        guard let selectedPlaylistID else { return .library }
+        return .playlist(selectedPlaylistID)
+    }
+
     private func clearFilters() {
         searchText = ""
         selectedPlaylistID = nil
@@ -514,6 +524,19 @@ private struct LibrarySection: View {
             parts.append("失敗 \(summary.failures.count) 件")
         }
         return parts.joined(separator: " · ")
+    }
+
+    private func duplicateFeedbackMessage(_ groups: [DuplicateTrackGroup]) -> String {
+        let visibleGroups = groups.prefix(3).map { group in
+            group.tracks
+                .map { "\($0.title) (\($0.originalFilename))" }
+                .joined(separator: " / ")
+        }
+        var message = "同じ SHA-256 の音源が \(groups.count) 組あります: \(visibleGroups.joined(separator: " · "))"
+        if groups.count > visibleGroups.count {
+            message += " 他 \(groups.count - visibleGroups.count) 組"
+        }
+        return message
     }
 }
 
@@ -552,6 +575,7 @@ private struct TrackRow: View {
     @EnvironmentObject private var player: PlaybackController
 
     var track: AudioTrack
+    var playbackContext: PlaybackContext = .library
     var editAction: () -> Void
 
     @State private var isDeleteConfirmationPresented = false
@@ -564,7 +588,7 @@ private struct TrackRow: View {
         let sprite = YokaiGallery.sprite(for: track.id)
 
         Button {
-            player.load(track, from: library, autoplay: true, context: .library)
+            player.load(track, from: library, autoplay: true, context: playbackContext)
         } label: {
             HStack(spacing: 12) {
                 ZStack {
@@ -732,17 +756,18 @@ private struct TrackMetadataEditor: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        library.updateMetadata(
+                        let didSave = library.updateMetadata(
                             for: track.id,
                             title: title,
                             artist: artist,
                             artworkFilename: artworkFilename,
                             notes: notes
                         )
-                        if let updatedTrack = library.tracks.first(where: { $0.id == track.id }) {
+                        if didSave,
+                           let updatedTrack = library.tracks.first(where: { $0.id == track.id }) {
                             player.refreshCurrentTrackMetadata(updatedTrack)
+                            dismiss()
                         }
-                        dismiss()
                     }
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }

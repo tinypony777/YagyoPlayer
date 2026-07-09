@@ -214,18 +214,19 @@ final class AudioLibraryStore: ObservableObject {
     }
 
     /// Step 2 — Library Confidence: title / artist / artwork / notes を編集して永続化する。
+    @discardableResult
     func updateMetadata(
         for trackID: AudioTrack.ID,
         title: String,
         artist: String?,
         artworkFilename: String?,
         notes: String?
-    ) {
-        guard let index = tracks.firstIndex(where: { $0.id == trackID }) else { return }
+    ) -> Bool {
+        guard let index = tracks.firstIndex(where: { $0.id == trackID }) else { return false }
 
         let previousTrack = tracks[index]
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedTitle.isEmpty else { return }
+        guard !trimmedTitle.isEmpty else { return false }
 
         tracks[index].title = trimmedTitle
         tracks[index].artist = Self.nilIfBlank(artist)
@@ -235,9 +236,11 @@ final class AudioLibraryStore: ObservableObject {
         do {
             try save()
             persistenceErrorMessage = nil
+            return true
         } catch {
             tracks[index] = previousTrack
             persistenceErrorMessage = "Track metadata could not be saved: \(error.localizedDescription)"
+            return false
         }
     }
 
