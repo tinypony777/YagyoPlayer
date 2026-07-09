@@ -131,6 +131,82 @@ final class PlaybackControllerTests: XCTestCase {
         XCTAssertFalse(player.isPlaying, "A track that was paused before the interruption must not auto-resume")
     }
 
+    /// 通話中にさらに割り込みが重なっても、一番外側の割り込みが終わるまでは再開せず、
+    /// 最終的に元の再生状態を正しく復元できることを確認する。
+    func testNestedInterruptionsResumeOnlyAfterOutermostEnds() async throws {
+        let store = makeStore()
+        store.load()
+        let track = try await importPlayableTrack(into: store)
+
+        let player = PlaybackController()
+        player.load(track, from: store, autoplay: true)
+        try XCTSkipUnless(player.isPlaying, "Audio playback is not available in this test environment")
+
+        func postInterruption(_ type: AVAudioSession.InterruptionType, shouldResume: Bool = false) {
+            var userInfo: [AnyHashable: Any] = [AVAudioSessionInterruptionTypeKey: NSNumber(value: type.rawValue)]
+            if type == .ended {
+                let options: AVAudioSession.InterruptionOptions = shouldResume ? .shouldResume : []
+                userInfo[AVAudioSessionInterruptionOptionKey] = NSNumber(value: options.rawValue)
+            }
+            NotificationCenter.default.post(name: AVAudioSession.interruptionNotification, object: nil, userInfo: userInfo)
+        }
+
+        postInterruption(.began) // outer
+        await flushMainActor()
+        XCTAssertFalse(player.isPlaying)
+
+        postInterruption(.began) // nested
+        await flushMainActor()
+        XCTAssertFalse(player.isPlaying)
+
+        postInterruption(.ended, shouldResume: true) // nested ends — must NOT resume yet
+        await flushMainActor()
+        XCTAssertFalse(player.isPlaying, "Playback must stay paused while the outer interruption is still active")
+
+        postInterruption(.ended, shouldResume: true) // outer ends — now it may resume
+        await flushMainActor()
+        XCTAssertTrue(player.isPlaying, "Playback should resume once every nested interruption has ended")
+    }
+
+    /// 割り込み中にイヤホンが抜けた場合、通話が終わってもスピーカーへ自動再開してはならない。
+    func testRouteChangeDuringInterruptionPreventsAutoResumeToSpeaker() async throws {
+        let store = makeStore()
+        store.load()
+        let track = try await importPlayableTrack(into: store)
+
+        let player = PlaybackController()
+        player.load(track, from: store, autoplay: true)
+        try XCTSkipUnless(player.isPlaying, "Audio playback is not available in this test environment")
+
+        NotificationCenter.default.post(
+            name: AVAudioSession.interruptionNotification,
+            object: nil,
+            userInfo: [AVAudioSessionInterruptionTypeKey: NSNumber(value: AVAudioSession.InterruptionType.began.rawValue)]
+        )
+        await flushMainActor()
+
+        NotificationCenter.default.post(
+            name: AVAudioSession.routeChangeNotification,
+            object: nil,
+            userInfo: [
+                AVAudioSessionRouteChangeReasonKey: NSNumber(value: AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue)
+            ]
+        )
+        await flushMainActor()
+
+        NotificationCenter.default.post(
+            name: AVAudioSession.interruptionNotification,
+            object: nil,
+            userInfo: [
+                AVAudioSessionInterruptionTypeKey: NSNumber(value: AVAudioSession.InterruptionType.ended.rawValue),
+                AVAudioSessionInterruptionOptionKey: NSNumber(value: AVAudioSession.InterruptionOptions.shouldResume.rawValue)
+            ]
+        )
+        await flushMainActor()
+
+        XCTAssertFalse(player.isPlaying, "Losing the output device during an interruption must prevent auto-resume to the speaker")
+    }
+
     // MARK: - ルート変更(イヤホン・AirPods抜去)は一時停止のみ。スピーカーで自動継続しない
 
     func testRouteChangeOldDeviceUnavailablePausesPlayback() async throws {

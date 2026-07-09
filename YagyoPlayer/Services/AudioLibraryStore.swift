@@ -173,6 +173,9 @@ final class AudioLibraryStore: ObservableObject {
     }
 
     func delete(_ track: AudioTrack) {
+        let previousTracks = tracks
+        let previousSelectedTrackID = selectedTrackID
+
         tracks.removeAll { $0.id == track.id }
         if selectedTrackID == track.id {
             selectedTrackID = tracks.first?.id
@@ -187,12 +190,21 @@ final class AudioLibraryStore: ObservableObject {
             try? savePlaylists()
         }
 
-        try? fileManager.removeItem(at: fileURL(for: track))
+        // 先に manifest を保存する: 失敗したら巻き戻し、ファイルはまだ消さない(取込元コピーを失わないため)。
         do {
             try save()
+        } catch {
+            tracks = previousTracks
+            selectedTrackID = previousSelectedTrackID
+            persistenceErrorMessage = "Library could not be saved after delete: \(error.localizedDescription)"
+            return
+        }
+
+        do {
+            try fileManager.removeItem(at: fileURL(for: track))
             persistenceErrorMessage = nil
         } catch {
-            persistenceErrorMessage = "Library could not be saved after delete: \(error.localizedDescription)"
+            persistenceErrorMessage = "The audio file could not be removed after delete: \(error.localizedDescription)"
         }
     }
 

@@ -55,6 +55,7 @@ struct ContentView: View {
                 Task {
                     switch result {
                     case .success(let urls):
+                        guard !urls.isEmpty else { return }
                         await library.importAudioFiles(from: urls)
                         switch library.importState {
                         case .finished(let summary):

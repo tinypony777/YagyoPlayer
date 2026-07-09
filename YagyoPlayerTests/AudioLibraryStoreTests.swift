@@ -186,6 +186,58 @@ final class AudioLibraryStoreTests: XCTestCase {
         XCTAssertEqual(store.tracks.first?.playCount, 1)
     }
 
+    func testDeleteRemovesTrackAndFile() async throws {
+        let store = makeStore()
+        store.load()
+
+        let source = try writeSourceFile(named: "gone.wav", contents: "vanish")
+        await store.importAudioFiles(from: [source])
+        let track = try XCTUnwrap(store.tracks.first)
+        let fileURL = store.fileURL(for: track)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path))
+
+        store.delete(track)
+
+        XCTAssertTrue(store.tracks.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: fileURL.path))
+        XCTAssertNil(store.persistenceErrorMessage)
+
+        // 別インスタンスで読み直しても削除が永続化されている
+        let reloaded = makeStore()
+        reloaded.load()
+        XCTAssertTrue(reloaded.tracks.isEmpty)
+    }
+
+    func testDeleteRollsBackAndKeepsFileWhenSaveFails() async throws {
+        let store = makeStore()
+        store.load()
+
+        let source = try writeSourceFile(named: "keepme.wav", contents: "keep-audio-bytes")
+        await store.importAudioFiles(from: [source])
+        let track = try XCTUnwrap(store.tracks.first)
+        let fileURL = store.fileURL(for: track)
+
+        // 削除実行前に library.json を書き込めない状態にする
+        let manifestURL = temporaryDirectory
+            .appending(path: "YagyoLibrary", directoryHint: .isDirectory)
+            .appending(path: "library.json", directoryHint: .notDirectory)
+        try FileManager.default.removeItem(at: manifestURL)
+        let blockedManifest = temporaryDirectory
+            .appending(path: "YagyoLibrary", directoryHint: .isDirectory)
+            .appending(path: "library.json", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: blockedManifest, withIntermediateDirectories: true)
+        try Data("block".utf8).write(to: blockedManifest.appending(path: "blocker", directoryHint: .notDirectory))
+
+        store.delete(track)
+
+        XCTAssertEqual(store.tracks.count, 1, "A failed save must roll back the in-memory deletion")
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: fileURL.path),
+            "The audio file must not be removed when the manifest save fails"
+        )
+        XCTAssertNotNil(store.persistenceErrorMessage)
+    }
+
     func testDecodingLegacyManifestWithoutStatsFields() throws {
         // 新フィールド追加前の library.json がそのまま読めること(後方互換)
         let legacyJSON = """

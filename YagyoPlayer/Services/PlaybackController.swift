@@ -36,19 +36,19 @@ final class PlaybackController: ObservableObject {
 
     /// 割り込み(電話・Siri)開始時点で再生中だったか。割り込み終了時、これが true の場合のみ再開する。
     private var wasPlayingBeforeInterruption = false
-    private var interruptionObserverToken: NSObjectProtocol?
-    private var routeChangeObserverToken: NSObjectProtocol?
+    /// 入れ子の割り込み(通話中にさらに別の割り込みが重なる等)に対応する深さ。0に戻ったときだけ再開を検討する。
+    private var interruptionDepth = 0
+    private var notificationObserverTokens: [NSObjectProtocol] = []
 
     init() {
         installAudioSessionObservers()
     }
 
     deinit {
-        if let interruptionObserverToken {
-            NotificationCenter.default.removeObserver(interruptionObserverToken)
-        }
-        if let routeChangeObserverToken {
-            NotificationCenter.default.removeObserver(routeChangeObserverToken)
+        timer?.invalidate()
+        meterTimer?.invalidate()
+        for token in notificationObserverTokens {
+            NotificationCenter.default.removeObserver(token)
         }
     }
 
@@ -69,7 +69,7 @@ final class PlaybackController: ObservableObject {
     private func installAudioSessionObservers() {
         let center = NotificationCenter.default
 
-        interruptionObserverToken = center.addObserver(
+        notificationObserverTokens.append(center.addObserver(
             forName: AVAudioSession.interruptionNotification,
             object: nil,
             queue: nil
@@ -77,9 +77,9 @@ final class PlaybackController: ObservableObject {
             Task { @MainActor in
                 self?.handleInterruption(notification)
             }
-        }
+        })
 
-        routeChangeObserverToken = center.addObserver(
+        notificationObserverTokens.append(center.addObserver(
             forName: AVAudioSession.routeChangeNotification,
             object: nil,
             queue: nil
@@ -87,10 +87,10 @@ final class PlaybackController: ObservableObject {
             Task { @MainActor in
                 self?.handleRouteChange(notification)
             }
-        }
+        })
     }
 
-    /// 電話・Siri等の割り込みから復帰する。中断前に再生中だった場合のみ再開する。
+    /// 電話・Siri等の割り込みから復帰する。中断前に再生中だった場合のみ、かつ入れ子の割り込みがすべて終わったときだけ再開する。
     private func handleInterruption(_ notification: Notification) {
         guard let info = notification.userInfo,
               let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
@@ -98,10 +98,15 @@ final class PlaybackController: ObservableObject {
 
         switch type {
         case .began:
-            wasPlayingBeforeInterruption = isPlaying
+            if interruptionDepth == 0 {
+                wasPlayingBeforeInterruption = isPlaying
+            }
+            interruptionDepth += 1
             pause()
 
         case .ended:
+            interruptionDepth = max(0, interruptionDepth - 1)
+            guard interruptionDepth == 0 else { return }
             defer { wasPlayingBeforeInterruption = false }
             guard wasPlayingBeforeInterruption else { return }
             let optionsValue = info[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
@@ -120,11 +125,13 @@ final class PlaybackController: ObservableObject {
     }
 
     /// イヤホン・Bluetoothが外れたら一時停止する。スピーカーで自動継続しない — 音を意図せず外に出さないための約束。
+    /// 割り込み中に出力先を失った場合は、割り込みが終わってもスピーカーへ自動再開しない。
     private func handleRouteChange(_ notification: Notification) {
         guard let info = notification.userInfo,
               let reasonValue = info[AVAudioSessionRouteChangeReasonKey] as? UInt,
               let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue),
               reason == .oldDeviceUnavailable else { return }
+        wasPlayingBeforeInterruption = false
         pause()
     }
 
@@ -206,6 +213,8 @@ final class PlaybackController: ObservableObject {
             elapsedTime = 0
             hasRecordedPlaybackEvent = false
             playbackErrorMessage = nil
+            wasPlayingBeforeInterruption = false
+            interruptionDepth = 0
             library.select(track)
             updateNowPlaying()
 
@@ -225,9 +234,16 @@ final class PlaybackController: ObservableObject {
     }
 
     func play() {
-        guard let audioPlayer else { return }
+        guard let audioPlayer else {
+            playbackErrorMessage = "No track is loaded yet."
+            return
+        }
         guard audioPlayer.play() else {
             playbackErrorMessage = "Playback could not start."
+            isPlaying = false
+            stopTimer()
+            stopMetering()
+            updateNowPlaying()
             return
         }
         playbackErrorMessage = nil
@@ -276,6 +292,9 @@ final class PlaybackController: ObservableObject {
         isPlaying = false
         elapsedTime = 0
         duration = 0
+        playbackErrorMessage = nil
+        wasPlayingBeforeInterruption = false
+        interruptionDepth = 0
         stopTimer()
         stopMetering()
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
