@@ -21,3 +21,19 @@ struct RealtimeAnalysisSnapshot: Equatable, Sendable {
         hasDiscontinuity: false
     )
 }
+
+enum TrackAnalysisStatus: String, Codable, Equatable, Hashable, Sendable {
+    case complete, silent, tooShort, unsupported
+}
+
+struct OfflineTrackAnalysis: Equatable, Sendable {
+    let status: TrackAnalysisStatus
+    let integratedLUFS: Double?
+    let maximumMomentaryLUFS: Double?
+    let maximumShortTermLUFS: Double?
+    let analyzedDuration: TimeInterval
+    let silentDuration: TimeInterval
+    let silentRatio: Double
+    let onsetCount: Int
+    let meanOnsetRate: Double
+}
