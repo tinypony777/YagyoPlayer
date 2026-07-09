@@ -16,7 +16,7 @@ final class PlaybackController: ObservableObject {
     @Published var duration: TimeInterval = 0
     @Published var volume: Float = 0.88 {
         didSet {
-            audioPlayer?.volume = volume
+            backend.volume = volume
         }
     }
 
@@ -26,7 +26,10 @@ final class PlaybackController: ObservableObject {
     /// 読み込み・再生に失敗したとき、無言で止まらずユーザーに伝えるためのメッセージ。
     @Published var playbackErrorMessage: String?
 
-    private var audioPlayer: AVAudioPlayer?
+    private var backend: any AudioPlaybackBackend
+    private let notificationCenter: NotificationCenter
+    private let activateAudioSession: @MainActor () throws -> Void
+
     // deinit は nonisolated かつ Timer/観測トークンは Sendable ではないため、
     // 後始末を安全に行うために nonisolated(unsafe) にする(実際のアクセスは常に MainActor 上、
     // deinit 時点では他に参照が無く競合しない)。
@@ -41,9 +44,21 @@ final class PlaybackController: ObservableObject {
     private var wasPlayingBeforeInterruption = false
     /// 入れ子の割り込み(通話中にさらに別の割り込みが重なる等)に対応する深さ。0に戻ったときだけ再開を検討する。
     private var interruptionDepth = 0
+    private var resumePolicyGeneration: UInt64 = 0
     private nonisolated(unsafe) var notificationObserverTokens: [NSObjectProtocol] = []
 
-    init() {
+    init(
+        backend: (any AudioPlaybackBackend)? = nil,
+        notificationCenter: NotificationCenter = .default,
+        activateAudioSession: @escaping @MainActor () throws -> Void = PlaybackController.activateSystemAudioSession
+    ) {
+        self.backend = backend ?? LegacyAudioPlayerPlaybackBackend()
+        self.notificationCenter = notificationCenter
+        self.activateAudioSession = activateAudioSession
+        self.backend.volume = volume
+        self.backend.onEvent = { [weak self] event in
+            self?.handleBackendEvent(event)
+        }
         installAudioSessionObservers()
     }
 
@@ -51,7 +66,7 @@ final class PlaybackController: ObservableObject {
         timer?.invalidate()
         meterTimer?.invalidate()
         for token in notificationObserverTokens {
-            NotificationCenter.default.removeObserver(token)
+            notificationCenter.removeObserver(token)
         }
     }
 
@@ -70,11 +85,9 @@ final class PlaybackController: ObservableObject {
 
     /// AVAudioSession の割り込み・ルート変更を監視する。トラック未読込の時点から効くよう init で登録する。
     private func installAudioSessionObservers() {
-        let center = NotificationCenter.default
-
         // Notification 自体は Sendable を保証できない(userInfo が [AnyHashable: Any])ため、
         // アクター境界を越える前にコールバック側で Sendable な値へ分解しておく。
-        notificationObserverTokens.append(center.addObserver(
+        notificationObserverTokens.append(notificationCenter.addObserver(
             forName: AVAudioSession.interruptionNotification,
             object: nil,
             queue: nil
@@ -86,7 +99,7 @@ final class PlaybackController: ObservableObject {
             }
         })
 
-        notificationObserverTokens.append(center.addObserver(
+        notificationObserverTokens.append(notificationCenter.addObserver(
             forName: AVAudioSession.routeChangeNotification,
             object: nil,
             queue: nil
@@ -113,16 +126,13 @@ final class PlaybackController: ObservableObject {
         case .ended:
             interruptionDepth = max(0, interruptionDepth - 1)
             guard interruptionDepth == 0 else { return }
-            defer { wasPlayingBeforeInterruption = false }
             guard wasPlayingBeforeInterruption else { return }
             let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue ?? 0)
-            guard options.contains(.shouldResume) else { return }
-            do {
-                try AVAudioSession.sharedInstance().setActive(true)
-                play()
-            } catch {
-                playbackErrorMessage = "Playback could not resume after the interruption: \(error.localizedDescription)"
+            guard options.contains(.shouldResume) else {
+                wasPlayingBeforeInterruption = false
+                return
             }
+            resumeAfterInterruption(policyGeneration: resumePolicyGeneration)
 
         @unknown default:
             break
@@ -135,6 +145,7 @@ final class PlaybackController: ObservableObject {
         guard let reasonValue,
               let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue),
               reason == .oldDeviceUnavailable else { return }
+        cancelPendingAutomaticResume()
         wasPlayingBeforeInterruption = false
         pause()
     }
@@ -193,6 +204,7 @@ final class PlaybackController: ObservableObject {
         autoplay: Bool = false,
         context: PlaybackContext? = nil
     ) {
+        cancelPendingAutomaticResume()
         remoteLibrary = library
         if let context {
             switch context {
@@ -206,15 +218,12 @@ final class PlaybackController: ObservableObject {
         do {
             try configureAudioSession()
             let fileURL = library.fileURL(for: track)
-            let player = try AVAudioPlayer(contentsOf: fileURL)
-            player.volume = volume
-            player.isMeteringEnabled = true
-            player.prepareToPlay()
+            try backend.load(url: fileURL, trackID: track.id)
+            backend.volume = volume
 
-            audioPlayer = player
             currentTrack = track
-            duration = player.duration
-            elapsedTime = 0
+            duration = backend.duration
+            elapsedTime = backend.position
             hasRecordedPlaybackEvent = false
             playbackErrorMessage = nil
             wasPlayingBeforeInterruption = false
@@ -238,27 +247,29 @@ final class PlaybackController: ObservableObject {
     }
 
     func play() {
-        guard let audioPlayer else {
+        guard currentTrack != nil else {
             playbackErrorMessage = "No track is loaded yet."
             return
         }
-        guard audioPlayer.play() else {
-            playbackErrorMessage = "Playback could not start."
+
+        do {
+            try backend.play()
+            playbackErrorMessage = nil
+            isPlaying = true
+            startTimer()
+            startMetering()
+            updateNowPlaying()
+        } catch {
+            playbackErrorMessage = error.localizedDescription
             isPlaying = false
             stopTimer()
             stopMetering()
             updateNowPlaying()
-            return
         }
-        playbackErrorMessage = nil
-        isPlaying = true
-        startTimer()
-        startMetering()
-        updateNowPlaying()
     }
 
     func pause() {
-        audioPlayer?.pause()
+        backend.pause()
         isPlaying = false
         stopTimer()
         stopMetering()
@@ -267,10 +278,15 @@ final class PlaybackController: ObservableObject {
     }
 
     func seek(to time: TimeInterval) {
-        guard let audioPlayer else { return }
-        audioPlayer.currentTime = min(max(time, 0), audioPlayer.duration)
-        syncProgress()
-        updateNowPlaying()
+        guard currentTrack != nil else { return }
+        let clampedTime = min(max(time, 0), duration)
+        do {
+            try backend.seek(to: clampedTime)
+            syncProgress()
+            updateNowPlaying()
+        } catch {
+            playbackErrorMessage = "Playback could not seek: \(error.localizedDescription)"
+        }
     }
 
     func playNext() {
@@ -290,12 +306,13 @@ final class PlaybackController: ObservableObject {
 
     func stopForDeletedTrack(_ track: AudioTrack) {
         guard currentTrack?.id == track.id else { return }
-        audioPlayer?.stop()
-        audioPlayer = nil
+        cancelPendingAutomaticResume()
+        backend.stop()
         currentTrack = nil
         isPlaying = false
         elapsedTime = 0
         duration = 0
+        audioLevel = 0
         playbackErrorMessage = nil
         wasPlayingBeforeInterruption = false
         interruptionDepth = 0
@@ -310,7 +327,42 @@ final class PlaybackController: ObservableObject {
         updateNowPlaying()
     }
 
+    func pollPlaybackState() {
+        syncProgress()
+        recordPlaybackEventIfNeeded()
+        updateNowPlaying()
+
+        guard isPlaying, !backend.isPlaying else { return }
+        if elapsedTime >= max(duration - 0.25, 0) {
+            elapsedTime = duration
+            recordPlaybackEventIfNeeded(didFinish: true)
+            playNext()
+        } else {
+            pause()
+        }
+    }
+
+    func pollRealtimeAnalysis() {
+        guard isPlaying else {
+            audioLevel = 0
+            return
+        }
+
+        let snapshot = backend.realtimeAnalysisSnapshot()
+        let normalized = min(max(snapshot.level, 0), 1)
+        // 立ち上がりは速く、引きはゆっくり — 提灯の火のように
+        if normalized > audioLevel {
+            audioLevel = audioLevel * 0.35 + normalized * 0.65
+        } else {
+            audioLevel = audioLevel * 0.82 + normalized * 0.18
+        }
+    }
+
     private func configureAudioSession() throws {
+        try activateAudioSession()
+    }
+
+    static func activateSystemAudioSession() throws {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playback, mode: .default)
         try session.setActive(true)
@@ -338,7 +390,7 @@ final class PlaybackController: ObservableObject {
         // .commonモードで登録 — スクロール中も提灯と妖怪が音に付いてくるように
         let timer = Timer(timeInterval: 1.0 / 15.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                self?.updateMeter()
+                self?.pollRealtimeAnalysis()
             }
         }
         RunLoop.main.add(timer, forMode: .common)
@@ -351,34 +403,72 @@ final class PlaybackController: ObservableObject {
         audioLevel = 0
     }
 
-    private func updateMeter() {
-        guard let audioPlayer, isPlaying, audioPlayer.numberOfChannels > 0 else { return }
-        audioPlayer.updateMeters()
-        // 片チャンネルが無音のステレオ音源でも反応するよう、全チャンネルの最大値を取る
-        var decibels = -160.0
-        for channel in 0..<audioPlayer.numberOfChannels {
-            decibels = max(decibels, Double(audioPlayer.averagePower(forChannel: channel)))
-        }
-        let normalized = min(max((decibels + 48) / 48, 0), 1)
-        // 立ち上がりは速く、引きはゆっくり — 提灯の火のように
-        if normalized > audioLevel {
-            audioLevel = audioLevel * 0.35 + normalized * 0.65
-        } else {
-            audioLevel = audioLevel * 0.82 + normalized * 0.18
+    private func tick() {
+        pollPlaybackState()
+    }
+
+    private func handleBackendEvent(_ event: AudioPlaybackBackendEvent) {
+        switch event {
+        case .finished(let identity):
+            handleFinishedEvent(identity)
+        case .engineConfigurationChanged(let identity):
+            handleEngineConfigurationChanged(identity)
         }
     }
 
-    private func tick() {
-        syncProgress()
-        recordPlaybackEventIfNeeded()
-        if let audioPlayer, !audioPlayer.isPlaying, isPlaying {
-            if elapsedTime >= max(duration - 0.25, 0) {
-                recordPlaybackEventIfNeeded(didFinish: true)
-                playNext()
-            } else {
+    private func handleFinishedEvent(_ identity: PlaybackScheduleIdentity) {
+        guard identity == backend.currentSchedule else { return }
+        elapsedTime = duration
+        recordPlaybackEventIfNeeded(didFinish: true)
+        playNext()
+    }
+
+    private func handleEngineConfigurationChanged(_ identity: PlaybackScheduleIdentity) {
+        guard identity == backend.currentSchedule else { return }
+        let shouldResume = isPlaying
+        let policyGeneration = resumePolicyGeneration
+        stopTimer()
+        stopMetering()
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                try await backend.rebuildAfterConfigurationChange()
+                syncProgress()
+                guard currentTrack?.id == identity.trackID else { return }
+                if shouldResume, policyGeneration == resumePolicyGeneration {
+                    play()
+                } else {
+                    isPlaying = backend.isPlaying
+                    updateNowPlaying()
+                }
+            } catch {
+                playbackErrorMessage = "Playback could not recover after the audio route changed: \(error.localizedDescription)"
                 pause()
             }
         }
+    }
+
+    private func resumeAfterInterruption(policyGeneration: UInt64) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                try activateAudioSession()
+                try await backend.prepareToResumeAfterInterruption()
+                guard policyGeneration == resumePolicyGeneration,
+                      interruptionDepth == 0,
+                      wasPlayingBeforeInterruption else { return }
+                wasPlayingBeforeInterruption = false
+                play()
+            } catch {
+                wasPlayingBeforeInterruption = false
+                playbackErrorMessage = "Playback could not resume after the interruption: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func cancelPendingAutomaticResume() {
+        resumePolicyGeneration += 1
     }
 
     /// 再生イベント(半分以上の再生または完走)を、ロードごとに一度だけ統計へ記録する。
@@ -391,12 +481,12 @@ final class PlaybackController: ObservableObject {
     }
 
     private func syncProgress() {
-        elapsedTime = audioPlayer?.currentTime ?? 0
-        duration = audioPlayer?.duration ?? duration
+        elapsedTime = backend.position
+        duration = backend.duration
     }
 
     private func transitionToPausedStateAfterLoad() {
-        audioPlayer?.pause()
+        backend.pause()
         isPlaying = false
         stopTimer()
         stopMetering()
