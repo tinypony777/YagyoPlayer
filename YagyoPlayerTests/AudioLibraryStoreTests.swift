@@ -238,6 +238,44 @@ final class AudioLibraryStoreTests: XCTestCase {
         XCTAssertNotNil(store.persistenceErrorMessage)
     }
 
+    func testDeleteRollsBackPlaylistMembershipWhenSaveFails() async throws {
+        let store = makeStore()
+        store.load()
+
+        let source = try writeSourceFile(named: "inplaylist.wav", contents: "playlist-audio-bytes")
+        await store.importAudioFiles(from: [source])
+        let track = try XCTUnwrap(store.tracks.first)
+
+        let playlist = try XCTUnwrap(store.createPlaylist(named: "夜の巻物"))
+        store.addTrack(track, to: playlist)
+        XCTAssertTrue(store.playlists.first?.contains(track.id) ?? false)
+
+        // 削除実行前に library.json を書き込めない状態にする
+        let manifestURL = temporaryDirectory
+            .appending(path: "YagyoLibrary", directoryHint: .isDirectory)
+            .appending(path: "library.json", directoryHint: .notDirectory)
+        try FileManager.default.removeItem(at: manifestURL)
+        let blockedManifest = temporaryDirectory
+            .appending(path: "YagyoLibrary", directoryHint: .isDirectory)
+            .appending(path: "library.json", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: blockedManifest, withIntermediateDirectories: true)
+        try Data("block".utf8).write(to: blockedManifest.appending(path: "blocker", directoryHint: .notDirectory))
+
+        store.delete(track)
+
+        XCTAssertEqual(store.tracks.count, 1, "A failed save must roll back the in-memory deletion")
+        XCTAssertTrue(
+            store.playlists.first?.contains(track.id) ?? false,
+            "Playlist membership must also roll back when the manifest save fails, not just tracks"
+        )
+        XCTAssertNotNil(store.persistenceErrorMessage)
+
+        // playlists.json はまだ書き換えていないはずなので、再読込しても所属が残っている
+        let reloaded = makeStore()
+        reloaded.load()
+        XCTAssertTrue(reloaded.playlists.first?.contains(track.id) ?? false)
+    }
+
     func testDecodingLegacyManifestWithoutStatsFields() throws {
         // 新フィールド追加前の library.json がそのまま読めること(後方互換)
         let legacyJSON = """

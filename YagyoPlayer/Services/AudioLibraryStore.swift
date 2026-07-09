@@ -175,6 +175,7 @@ final class AudioLibraryStore: ObservableObject {
     func delete(_ track: AudioTrack) {
         let previousTracks = tracks
         let previousSelectedTrackID = selectedTrackID
+        let previousPlaylists = playlists
 
         tracks.removeAll { $0.id == track.id }
         if selectedTrackID == track.id {
@@ -186,18 +187,22 @@ final class AudioLibraryStore: ObservableObject {
             playlists[index].remove(track.id)
             playlistsChanged = true
         }
-        if playlistsChanged {
-            try? savePlaylists()
-        }
 
-        // 先に manifest を保存する: 失敗したら巻き戻し、ファイルはまだ消さない(取込元コピーを失わないため)。
+        // 先に manifest を保存する: 失敗したら tracks・playlists ともに巻き戻し、ファイルはまだ消さない
+        // (取込元コピーを失わないため)。playlists.json への反映も manifest 保存が成功してから行う —
+        // 先に保存してしまうと、直後の manifest 保存が失敗したときに巻物の所属だけが巻き戻せなくなる。
         do {
             try save()
         } catch {
             tracks = previousTracks
             selectedTrackID = previousSelectedTrackID
+            playlists = previousPlaylists
             persistenceErrorMessage = "Library could not be saved after delete: \(error.localizedDescription)"
             return
+        }
+
+        if playlistsChanged {
+            try? savePlaylists()
         }
 
         do {
