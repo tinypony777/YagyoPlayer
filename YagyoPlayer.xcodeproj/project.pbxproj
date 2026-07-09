@@ -7,11 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0A0CE44EB431977072C2A8F9 /* LibEBUR128LinkageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AECE9A456569BCF1094B4727 /* LibEBUR128LinkageTests.swift */; };
 		250E9A7346FB7374DD1960B8 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = D79B2B99B83398BAB69DC334 /* DesignTokens.swift */; };
 		3A2A8EAA663E2ADB181E7205 /* PlaybackControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E06CD6FA3AD454DCD485EF3 /* PlaybackControllerTests.swift */; };
 		3E00AE61C5997249328D5DB6 /* UshimitsuWatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 009132A905A8FFC8AA18D877 /* UshimitsuWatch.swift */; };
+		522CEC5A8B07DC6790F59E0F /* ebur128.c in Sources */ = {isa = PBXBuildFile; fileRef = EB52C09A1B2A84F333625AFB /* ebur128.c */; };
 		61BAD1FE4C2E56B48EDA17E6 /* PlaylistSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8260ACDAEA6A60FE15F832E1 /* PlaylistSection.swift */; };
 		6A2D3D5662B960C39D3C324E /* AnalysisResults.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F48CA37172823EB21CEF44 /* AnalysisResults.swift */; };
+		6A6AAA7620591A1B2E0F6F4A /* libCEBUR128.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 250A79D71242EBB07FB61569 /* libCEBUR128.a */; };
 		6AB494FB98028D7497DCC50C /* MusicKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 301E9CBCD2076B4C94F2C87F /* MusicKit.framework */; };
 		6CF615A930DE9D845F3F57C3 /* PlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81C4BE9E308A1B398FCC749 /* PlaybackController.swift */; };
 		8D11AB6599E537AB3E159AEF /* AudioTrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25089FD8B7B3584C1950CD9B /* AudioTrackTests.swift */; };
@@ -23,6 +26,8 @@
 		B4C130EA40CACEAF7872EDED /* YagyoPlayerIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 025BE94FAA9D790E8896BF44 /* YagyoPlayerIntents.swift */; };
 		B89BF864B9C26F21D2722D93 /* Playlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AE27C22EE5C6B775EF69776 /* Playlist.swift */; };
 		C30AFF1D77D6C0C74B7ECFAB /* LibraryConfidenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C65840D328AB5AC39599FEBE /* LibraryConfidenceTests.swift */; };
+		C34CAED7D7E0E66674B84A56 /* libCEBUR128.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 250A79D71242EBB07FB61569 /* libCEBUR128.a */; };
+		D06BD0E7776DED9A0263326A /* ebur128.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = EBCB48049FEC947358615989 /* ebur128.h */; };
 		D8BDCB51518C4D326E8126FD /* PixelSprites.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82313649B4E00E83BE7B7E39 /* PixelSprites.swift */; };
 		E1F12D8AB5237C46EB410996 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7FEEC5F390CD3E9B6E288C6F /* AVFoundation.framework */; };
 		E208F7A31178FF01D3AF158D /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDC21A8FC3FC543E1CAE93C0 /* AppRouter.swift */; };
@@ -31,6 +36,7 @@
 		ED30E11EDA4E3545119F08D0 /* AudioTrack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76389A5952E76C7CE5A22B96 /* AudioTrack.swift */; };
 		F277B9BD9D60634F9BDF94A4 /* YagyoParadeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99DFADEFD1438C21D0A4F055 /* YagyoParadeView.swift */; };
 		F553274643EE8B8A838C9B97 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A3693A3D5090FDEC93959BD /* ContentView.swift */; };
+		F7DB9363BFBCA8EE9853A67F /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7A90FE4FF741479811E304D1 /* Accelerate.framework */; };
 		F8AD9D1EE7CAE2C83936CD68 /* AudioPlaybackBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = D333F352E67C8599E3C81D32 /* AudioPlaybackBackend.swift */; };
 		F9991556DDF047A16C7EABDD /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66B26F6B600C8B8FB1995EFA /* MediaPlayer.framework */; };
 		FAF6648B6E5D6DFA7E4E2B98 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7C108546297C058BDF30B16F /* AppIntents.framework */; };
@@ -44,13 +50,41 @@
 			remoteGlobalIDString = 40BC8A4B934A441D483F9151;
 			remoteInfo = YagyoPlayer;
 		};
+		698B6A14731CF60F2378D03F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CF8CB9810328B181900DCC11 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FF3F7EE521D69DB5C109B334;
+			remoteInfo = CEBUR128;
+		};
+		D4D55DBC03016FAD21FDC656 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CF8CB9810328B181900DCC11 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FF3F7EE521D69DB5C109B334;
+			remoteInfo = CEBUR128;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		546959066CCF711F0BE07A31 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "include/$(PRODUCT_NAME)";
+			dstSubfolderSpec = 16;
+			files = (
+				D06BD0E7776DED9A0263326A /* ebur128.h in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		009132A905A8FFC8AA18D877 /* UshimitsuWatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UshimitsuWatch.swift; sourceTree = "<group>"; };
 		025BE94FAA9D790E8896BF44 /* YagyoPlayerIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YagyoPlayerIntents.swift; sourceTree = "<group>"; };
 		21F48CA37172823EB21CEF44 /* AnalysisResults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisResults.swift; sourceTree = "<group>"; };
 		25089FD8B7B3584C1950CD9B /* AudioTrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTrackTests.swift; sourceTree = "<group>"; };
+		250A79D71242EBB07FB61569 /* libCEBUR128.a */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = archive.ar; path = libCEBUR128.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		25C215A13FBD2FF5FA19ECFB /* YagyoPlayerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YagyoPlayerApp.swift; sourceTree = "<group>"; };
 		2A3693A3D5090FDEC93959BD /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		301E9CBCD2076B4C94F2C87F /* MusicKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MusicKit.framework; path = System/Library/Frameworks/MusicKit.framework; sourceTree = SDKROOT; };
@@ -59,6 +93,7 @@
 		52B6474115C670A861E1F6EC /* YagyoPlayer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = YagyoPlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		66B26F6B600C8B8FB1995EFA /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
 		76389A5952E76C7CE5A22B96 /* AudioTrack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTrack.swift; sourceTree = "<group>"; };
+		7A90FE4FF741479811E304D1 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		7B3E9103C21666DF09B5B1F8 /* AudioLibraryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLibraryStoreTests.swift; sourceTree = "<group>"; };
 		7C108546297C058BDF30B16F /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		7E06CD6FA3AD454DCD485EF3 /* PlaybackControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackControllerTests.swift; sourceTree = "<group>"; };
@@ -69,6 +104,7 @@
 		8640BFBB549CB37CBED4C8EE /* FakeAudioPlaybackBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakeAudioPlaybackBackend.swift; sourceTree = "<group>"; };
 		8AE27C22EE5C6B775EF69776 /* Playlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Playlist.swift; sourceTree = "<group>"; };
 		99DFADEFD1438C21D0A4F055 /* YagyoParadeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YagyoParadeView.swift; sourceTree = "<group>"; };
+		AECE9A456569BCF1094B4727 /* LibEBUR128LinkageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibEBUR128LinkageTests.swift; sourceTree = "<group>"; };
 		B13D8A65B01B04F9BD642237 /* VisualComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualComponents.swift; sourceTree = "<group>"; };
 		B5EA40EBAF54D3B9F3FCD756 /* LegacyAudioPlayerPlaybackBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyAudioPlayerPlaybackBackend.swift; sourceTree = "<group>"; };
 		B81C4BE9E308A1B398FCC749 /* PlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackController.swift; sourceTree = "<group>"; };
@@ -78,6 +114,8 @@
 		DDC21A8FC3FC543E1CAE93C0 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		E3041BBBEE3EE97F35C80624 /* YagyoPlayerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = YagyoPlayerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EA706A94AFF32D4A08A9A32F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		EB52C09A1B2A84F333625AFB /* ebur128.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ebur128.c; sourceTree = "<group>"; };
+		EBCB48049FEC947358615989 /* ebur128.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ebur128.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -85,19 +123,38 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C34CAED7D7E0E66674B84A56 /* libCEBUR128.a in Frameworks */,
 				E1F12D8AB5237C46EB410996 /* AVFoundation.framework in Frameworks */,
 				F9991556DDF047A16C7EABDD /* MediaPlayer.framework in Frameworks */,
 				6AB494FB98028D7497DCC50C /* MusicKit.framework in Frameworks */,
 				FAF6648B6E5D6DFA7E4E2B98 /* AppIntents.framework in Frameworks */,
+				F7DB9363BFBCA8EE9853A67F /* Accelerate.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3CF47721C0FBCC05E0FFEADC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6A6AAA7620591A1B2E0F6F4A /* libCEBUR128.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		03CDC57AE52FA2E50F7992A0 /* Analysis */ = {
+			isa = PBXGroup;
+			children = (
+				AECE9A456569BCF1094B4727 /* LibEBUR128LinkageTests.swift */,
+			);
+			path = Analysis;
+			sourceTree = "<group>";
+		};
 		2905E51C924926504868ECF7 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				7A90FE4FF741479811E304D1 /* Accelerate.framework */,
 				7C108546297C058BDF30B16F /* AppIntents.framework */,
 				7FEEC5F390CD3E9B6E288C6F /* AVFoundation.framework */,
 				66B26F6B600C8B8FB1995EFA /* MediaPlayer.framework */,
@@ -127,6 +184,7 @@
 		9107913FF838CD33DB0B5CD7 = {
 			isa = PBXGroup;
 			children = (
+				AA54797DBC3FE51EB0D1BABE /* libebur128 */,
 				97FCC1944622139E6A50FB14 /* YagyoPlayer */,
 				E513368DB58CA9D28D6F55F9 /* YagyoPlayerTests */,
 				2905E51C924926504868ECF7 /* Frameworks */,
@@ -159,6 +217,16 @@
 				93A657406EDC74EC63CF6A6E /* Views */,
 			);
 			path = YagyoPlayer;
+			sourceTree = "<group>";
+		};
+		AA54797DBC3FE51EB0D1BABE /* libebur128 */ = {
+			isa = PBXGroup;
+			children = (
+				EB52C09A1B2A84F333625AFB /* ebur128.c */,
+				EBCB48049FEC947358615989 /* ebur128.h */,
+			);
+			name = libebur128;
+			path = Vendor/libebur128;
 			sourceTree = "<group>";
 		};
 		CF410E415ACC3F8C3E52F9F0 /* Intents */ = {
@@ -197,6 +265,7 @@
 				C65840D328AB5AC39599FEBE /* LibraryConfidenceTests.swift */,
 				7E06CD6FA3AD454DCD485EF3 /* PlaybackControllerTests.swift */,
 				43BAB562AE3CA0460CA4B562 /* PlaylistTests.swift */,
+				03CDC57AE52FA2E50F7992A0 /* Analysis */,
 				8D4B73459E41D451F61F3CEB /* TestSupport */,
 			);
 			path = YagyoPlayerTests;
@@ -205,6 +274,7 @@
 		EB1A7F895A7907D277D0D6F6 /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				250A79D71242EBB07FB61569 /* libCEBUR128.a */,
 				52B6474115C670A861E1F6EC /* YagyoPlayer.app */,
 				E3041BBBEE3EE97F35C80624 /* YagyoPlayerTests.xctest */,
 			);
@@ -233,6 +303,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				447D0ACA435A1E6851D99C1C /* PBXTargetDependency */,
 			);
 			name = YagyoPlayer;
 			packageProductDependencies = (
@@ -246,11 +317,13 @@
 			buildConfigurationList = 82FAA49B5082355F835F648F /* Build configuration list for PBXNativeTarget "YagyoPlayerTests" */;
 			buildPhases = (
 				174B075A6A809C65629887D3 /* Sources */,
+				3CF47721C0FBCC05E0FFEADC /* Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				09F05F85E10A1A2310D22DE0 /* PBXTargetDependency */,
+				A8D445387DD5A49B9FBA8D68 /* PBXTargetDependency */,
 			);
 			name = YagyoPlayerTests;
 			packageProductDependencies = (
@@ -258,6 +331,24 @@
 			productName = YagyoPlayerTests;
 			productReference = E3041BBBEE3EE97F35C80624 /* YagyoPlayerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		FF3F7EE521D69DB5C109B334 /* CEBUR128 */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 74F363E1265C61180F4AFC6E /* Build configuration list for PBXNativeTarget "CEBUR128" */;
+			buildPhases = (
+				546959066CCF711F0BE07A31 /* CopyFiles */,
+				4FAE809332D8E34B7B52EFFC /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CEBUR128;
+			packageProductDependencies = (
+			);
+			productName = CEBUR128;
+			productReference = 250A79D71242EBB07FB61569 /* libCEBUR128.a */;
+			productType = "com.apple.product-type.library.static";
 		};
 /* End PBXNativeTarget section */
 
@@ -273,6 +364,9 @@
 						ProvisioningStyle = Automatic;
 					};
 					D6F1D001A9F4932966B529B4 = {
+						DevelopmentTeam = "";
+					};
+					FF3F7EE521D69DB5C109B334 = {
 						DevelopmentTeam = "";
 					};
 				};
@@ -291,6 +385,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				FF3F7EE521D69DB5C109B334 /* CEBUR128 */,
 				40BC8A4B934A441D483F9151 /* YagyoPlayer */,
 				D6F1D001A9F4932966B529B4 /* YagyoPlayerTests */,
 			);
@@ -305,9 +400,18 @@
 				B3F5B378204D7103FD8928A7 /* AudioLibraryStoreTests.swift in Sources */,
 				8D11AB6599E537AB3E159AEF /* AudioTrackTests.swift in Sources */,
 				ECB9B961AB1D5F71E3F61EF5 /* FakeAudioPlaybackBackend.swift in Sources */,
+				0A0CE44EB431977072C2A8F9 /* LibEBUR128LinkageTests.swift in Sources */,
 				C30AFF1D77D6C0C74B7ECFAB /* LibraryConfidenceTests.swift in Sources */,
 				3A2A8EAA663E2ADB181E7205 /* PlaybackControllerTests.swift in Sources */,
 				A9BE8B0491943FD5F76C952C /* PlaylistTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4FAE809332D8E34B7B52EFFC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				522CEC5A8B07DC6790F59E0F /* ebur128.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -343,6 +447,16 @@
 			target = 40BC8A4B934A441D483F9151 /* YagyoPlayer */;
 			targetProxy = 0D3D16D39FD3B9E1CD06C5DF /* PBXContainerItemProxy */;
 		};
+		447D0ACA435A1E6851D99C1C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FF3F7EE521D69DB5C109B334 /* CEBUR128 */;
+			targetProxy = D4D55DBC03016FAD21FDC656 /* PBXContainerItemProxy */;
+		};
+		A8D445387DD5A49B9FBA8D68 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FF3F7EE521D69DB5C109B334 /* CEBUR128 */;
+			targetProxy = 698B6A14731CF60F2378D03F /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -357,8 +471,15 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.codex.yagyoplayer.tests;
 				SDKROOT = iphoneos;
+				SWIFT_INCLUDE_PATHS = (
+					"$(SRCROOT)/Vendor/libebur128",
+				);
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/YagyoPlayer.app/YagyoPlayer";
 			};
@@ -435,8 +556,15 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.codex.yagyoplayer;
 				SDKROOT = iphoneos;
+				SWIFT_INCLUDE_PATHS = (
+					"$(SRCROOT)/Vendor/libebur128",
+				);
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
@@ -455,8 +583,15 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.codex.yagyoplayer;
 				SDKROOT = iphoneos;
+				SWIFT_INCLUDE_PATHS = (
+					"$(SRCROOT)/Vendor/libebur128",
+				);
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
@@ -472,8 +607,15 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.codex.yagyoplayer.tests;
 				SDKROOT = iphoneos;
+				SWIFT_INCLUDE_PATHS = (
+					"$(SRCROOT)/Vendor/libebur128",
+				);
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/YagyoPlayer.app/YagyoPlayer";
 			};
@@ -543,6 +685,52 @@
 			};
 			name = Debug;
 		};
+		B6D3B8EA2CF56700D557C958 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEFINES_MODULE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/Vendor/libebur128",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MODULEMAP_FILE = "$(SRCROOT)/Vendor/libebur128/module.modulemap";
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.CEBUR128;
+				PRODUCT_MODULE_NAME = CEBUR128;
+				PUBLIC_HEADERS_FOLDER_PATH = include/CEBUR128;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F15B51F51C806A069E166000 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEFINES_MODULE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/Vendor/libebur128",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MODULEMAP_FILE = "$(SRCROOT)/Vendor/libebur128/module.modulemap";
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.CEBUR128;
+				PRODUCT_MODULE_NAME = CEBUR128;
+				PUBLIC_HEADERS_FOLDER_PATH = include/CEBUR128;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -551,6 +739,15 @@
 			buildConfigurations = (
 				823D02C804E00EA5009D80A6 /* Debug */,
 				0C75C7C28F69CBC8C17BAE83 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		74F363E1265C61180F4AFC6E /* Build configuration list for PBXNativeTarget "CEBUR128" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B6D3B8EA2CF56700D557C958 /* Debug */,
+				F15B51F51C806A069E166000 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
