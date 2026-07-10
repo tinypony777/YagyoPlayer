@@ -1,0 +1,72 @@
+name: YagyoPlayer
+options:
+  bundleIdPrefix: com.codex
+  deploymentTarget:
+    iOS: "26.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: ""
+    SWIFT_VERSION: "6.0"
+targets:
+  CEBUR128:
+    type: library.static
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: Vendor/libebur128/ebur128.c
+      - path: Vendor/libebur128/ebur128.h
+        buildPhase: headers
+        headerVisibility: public
+    settings:
+      base:
+        PRODUCT_MODULE_NAME: CEBUR128
+        DEFINES_MODULE: YES
+        CLANG_ENABLE_MODULES: YES
+        MODULEMAP_FILE: "$(SRCROOT)/Vendor/libebur128/module.modulemap"
+        HEADER_SEARCH_PATHS:
+          - "$(SRCROOT)/Vendor/libebur128"
+        PUBLIC_HEADERS_FOLDER_PATH: include/CEBUR128
+        SKIP_INSTALL: YES
+  YagyoPlayer:
+    type: application
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: YagyoPlayer
+        excludes:
+          - Resources
+    resources:
+      - path: YagyoPlayer/Resources
+    dependencies:
+      - target: CEBUR128
+      - sdk: AVFoundation.framework
+      - sdk: MediaPlayer.framework
+      - sdk: MusicKit.framework
+      - sdk: AppIntents.framework
+      - sdk: Accelerate.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.codex.yagyoplayer
+        INFOPLIST_FILE: YagyoPlayer/Info.plist
+        SWIFT_INCLUDE_PATHS:
+          - "$(SRCROOT)/Vendor/libebur128"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+  YagyoPlayerTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: YagyoPlayerTests
+    dependencies:
+      - target: YagyoPlayer
+      - target: CEBUR128
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.codex.yagyoplayer.tests
+        INFOPLIST_FILE: YagyoPlayerTests/Info.plist
+        SWIFT_INCLUDE_PATHS:
+          - "$(SRCROOT)/Vendor/libebur128"
