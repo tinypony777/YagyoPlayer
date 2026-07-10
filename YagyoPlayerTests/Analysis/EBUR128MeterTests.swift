@@ -29,6 +29,14 @@ final class EBUR128MeterTests: XCTestCase {
         XCTAssertEqual(try finiteValue(meter.integrated()), expectedDualIntegrated, accuracy: 0.01)
     }
 
+    func testOneSidedStereoIntegratedMatchesMonoReference() throws {
+        let format = try AnalysisPCMFormat(sampleRate: PCMFixtureFactory.sampleRate, channelRoles: [.left, .right])
+        let samples = PCMFixtureFactory.sine(format: format, activeChannels: [0])
+        let meter = try meter(format: format, samples: samples, chunkSize: 1_024)
+
+        XCTAssertEqual(try finiteValue(meter.integrated()), expectedMonoIntegrated, accuracy: 0.01)
+    }
+
     func testMomentaryIsUnavailableBeforeFourHundredMilliseconds() throws {
         let format = try AnalysisPCMFormat(sampleRate: PCMFixtureFactory.sampleRate, channelRoles: [.center])
         let samples = PCMFixtureFactory.sine(format: format, duration: 0.399)
@@ -66,14 +74,21 @@ final class EBUR128MeterTests: XCTestCase {
         XCTAssertNil(reading.externalValue)
     }
 
-    func testChunkSizesProduceIdenticalIntegratedLoudness() throws {
+    func testChunkSizesProduceIdenticalLoudnessReadings() throws {
         let format = try AnalysisPCMFormat(sampleRate: PCMFixtureFactory.sampleRate, channelRoles: [.center])
         let samples = PCMFixtureFactory.sine(format: format)
         let values = try [64, 257, 1_024, 4_096].map { chunkSize in
-            try finiteValue(meter(format: format, samples: samples, chunkSize: chunkSize).integrated())
+            let meter = try meter(format: format, samples: samples, chunkSize: chunkSize)
+            return (
+                integrated: try finiteValue(meter.integrated()),
+                momentary: try finiteValue(meter.momentary()),
+                shortTerm: try finiteValue(meter.shortTerm())
+            )
         }
 
-        XCTAssertLessThanOrEqual((values.max() ?? 0) - (values.min() ?? 0), 1e-9)
+        assertValuesWithinOneBillionth(values.map { $0.integrated })
+        assertValuesWithinOneBillionth(values.map { $0.momentary })
+        assertValuesWithinOneBillionth(values.map { $0.shortTerm })
     }
 
     func testEveryRoleMapsToExpectedIsolatedChannelGain() throws {
@@ -174,6 +189,14 @@ final class EBUR128MeterTests: XCTestCase {
             throw TestFailure.unexpectedReading
         }
         return value
+    }
+
+    private func assertValuesWithinOneBillionth(
+        _ values: [Double],
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertLessThanOrEqual((values.max() ?? 0) - (values.min() ?? 0), 1e-9, file: file, line: line)
     }
 
     private enum TestFailure: Error {

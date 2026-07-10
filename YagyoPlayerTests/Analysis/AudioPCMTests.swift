@@ -87,6 +87,43 @@ final class AudioPCMTests: XCTestCase {
         XCTAssertEqual(destination, [1, 2, 3, 4, 5, 6])
     }
 
+    func testInvalidExplicitMonoDescriptionDoesNotFallbackToCenter() throws {
+        let format = try PCMFixtureFactory.format(channelLabels: [kAudioChannelLabel_LeftSurroundDirect])
+
+        let adapter = try AVAudioPCMBufferAdapter(format: format)
+
+        XCTAssertNil(adapter.sourceDescription.channelRoles)
+        XCTAssertNil(adapter.analysisFormat)
+    }
+
+    func testInvalidExplicitStereoDescriptionsDoNotFallbackToLeftRight() throws {
+        let format = try PCMFixtureFactory.format(channelLabels: [
+            kAudioChannelLabel_LeftSurround,
+            kAudioChannelLabel_RightSurround
+        ])
+
+        let adapter = try AVAudioPCMBufferAdapter(format: format)
+
+        XCTAssertNil(adapter.sourceDescription.channelRoles)
+        XCTAssertNil(adapter.analysisFormat)
+    }
+
+    func testUnsupportedExplicitMonoAndStereoTagsDoNotFallbackToCountBasedRoles() throws {
+        let unsupportedTaggedFormats: [(AudioChannelLayoutTag, AVAudioChannelCount)] = [
+            (kAudioChannelLayoutTag_DiscreteInOrder | AudioChannelLayoutTag(1), 1),
+            (kAudioChannelLayoutTag_Binaural, 2)
+        ]
+
+        for (layoutTag, channelCount) in unsupportedTaggedFormats {
+            let format = try PCMFixtureFactory.format(channelCount: channelCount, layoutTag: layoutTag)
+
+            let adapter = try AVAudioPCMBufferAdapter(format: format)
+
+            XCTAssertNil(adapter.sourceDescription.channelRoles, "\(layoutTag)")
+            XCTAssertNil(adapter.analysisFormat, "\(layoutTag)")
+        }
+    }
+
     func testInterleavedFloat32OrderIsCopiedUnchanged() throws {
         let format = try PCMFixtureFactory.format(channelCount: 2, interleaved: true)
         let buffer = try PCMFixtureFactory.buffer(
@@ -157,6 +194,25 @@ final class AudioPCMTests: XCTestCase {
 
         XCTAssertFalse(copied)
         XCTAssertEqual(destination, [99, 99, 99, 99, 99])
+    }
+
+    func testSampleRateMismatchRejectsWithoutPartialCopy() throws {
+        let adapterFormat = try PCMFixtureFactory.format(channelCount: 2, sampleRate: 48_000, interleaved: true)
+        let bufferFormat = try PCMFixtureFactory.format(channelCount: 2, sampleRate: 44_100, interleaved: true)
+        let buffer = try PCMFixtureFactory.buffer(
+            format: bufferFormat,
+            frameCount: 2,
+            interleavedSamples: [1, 2, 3, 4]
+        )
+        let adapter = try AVAudioPCMBufferAdapter(format: adapterFormat)
+        var destination: [Float] = [99, 99, 99, 99]
+
+        let copied = destination.withUnsafeMutableBufferPointer {
+            adapter.copyInterleavedSamples(from: buffer, sourceFrameOffset: 0, frameCount: 2, into: $0)
+        }
+
+        XCTAssertFalse(copied)
+        XCTAssertEqual(destination, [99, 99, 99, 99])
     }
 
     func testRepeatedCopiesReuseCallerOwnedStorageAddress() throws {

@@ -81,6 +81,7 @@ struct AVAudioPCMBufferAdapter: Sendable {
         into destination: UnsafeMutableBufferPointer<Float>
     ) -> Bool {
         guard buffer.format.commonFormat == .pcmFormatFloat32,
+              buffer.format.sampleRate == sourceDescription.sampleRate,
               Int(buffer.format.channelCount) == channelCount,
               buffer.format.isInterleaved == isInterleaved,
               sourceFrameOffset >= 0,
@@ -139,9 +140,8 @@ enum AudioPCMError: Error, Equatable {
 
 private extension AVAudioPCMBufferAdapter {
     static func resolveChannelRoles(format: AVAudioFormat, channelCount: Int) -> [AudioChannelRole]? {
-        if let layout = format.channelLayout,
-           let roles = roles(from: layout, expectedChannelCount: channelCount) {
-            return roles
+        if let layout = format.channelLayout {
+            return roles(from: layout, expectedChannelCount: channelCount)
         }
 
         switch channelCount {
@@ -162,6 +162,11 @@ private extension AVAudioPCMBufferAdapter {
             return roles(from: layoutPointer, expectedChannelCount: expectedChannelCount)
         }
 
+        if let roles = roles(forSupportedLayoutTag: layoutTag),
+           roles.count == expectedChannelCount {
+            return roles
+        }
+
         guard supportedLayoutTags.contains(layoutTag),
               let resolvedLayoutPointer = resolvedLayout(for: layoutTag) else {
             return nil
@@ -169,6 +174,17 @@ private extension AVAudioPCMBufferAdapter {
         defer { resolvedLayoutPointer.deallocate() }
 
         return roles(from: UnsafePointer(resolvedLayoutPointer), expectedChannelCount: expectedChannelCount)
+    }
+
+    static func roles(forSupportedLayoutTag layoutTag: AudioChannelLayoutTag) -> [AudioChannelRole]? {
+        switch layoutTag {
+        case kAudioChannelLayoutTag_Mono:
+            return [.center]
+        case kAudioChannelLayoutTag_Stereo:
+            return [.left, .right]
+        default:
+            return nil
+        }
     }
 
     static func roles(

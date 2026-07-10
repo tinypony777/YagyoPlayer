@@ -7,13 +7,20 @@ enum PCMFixtureFactory {
 
     static func format(
         channelCount: AVAudioChannelCount,
+        sampleRate: Double = PCMFixtureFactory.sampleRate,
         interleaved: Bool = true,
         layoutTag: AudioChannelLayoutTag? = nil,
         file: StaticString = #filePath,
         line: UInt = #line
     ) throws -> AVAudioFormat {
         guard let layoutTag else {
-            return try format(channelCount: channelCount, interleaved: interleaved, file: file, line: line)
+            return try format(
+                channelCount: channelCount,
+                sampleRate: sampleRate,
+                interleaved: interleaved,
+                file: file,
+                line: line
+            )
         }
         let layout = try XCTUnwrap(AVAudioChannelLayout(layoutTag: layoutTag), file: file, line: line)
         let format = AVAudioFormat(
@@ -28,7 +35,27 @@ enum PCMFixtureFactory {
     }
 
     static func format(
+        channelLabels: [AudioChannelLabel],
+        sampleRate: Double = PCMFixtureFactory.sampleRate,
+        interleaved: Bool = true,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws -> AVAudioFormat {
+        let layout = try channelLayout(labels: channelLabels, file: file, line: line)
+        let format = AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: sampleRate,
+            interleaved: interleaved,
+            channelLayout: layout
+        )
+        let unwrapped = try XCTUnwrap(format, file: file, line: line)
+        XCTAssertEqual(unwrapped.channelCount, AVAudioChannelCount(channelLabels.count), file: file, line: line)
+        return unwrapped
+    }
+
+    static func format(
         channelCount: AVAudioChannelCount,
+        sampleRate: Double = PCMFixtureFactory.sampleRate,
         interleaved: Bool = true,
         file: StaticString = #filePath,
         line: UInt = #line
@@ -89,5 +116,43 @@ enum PCMFixtureFactory {
             }
         }
         return samples
+    }
+
+    private static func channelLayout(
+        labels: [AudioChannelLabel],
+        file: StaticString,
+        line: UInt
+    ) throws -> AVAudioChannelLayout {
+        XCTAssertFalse(labels.isEmpty, file: file, line: line)
+        let descriptionsOffset = try XCTUnwrap(
+            MemoryLayout<AudioChannelLayout>.offset(of: \.mChannelDescriptions),
+            file: file,
+            line: line
+        )
+        let byteCount = descriptionsOffset + MemoryLayout<AudioChannelDescription>.stride * labels.count
+        let rawLayout = UnsafeMutableRawPointer.allocate(
+            byteCount: byteCount,
+            alignment: MemoryLayout<AudioChannelLayout>.alignment
+        )
+        defer { rawLayout.deallocate() }
+        rawLayout.initializeMemory(as: UInt8.self, repeating: 0, count: byteCount)
+
+        let layout = rawLayout.assumingMemoryBound(to: AudioChannelLayout.self)
+        layout.pointee.mChannelLayoutTag = kAudioChannelLayoutTag_UseChannelDescriptions
+        layout.pointee.mChannelBitmap = AudioChannelBitmap()
+        layout.pointee.mNumberChannelDescriptions = UInt32(labels.count)
+
+        let descriptions = rawLayout
+            .advanced(by: descriptionsOffset)
+            .assumingMemoryBound(to: AudioChannelDescription.self)
+        for (index, label) in labels.enumerated() {
+            descriptions[index] = AudioChannelDescription(
+                mChannelLabel: label,
+                mChannelFlags: AudioChannelFlags(),
+                mCoordinates: (0, 0, 0)
+            )
+        }
+
+        return AVAudioChannelLayout(layout: UnsafePointer(layout))
     }
 }
