@@ -225,7 +225,7 @@ rg -n "Draft" project.yml YagyoPlayer.xcodeproj/project.pbxproj
 
 Expected: only the intended commits are ahead of `origin/main`; diff check is clean; no production project file references `Draft`.
 
-- [ ] **Step 3: Push the explicitly requested main branch**
+- [x] **Step 3: Push the explicitly requested main branch**
 
 ```bash
 git push origin main
