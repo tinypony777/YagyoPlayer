@@ -1,7 +1,7 @@
 # 夜行絵巻 2.0 — 唐傘基準体と正直な音量振付 設計仕様
 
 **日付:** 2026-07-11
-**状態:** 方針・記述仕様承認済み・feature branch実装済み。初期の紫色・横向き唐傘とそのSimulator証跡は不採用。参照忠実度再設計のbuild／tests／semantic AX検証と証跡生成は完了し、Simulator画像の最終native目視QAとユーザー見た目承認待ち
+**状態:** 方針・記述仕様承認済み・feature branch実装済み。初期の紫色・横向き唐傘とそのSimulator証跡は不採用。参照忠実度再設計のbuild／tests／semantic AX／2名の独立native visual QA／GitHub証跡同期まで完了し、ユーザー本人の見た目承認待ち
 **対象:** Step 4「夜行絵巻 2.0」の最初の唐傘縦切り。残りの妖怪へ展開する前提となる共通契約
 
 > **2026-07-12 追補・優先関係:** 唐傘の色、姿勢、輪郭、部位、`strong` の見た目は [`2026-07-12-karakasa-reference-fidelity-redesign.md`](./2026-07-12-karakasa-reference-fidelity-redesign.md) と、その [`implementation plan`](../plans/2026-07-12-karakasa-reference-fidelity-implementation.md) を正本とする。本書に残る初期の紫パレット、横向き／長い柄、横に開いた傘の記述と、それを写した検証結果は履歴としてのみ保存され、現行アート仕様・視覚承認証跡には使用しない。reducer の互換フェーズ名 `.open`、`strongOpen`、旧ファイル名に含まれる `open` は残してよいが、見た目は「傘を横に開く」ではなく正面姿勢の reaction を意味する。
@@ -10,7 +10,7 @@
 
 現在候補は、全8フレームで**正面向きの赤〜珊瑚色の円錐形**を守り、**茶色の頭頂、金色の帯、中央の一つ目、曲線の笑い口、桃色の舌、淡色の一本足、一足の茶／金色の下駄**を共有する coherent frame family とする。構成は `idle 1 + walk 4 + hush 1 + strong 2` のまま、`strong` は正面形を保った anticipate／reaction の二次動作で表す。
 
-参照忠実度テストは旧アートに対するTask 1の意味的REDをXcode 27／iOS 27で確認済みである。現在候補は、Xcode 27.0のgeneric iOS build、checked projectの **11 / 11 focused QA GREEN** と **65 / 65 full suite GREEN**（ともにskip 0）を完了した。座標tapなしのsemantic AX validationも、iPhone 17 Proのstate matrix **4 / 4**、Reduce Motion stability **1 / 1**、最小幅iPhone 17eのdefault Normal + Karakasa **1 / 1**をskip 0で通過した。Reduce Motionの`t0`／`t+2 s` full PNGは同一SHA-256で、canvas cropのdiffering bytesは0である。同じASCIIソースからのPNG contact sheet／GIF motion previewは独立native QA APPROVED。現在の画像とhashは[証跡ledger](../../evidence/step4-karakasa/README.md)を正本とする。Simulator画像の最終native目視QAとユーザー見た目承認は未完了であり、視覚完了とは扱わない。
+参照忠実度テストは旧アートに対するTask 1の意味的REDをXcode 27／iOS 27で確認済みである。現在候補は、Xcode 27.0のgeneric iOS build、checked projectの **11 / 11 focused QA GREEN** と **65 / 65 full suite GREEN**（ともにskip 0）を完了した。座標tapなしのsemantic AX validationも、iPhone 17 Proのstate matrix **4 / 4**、Reduce Motion stability **1 / 1**、最小幅iPhone 17eのdefault Normal + Karakasa **1 / 1**をskip 0で通過した。Reduce Motionの`t0`／`t+2 s` full PNGは同一SHA-256で、canvas cropのdiffering bytesは0である。2名の独立native reviewerは同じASCIIソースからのPNG contact sheet／GIFとSimulator画像7枚をすべてAPPROVEDし、BLOCKER／MAJOR／MINORは0。Pro Strongの右端寄りは切断なしのINFOだけである。現在の画像とhashは[証跡ledger](../../evidence/step4-karakasa/README.md)を正本とし、binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`で9 binary blob／旧5画像削除／Draft PR本文を確認済み。ユーザー本人の見た目承認は未完了であり、視覚完了とは扱わない。
 
 ## 1. 目的
 
@@ -86,7 +86,7 @@ Step 3「狐火の調律」は iOS 27 の Music Understanding / Core AI を正�
 
 ### 5.3 基準体ゲート
 
-唐傘は通常時・丑三つ時、resident先導時、Reduce Motion、狭いiPhone幅を座標tapなしのsemantic AX testで検証済みである。Reduce Motionは2秒差のfull PNG同一性とcanvas crop差分0も確認した。保存済みSimulator画像について切れ、補間、基準線の揺れ、周囲の旧スプライトとの衝突を最終native目視QAし、ユーザーが見た目を承認してから残りの妖怪へ展開する。検証中の混在状態はfeature branchとDraft PRに留め、唐傘だけが異なる画風の状態では`main`へ統合しない。
+唐傘は通常時・丑三つ時、resident先導時、Reduce Motion、狭いiPhone幅を座標tapなしのsemantic AX testで検証済みである。Reduce Motionは2秒差のfull PNG同一性とcanvas crop差分0も確認した。保存済みSimulator画像について切れ、補間、基準線、周囲の旧スプライトとの衝突を2名の独立native reviewerがAPPROVED済みである。ユーザー本人が見た目を承認してから残りの妖怪へ展開する。混在状態はfeature branchとDraft PRに留め、唐傘だけが異なる画風の状態では`main`へ統合しない。
 
 ## 6. 視覚信号アーキテクチャ
 

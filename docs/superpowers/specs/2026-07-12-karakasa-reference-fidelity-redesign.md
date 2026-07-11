@@ -1,7 +1,7 @@
 # 唐傘・参照忠実度再設計 補足仕様
 
 **日付:** 2026-07-12
-**状態:** 仕様承認・実装・build／tests／semantic AX検証・証跡生成まで完了。contact sheet／GIFの独立native QAはAPPROVED。Simulator画像の最終native目視QAとユーザー見た目承認待ち
+**状態:** 仕様承認・実装・build／tests／semantic AX検証・証跡生成・2名の独立native visual QA・GitHub同期まで完了。ユーザー本人の見た目承認待ち
 **対象:** Step 4「夜行絵巻 2.0」の唐傘 40×48 px・8フレームのみ
 
 ## 1. 目的と優先関係
@@ -151,4 +151,4 @@ Hatch Petの全出力仕様は採用せず、キャラクター同一性とア�
 - Reduce Motion: `t0`／`t+2 s`のfull PNGは同一SHA-256で、canvas cropのdiffering bytesは0。
 - semantic AX／最小幅iPhone 17e: default Normal + Karakasa **1 / 1**、skip 0。最初のmenu試行失敗とauto diagnostics終了は正本から除外し、follow-up GREENを採用する。
 - 最新ASCIIから生成した696×96 contact sheetと80×96／15-frame GIFは、参照画と比較する独立native QAでAPPROVED。
-- Simulator screenshot一式はsemantic testとhash記録まで完了したが、最終native目視QAは未完了。ユーザー承認も未完了なので、残り妖怪と`main`統合のゲートは閉じたままとする。
+- Simulator screenshot一式はsemantic test／hash記録に加え、2名の独立native reviewerがすべてAPPROVEDした（BLOCKER／MAJOR／MINOR 0）。Pro Strongの右端寄りは切断なしのINFOのみ。binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`で9 binary blob、旧5画像削除、画像link、Draft PR本文も確認済み。ユーザー本人の承認は未完了なので、残り妖怪と`main`統合のゲートは閉じたままとする。

@@ -13,8 +13,8 @@
 - Tasks 1–3 are complete. The rejected art produced a semantic RED; the current coherent family and QA renderer pass the checked focused suite **11 / 11**, skip 0.
 - Task 4 Steps 1–6 are complete: Xcode 27.0 generic build SUCCESS、iOS 27／iPhone 17 Pro full suite **65 / 65** skip 0、semantic AX Pro **4 + 1** and 17e **1 / 1** skip 0、[evidence ledger](../../evidence/step4-karakasa/README.md) generation commit `d1eca866`。
 - Reduce Motion `t0`／`t+2 s` full PNGs are identical and the canvas crop has 0 differing bytes. All semantic state selection used AX element references with no coordinate taps.
-- Contact sheet／GIF independent native QA is APPROVED. Simulator screenshots still require final native visual QA; user visual approval is not complete.
-- Task 4 Step 7 remains pending for GitHub branch/image-link synchronization and final confirmation. Draft PR、`main` unmerged、mixed-art、remaining-yokai separate matrix gates remain unchanged.
+- Contact sheet／GIF and all seven Simulator screenshots are APPROVED by two independent native reviewers, with 0 BLOCKER／MAJOR／MINOR findings. Pro Strong right-edge placement is INFO-only and is not clipped. User visual approval is not complete.
+- Task 4 Step 7 is complete: binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5` has all 9 binary hashes/links, the 5 old images are deleted, and Draft PR #13's body/state were verified. Draft PR、`main` unmerged、mixed-art、remaining-yokai separate matrix gates remain unchanged.
 
 ## Global Constraints
 
@@ -361,7 +361,7 @@ Expected: BUILD SUCCEEDED、focused/full tests PASS、skip数を記録。生成�
 
 - [x] **Step 5: docsとDraft PR用ledgerを更新する**
 
-parent specの旧「紫」と横長openを補足specへ委譲し、旧検証実績をsupersededとして明記した。Draft PR用の画像リンクとledgerを準備し、Draft、`main`未merge、ユーザー視覚承認待ちを維持する。GitHub上の最終同期確認はStep 7に残す。
+parent specの旧「紫」と横長openを補足specへ委譲し、旧検証実績をsupersededとして明記した。Draft PR用の画像リンクとledgerを準備し、Draft、`main`未merge、ユーザー視覚承認待ちを維持した。GitHub上の最終同期はStep 7で確認した。
 
 - [x] **Step 6: validation commitを作る**
 
@@ -378,11 +378,11 @@ git add README.md \
 git commit -m "docs: publish current Karakasa evidence"
 ```
 
-Binary artifacts were generated from `d1eca866`; their GitHub path synchronization and link confirmation remain Step 7.
+Binary artifacts were generated from `d1eca866`; their GitHub path synchronization and link confirmation were completed in Step 7.
 
-- [ ] **Step 7: GitHub同期と最終確認**
+- [x] **Step 7: GitHub同期と最終確認**
 
-feature branch `agent/step4-yagyo-emaki-2`だけを更新し、Draft PR #13のhead、画像リンク、checksを確認する。`main`へmergeしない。最終handoffはユーザーの視覚承認要求で止める。
+feature branch `agent/step4-yagyo-emaki-2`だけを更新した。binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`で9 binary blobのSHA-256と画像link、旧5画像削除を確認。Draft PR #13は本文更新済み、`draft = true`、`merged = false`、base `main`。`main` SHA `256a45a8c9d9efb8db09970f3e40e6d1f5ef28fc`は不変。2名の独立native visual QAも全artifactをAPPROVEDした。最終handoffはユーザー本人の視覚承認要求で止め、`main`へmergeしない。
 
 ## Self-Review
 

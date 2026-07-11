@@ -2,7 +2,7 @@
 
 このフォルダは、参照忠実度再設計後の赤い正面向き唐傘だけを収める証跡ledgerです。生成対象commitは `d1eca866`。初期の紫色・横向き／長い柄・横に開いた唐傘と、その旧Simulator画像はsupersededであり、ここには置きません。
 
-現在候補は40×48 px、`idle 1 + walk 4 + hush 1 + strong 2`の8フレームです。`.open`は互換性のための内部phase名で、画像上は横へ開いた傘ではなく正面reactionを表します。contact sheet／GIFは独立native visual QAで**APPROVED**。Simulator画像はsemantic AX／hash検証まで完了していますが、最終native目視QAとユーザー見た目承認は**pending**です。
+現在候補は40×48 px、`idle 1 + walk 4 + hush 1 + strong 2`の8フレームです。`.open`は互換性のための内部phase名で、画像上は横へ開いた傘ではなく正面reactionを表します。contact sheet／GIFとSimulator画像7枚は、2名の独立native reviewerがすべて**APPROVED**しました（BLOCKER／MAJOR／MINOR 0）。Pro Strongの右端寄りは切断なしのINFOだけです。ユーザー本人の見た目承認は**pending**です。
 
 参照仕様は[唐傘・参照忠実度再設計](../../superpowers/specs/2026-07-12-karakasa-reference-fidelity-redesign.md)、実行記録は[implementation plan](../../superpowers/plans/2026-07-12-karakasa-reference-fidelity-implementation.md)、振付の意味は[夜行絵巻 振付翻訳帳](../../CHOREOGRAPHY.md)を正本とします。
 
@@ -12,13 +12,13 @@
 |---|---|---|---|---|
 | [`karakasa-contact-sheet.png`](karakasa-contact-sheet.png) | 8 semantic frames | 696×96 PNG | `6f092b951f7ff42f6302d4fd34aed72778bd71539bc77cac4951619a5f2ac368` | independent native QA APPROVED |
 | [`karakasa-motion-preview.gif`](karakasa-motion-preview.gif) | coherent motion preview | 80×96、15 frames | `4a3243ea3093c7a686bf8544034010976ab88f23df1c20fcd23806691e2bd50a` | independent native QA APPROVED |
-| [`karakasa-normal-iphone17pro.png`](karakasa-normal-iphone17pro.png) | Normal + Karakasa | 1206×2622 PNG | `d3d0d8bc8ad560178c0d9cc65d0d6a6bd71ad63952aad729cad7226eda08a599` | semantic AX GREEN、native visual QA pending |
-| [`karakasa-quiet-iphone17pro.png`](karakasa-quiet-iphone17pro.png) | Quiet + Karakasa | 1206×2622 PNG | `619b6e3574321a08c1b0de1830061f6f99e230f9ee6caf71f782e84883d418af` | semantic AX GREEN、native visual QA pending |
-| [`karakasa-strong-iphone17pro.png`](karakasa-strong-iphone17pro.png) | Strong + Karakasa | 1206×2622 PNG | `b9c701999de044c506ab36af12ed31c48bbd386417dccecf01f212f9a47ebb15` | semantic AX GREEN、native visual QA pending |
-| [`karakasa-strong-ushimitsu-iphone17pro.png`](karakasa-strong-ushimitsu-iphone17pro.png) | Strong + Karakasa + Ushimitsu | 1206×2622 PNG | `65e3327ca498bdc6671cd1db4143aadb29a05bb6db59c5de38b71fb0cbb696e9` | semantic AX GREEN、native visual QA pending |
-| [`karakasa-strong-reduce-motion-iphone17pro.png`](karakasa-strong-reduce-motion-iphone17pro.png) | Strong + Karakasa + Reduce Motion、`t0` | 1206×2622 PNG | `54d997b10c157e6acc887f68b0072a93cc77bdbcefb7c8d8611957b995296335` | semantic AX GREEN、native visual QA pending |
-| [`karakasa-strong-reduce-motion-iphone17pro-t-plus-2s.png`](karakasa-strong-reduce-motion-iphone17pro-t-plus-2s.png) | 同状態、`t+2 s` | 1206×2622 PNG | `54d997b10c157e6acc887f68b0072a93cc77bdbcefb7c8d8611957b995296335` | full PNG identical、native visual QA pending |
-| [`karakasa-normal-iphone17e.png`](karakasa-normal-iphone17e.png) | 最小幅、Normal + Karakasa、selected `+6 s` | 1170×2532 PNG、1,616,447 bytes | `6a65cbce58404770515b7d737fff2ac11103ae495005638c40c8fcb1d3e09811` | semantic XCUITest GREEN、native visual QA pending |
+| [`karakasa-normal-iphone17pro.png`](karakasa-normal-iphone17pro.png) | Normal + Karakasa | 1206×2622 PNG | `d3d0d8bc8ad560178c0d9cc65d0d6a6bd71ad63952aad729cad7226eda08a599` | semantic AX GREEN、native visual QA APPROVED |
+| [`karakasa-quiet-iphone17pro.png`](karakasa-quiet-iphone17pro.png) | Quiet + Karakasa | 1206×2622 PNG | `619b6e3574321a08c1b0de1830061f6f99e230f9ee6caf71f782e84883d418af` | semantic AX GREEN、native visual QA APPROVED |
+| [`karakasa-strong-iphone17pro.png`](karakasa-strong-iphone17pro.png) | Strong + Karakasa | 1206×2622 PNG | `b9c701999de044c506ab36af12ed31c48bbd386417dccecf01f212f9a47ebb15` | semantic AX GREEN、native visual QA APPROVED（right-edge INFO、not clipped） |
+| [`karakasa-strong-ushimitsu-iphone17pro.png`](karakasa-strong-ushimitsu-iphone17pro.png) | Strong + Karakasa + Ushimitsu | 1206×2622 PNG | `65e3327ca498bdc6671cd1db4143aadb29a05bb6db59c5de38b71fb0cbb696e9` | semantic AX GREEN、native visual QA APPROVED |
+| [`karakasa-strong-reduce-motion-iphone17pro.png`](karakasa-strong-reduce-motion-iphone17pro.png) | Strong + Karakasa + Reduce Motion、`t0` | 1206×2622 PNG | `54d997b10c157e6acc887f68b0072a93cc77bdbcefb7c8d8611957b995296335` | semantic AX GREEN、native visual QA APPROVED |
+| [`karakasa-strong-reduce-motion-iphone17pro-t-plus-2s.png`](karakasa-strong-reduce-motion-iphone17pro-t-plus-2s.png) | 同状態、`t+2 s` | 1206×2622 PNG | `54d997b10c157e6acc887f68b0072a93cc77bdbcefb7c8d8611957b995296335` | full PNG identical、native visual QA APPROVED |
+| [`karakasa-normal-iphone17e.png`](karakasa-normal-iphone17e.png) | 最小幅、Normal + Karakasa、selected `+6 s` | 1170×2532 PNG、1,616,447 bytes | `6a65cbce58404770515b7d737fff2ac11103ae495005638c40c8fcb1d3e09811` | semantic XCUITest GREEN、native visual QA APPROVED |
 
 ## 最新ASCIIから生成した8フレーム
 
@@ -81,7 +81,9 @@ GIFは `idle, walk0...3, walk0...3, hush, hush, strong0, strong1, strong1, idle`
 ## QAと公開ゲート
 
 - contact sheet／GIF: 元参照と比較した独立native visual QA **APPROVED**。
-- Simulator screenshots: semantic AX／XCUITestとhash検証はGREEN。最終native目視QAは**pending**。
+- Simulator screenshots: semantic AX／XCUITestとhash検証はGREEN。2名の独立native visual QAは全7枚を**APPROVED**（BLOCKER／MAJOR／MINOR 0）。Pro Strongの右端寄りは切断なしのINFOのみ。
 - ユーザー見た目承認: **pending**。
-- [Draft PR #13](https://github.com/tinypony777/YagyoPlayer/pull/13)はDraftのまま、`main`へ未merge。
+- GitHub binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`で9 binary blobのSHA-256と画像linkを確認済み。旧5画像は削除済み。
+- [Draft PR #13](https://github.com/tinypony777/YagyoPlayer/pull/13)は本文更新済み、`draft = true`、`merged = false`、base `main`。
+- `main` SHA `256a45a8c9d9efb8db09970f3e40e6d1f5ef28fc`は不変。
 - 現在は唐傘だけが新画風のmixed-art状態。残り7体と一つ目小僧は、唐傘のユーザー承認後に別frame matrixを提示し、別途承認されるまで展開しません。

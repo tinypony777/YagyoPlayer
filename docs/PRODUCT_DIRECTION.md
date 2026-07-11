@@ -48,7 +48,7 @@ North Star は次の 3 条件。確認の物差しは市場指標ではなく、
 2. **Music Made Visible** — 妖怪・提灯・月は、取得できる音量帯、低レベル継続近似、強い音量上昇近似、再生状態を伝える存在。意味のない常時アニメーションより、根拠を説明できる入力と操作に結びついた反応を優先する。すべての反応は翻訳帳(§4.1)で説明できること。
 3. **Folklore as Interaction Model** — 行列=ライブラリ、巻物=プレイリスト、提灯=再生位置と音の反応、狐火=分析・提案、丑三つ時=時刻と特別状態。語彙は雰囲気語ではなく操作体系。新機能はまずこの語彙表のどれで呼ばれるかを問う(§7 Q1)。
 4. **音への敬意** — 音を勝手に加工しない。分析は根拠・比較・取り消しとセットで、用語は「補正」ではなく**「提案」**(自動で直さない、根拠を示して提案し、ユーザーが判断する)。
-5. **iOS-native Ritual** — MediaPlayer / App Intents / Shortcuts の作法に従う。VoiceOver・Reduce Motion・コントラストは最初から設計対象。Reduce Motion でも情報が失われない(静止状態でも音量・再生状態の代替表現を持つ)。現在地: Step 4 feature branch で夜行絵巻と波形リングの静止代替、VoiceOver 値を縦切り実装した。Xcode 27.0のgeneric iOS buildに成功し、checked projectをiOS 27のiPhone 17 Pro destinationでfocused QA 11 / 11、full suite 65 / 65（いずれもskip 0）まで完了している。座標tapなしのsemantic AX validationはProのstate matrix 4 / 4、Reduce Motion stability 1 / 1、17e default 1 / 1をskip 0で通過した。Reduce Motionの`t0`／`t+2 s` full PNGは同一でcanvas crop差分も0である。[証跡ledger](evidence/step4-karakasa/README.md)のSimulator画像は最終native目視QA待ちで、ユーザーの見た目承認も残っている。旧紫・横向き唐傘の画像はsupersededで、現候補の証拠には使わない。
+5. **iOS-native Ritual** — MediaPlayer / App Intents / Shortcuts の作法に従う。VoiceOver・Reduce Motion・コントラストは最初から設計対象。Reduce Motion でも情報が失われない(静止状態でも音量・再生状態の代替表現を持つ)。現在地: Step 4 feature branch で夜行絵巻と波形リングの静止代替、VoiceOver 値を縦切り実装した。Xcode 27.0のgeneric iOS buildに成功し、checked projectをiOS 27のiPhone 17 Pro destinationでfocused QA 11 / 11、full suite 65 / 65（いずれもskip 0）まで完了している。座標tapなしのsemantic AX validationはProのstate matrix 4 / 4、Reduce Motion stability 1 / 1、17e default 1 / 1をskip 0で通過した。Reduce Motionの`t0`／`t+2 s` full PNGは同一でcanvas crop差分も0である。[証跡ledger](evidence/step4-karakasa/README.md)は2名の独立native reviewerがSimulator画像を含む全artifactをAPPROVEDし、BLOCKER／MAJOR／MINORは0。ユーザー本人の見た目承認だけが残っている。旧紫・横向き唐傘の画像はsupersededで、現候補の証拠には使わない。
 
 **Producer Check と世界観の共存規則**: 狐火の帳(§4.4)の使用中、夜行絵巻は静的な背景に退き、数値が主役になる。ただし助言の語彙は狐火で統一する。世界観は検聴(ミックス/マスターの確認試聴)の邪魔をせず、検聴は世界観の外に出ない。
 
@@ -62,7 +62,7 @@ North Star は次の 3 条件。確認の物差しは市場指標ではなく、
 
 - 正式な対応表は [振付翻訳帳](CHOREOGRAPHY.md) として公開し、入力、閾値、通常振付、Reduce Motion の静止代替、近似の限界を同じ場所で管理する。反応の意味を説明すること自体が、この世界への招待状である。
 - 妖怪の頭数を増やすことより、一体あたりの挙動深度を上げることに投資する。
-- **現在地(正直に)**: Step 4 feature branch では、従来の音量連動の跳ねを単一の `ParadeSignalSnapshot` に基づく振付へ置き換え、resident 先導、Reduce Motion、VoiceOver を接続している。現在の唐傘は、赤〜珊瑚色の正面円錐形、茶色の頭頂と金帯、一つ目、笑い口と桃色の舌、淡色の一本足、一足の下駄を全8枚で共有する。内部phase名`.open`は互換性のため残るが、表示は正面reactionであり、初期の紫色・横向き／長い柄・横に開いた造形はsupersededである。Xcode 27.0のgeneric iOS buildに成功し、iOS 27のiPhone 17 Pro destinationでfocused QA **11 / 11**、full suite **65 / 65**、いずれもskip 0を確認した。Pro semantic AX **4 + 1**、17e **1 / 1**もskip 0で通過し、Reduce Motionの2枚はfull PNG同一／canvas crop差分0である。contact sheet／GIFの独立native QAはAPPROVED、Simulator画像の最終native目視QAとユーザー承認は未完了である。SNES相当の新規アートは唐傘1体だけで、他の行列妖怪は従来アートのまま。この混在状態はDraft PRに留め、`main`へ統合しない。残りの妖怪は別途frame matrixの承認を得るまで展開しない。
+- **現在地(正直に)**: Step 4 feature branch では、従来の音量連動の跳ねを単一の `ParadeSignalSnapshot` に基づく振付へ置き換え、resident 先導、Reduce Motion、VoiceOver を接続している。現在の唐傘は、赤〜珊瑚色の正面円錐形、茶色の頭頂と金帯、一つ目、笑い口と桃色の舌、淡色の一本足、一足の下駄を全8枚で共有する。内部phase名`.open`は互換性のため残るが、表示は正面reactionであり、初期の紫色・横向き／長い柄・横に開いた造形はsupersededである。Xcode 27.0のgeneric iOS buildに成功し、iOS 27のiPhone 17 Pro destinationでfocused QA **11 / 11**、full suite **65 / 65**、いずれもskip 0を確認した。Pro semantic AX **4 + 1**、17e **1 / 1**もskip 0で通過し、Reduce Motionの2枚はfull PNG同一／canvas crop差分0である。2名の独立native reviewerはcontact sheet／GIFとSimulator画像7枚をすべてAPPROVEDし、BLOCKER／MAJOR／MINOR 0。GitHub binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`の9 binary hash／link、旧5画像削除、Draft PR本文も確認済みである。ユーザー本人の見た目承認は未完了。SNES相当の新規アートは唐傘1体だけで、他の行列妖怪は従来アートのまま。この混在状態はDraft PRに留め、`main`へ統合しない。残りの妖怪は別途frame matrixの承認を得るまで展開しない。
 
 ### 4.2 狐火の調律 — 好みの聴き方を、自分で選ぶ（保留中の構想）
 
@@ -84,7 +84,7 @@ residency は各トラックに安定して住み着く妖怪を割り当てる�
 - この先導は安定したトラック割当であり、聴取回数による成長や listening-history progression ではない。playCount 等による見た目の変化は未接続である。
 - 蓄積が端末喪失を生き延びることは別途検証する。消える蓄積は愛着の裏切りになる。
 - 収集ゲームにはしない(§6 の線引き)。
-- **現在地(正直に)**: 統計の記録・永続化は実装済み。resident先導はfeature branchに実装し、現行full suiteと座標tapなしのsemantic AX state validationで確認済み。Simulator画像の最終native目視QAは未完了で、歴史的な行列振付も未実装である。
+- **現在地(正直に)**: 統計の記録・永続化は実装済み。resident先導はfeature branchに実装し、現行full suite、座標tapなしのsemantic AX state validation、独立native visual QAで確認済み。ユーザー本人の見た目承認と歴史的な行列振付は未完了である。
 
 ### 4.4 狐火の帳(Producer Check)— 自分のデモを確かめる道具
 

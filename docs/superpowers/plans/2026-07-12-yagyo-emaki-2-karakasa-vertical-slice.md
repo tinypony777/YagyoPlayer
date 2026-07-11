@@ -17,7 +17,7 @@
 - 旧アートを拒否する参照忠実度Task 1は、Xcode 27／iOS 27で意味的なREDを確認済み。
 - 現在候補は、Xcode 27／iOS 27で構造テスト9件とQA artifactテスト2件の **11 / 11 focused QA GREEN**。同じソースからPNG contact sheetとGIF motion previewを抽出し、独立視覚QAも承認済み。
 - 再設計Task 4はXcode 27.0 generic build、checked projectのfull suite **65 / 65**、Pro semantic AX **4 + 1**、17e default **1 / 1**（すべてskip 0）まで完了。Reduce Motionの`t0`／`t+2 s` full PNGは同一でcanvas crop差分0。[現在の証跡ledger](../../evidence/step4-karakasa/README.md)を正本とする。
-- contact sheet／GIFの独立native QAはAPPROVED。Simulator画像の最終native目視QA、GitHub同期の最終確認、ユーザー見た目承認は未完了。このplan末尾の旧full-suite／Simulator結果を現在候補へ流用しない。
+- contact sheet／GIFとSimulator画像7枚は2名の独立native reviewerがすべてAPPROVED（BLOCKER／MAJOR／MINOR 0）。binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`の9 binary blob、旧5画像削除、画像link、Draft PR本文まで確認済み。ユーザー本人の見た目承認だけが未完了。このplan末尾の旧full-suite／Simulator結果を現在候補へ流用しない。
 - Draft PRを維持し、`main`へmergeしない。唐傘だけが新画風のmixed-art状態であり、残りの妖怪はユーザーの唐傘承認後に別frame matrixを提示し、別承認を得るまで制作しない。
 
 ## Global Constraints
@@ -837,6 +837,7 @@ base `main`、head `agent/step4-yagyo-emaki-2`。PR本文にdesign spec、implem
 - **focused QA GREEN:** 現在の赤い正面向き候補とtest-only QA artifact rendererを、Xcode 27／iOS 27で **11 / 11 PASS、fail 0、skip 0**（構造9件＋artifact 2件）まで確認した。
 - **build／full GREEN:** Xcode 27.0のgeneric iOS buildに成功。checked projectをiOS 27のiPhone 17 Proで **65 / 65 PASS、fail 0、skip 0**。
 - **semantic Simulator GREEN:** 座標tapなしで、iPhone 17 ProのNormal／Quiet／Strong／Strong + Ushimitsu state matrix **4 / 4**、Strong + Reduce Motion stability **1 / 1**、最小幅iPhone 17eのdefault Normal + Karakasa **1 / 1**を通過。Reduce Motionの`t0`／`t+2 s` full PNGは同一SHA-256、canvas cropのdiffering bytesは0。最初の17e menu試行失敗とauto diagnostics終了は除外し、follow-up GREENを正本とする。
-- **QA artifacts:** 現在ASCIIソースから最近傍2倍のPNG contact sheetと15-frame GIF motion previewを抽出し、デコード／フレーム整合性を確認した。元参照、PNG、GIFを比較した独立native QAはAPPROVED。生成commitは`d1eca866`、画像とSHA-256は[証跡ledger](../../evidence/step4-karakasa/README.md)に集約する。
-- **未完了:** 保存済みSimulator画像の最終native目視QA、GitHub同期とDraft PR画像リンクの最終確認、ユーザー見た目承認。旧headの57 / 57結果やiOS 26.5画像をこれらの代用にしない。
+- **QA artifacts:** 現在ASCIIソースから最近傍2倍のPNG contact sheetと15-frame GIF motion previewを抽出し、デコード／フレーム整合性を確認した。2名の独立native reviewerは元参照、PNG、GIF、Simulator画像7枚をすべてAPPROVEDし、BLOCKER／MAJOR／MINORは0。Pro Strongの右端寄りは切断なしのINFOのみ。生成commitは`d1eca866`、画像とSHA-256は[証跡ledger](../../evidence/step4-karakasa/README.md)に集約する。
+- **GitHub同期:** binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`で9 binary blob SHA、画像link、旧5画像削除、Draft PR本文を確認。PR #13は`draft = true`、`merged = false`、base `main`。`main` SHA `256a45a8c9d9efb8db09970f3e40e6d1f5ef28fc`は不変。
+- **未完了:** ユーザー本人の唐傘見た目承認。旧headの57 / 57結果やiOS 26.5画像を代用にしない。
 - **公開ゲート:** [Draft PR #13](https://github.com/tinypony777/YagyoPlayer/pull/13)をDraftのまま維持し、`main`へmergeしない。現時点は唐傘だけが新画風のmixed-art状態であり、残り妖怪は唐傘のユーザー承認後に別frame matrixを提示し、別途承認されるまで制作しない。
