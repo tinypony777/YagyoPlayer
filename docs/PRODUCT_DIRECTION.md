@@ -48,7 +48,7 @@ North Star は次の 3 条件。確認の物差しは市場指標ではなく、
 2. **Music Made Visible** — 妖怪・提灯・月は、取得できる音量帯、低レベル継続近似、強い音量上昇近似、再生状態を伝える存在。意味のない常時アニメーションより、根拠を説明できる入力と操作に結びついた反応を優先する。すべての反応は翻訳帳(§4.1)で説明できること。
 3. **Folklore as Interaction Model** — 行列=ライブラリ、巻物=プレイリスト、提灯=再生位置と音の反応、狐火=分析・提案、丑三つ時=時刻と特別状態。語彙は雰囲気語ではなく操作体系。新機能はまずこの語彙表のどれで呼ばれるかを問う(§7 Q1)。
 4. **音への敬意** — 音を勝手に加工しない。分析は根拠・比較・取り消しとセットで、用語は「補正」ではなく**「提案」**(自動で直さない、根拠を示して提案し、ユーザーが判断する)。
-5. **iOS-native Ritual** — MediaPlayer / App Intents / Shortcuts の作法に従う。VoiceOver・Reduce Motion・コントラストは最初から設計対象。Reduce Motion でも情報が失われない(静止状態でも音量・再生状態の代替表現を持つ)。現在地: Step 4 feature branch で夜行絵巻と波形リングの静止代替、VoiceOver 値を縦切り実装し、ローカル build / Simulator 検証を待っている。
+5. **iOS-native Ritual** — MediaPlayer / App Intents / Shortcuts の作法に従う。VoiceOver・Reduce Motion・コントラストは最初から設計対象。Reduce Motion でも情報が失われない(静止状態でも音量・再生状態の代替表現を持つ)。現在地: Step 4 feature branch で夜行絵巻と波形リングの静止代替、VoiceOver 値を縦切り実装した。ローカル build / tests は完了し、`CircularWaveform` の位相固定と離散形状はunit testsとcode reviewで、夜行絵巻の状態表示（提灯 halo を含む）はSimulator目視で確認した。夜行絵巻のReduce Motionは座標・scale固定を画像で確認したが、時間経過後も完全に静止することの実測とユーザーの見た目承認は残っている。
 
 **Producer Check と世界観の共存規則**: 狐火の帳(§4.4)の使用中、夜行絵巻は静的な背景に退き、数値が主役になる。ただし助言の語彙は狐火で統一する。世界観は検聴(ミックス/マスターの確認試聴)の邪魔をせず、検聴は世界観の外に出ない。
 
@@ -62,7 +62,7 @@ North Star は次の 3 条件。確認の物差しは市場指標ではなく、
 
 - 正式な対応表は [振付翻訳帳](CHOREOGRAPHY.md) として公開し、入力、閾値、通常振付、Reduce Motion の静止代替、近似の限界を同じ場所で管理する。反応の意味を説明すること自体が、この世界への招待状である。
 - 妖怪の頭数を増やすことより、一体あたりの挙動深度を上げることに投資する。
-- **現在地(正直に)**: Step 4 feature branch では、従来の音量連動の跳ねを単一の `ParadeSignalSnapshot` に基づく振付へ置き換え、resident 先導、Reduce Motion、VoiceOver を接続している。SNES 相当の新規アートは唐傘 1 体だけで、他の行列妖怪は従来アートのまま。ローカル build / Simulator とユーザーの見た目承認が未完了なので、この混在状態は Draft PR に留め、`main` へ統合しない。残りの妖怪は別途 frame matrix の承認を得るまで展開しない。
+- **現在地(正直に)**: Step 4 feature branch では、従来の音量連動の跳ねを単一の `ParadeSignalSnapshot` に基づく振付へ置き換え、resident 先導、Reduce Motion、VoiceOver を接続している。ローカル Xcode build、focused 32 tests、全57 tests、iPhone 17 Proと最小幅iPhone 17eのSimulator確認は完了した。SNES 相当の新規アートは唐傘 1 体だけで、他の行列妖怪は従来アートのまま。ユーザーの見た目承認が未完了なので、この混在状態は Draft PR に留め、`main` へ統合しない。残りの妖怪は別途 frame matrix の承認を得るまで展開しない。
 
 ### 4.2 狐火の調律 — 好みの聴き方を、自分で選ぶ（保留中の構想）
 
@@ -84,7 +84,7 @@ residency は各トラックに安定して住み着く妖怪を割り当てる�
 - この先導は安定したトラック割当であり、聴取回数による成長や listening-history progression ではない。playCount 等による見た目の変化は未接続である。
 - 蓄積が端末喪失を生き延びることは別途検証する。消える蓄積は愛着の裏切りになる。
 - 収集ゲームにはしない(§6 の線引き)。
-- **現在地(正直に)**: 統計の記録・永続化は実装済み。resident 先導は feature branch に実装し、ローカル検証待ち。歴史的な行列振付は未実装である。
+- **現在地(正直に)**: 統計の記録・永続化は実装済み。resident 先導は feature branch に実装し、unit testsとSimulatorでローカル検証済み。歴史的な行列振付は未実装である。
 
 ### 4.4 狐火の帳(Producer Check)— 自分のデモを確かめる道具
 
