@@ -1,5 +1,11 @@
 import SwiftUI
 
+enum ParadeMotionPreference {
+    static func resolve(systemReduceMotion: Bool, previewOverride: Bool?) -> Bool {
+        previewOverride ?? systemReduceMotion
+    }
+}
+
 struct ParadeProcessionLayout: Sendable {
     static let staticLeadingInset: Double = 12
     private static let animatedLeadingOffset: Double = 70
@@ -28,14 +34,23 @@ struct YagyoParadeView: View {
     var residentSpriteID: String?
     var isUshimitsu: Bool
     var onMoonTap: () -> Void
+    /// Deterministic fixture hook. Production call sites leave this unset.
+    var previewReduceMotionOverride: Bool? = nil
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
     private static let launch = Date()
     private static let legacySpriteScale: Double = 3
     private static let karakasaSpriteScale: Double = 2
     private static let moonRadius: Double = 19
     private static let strongReactiveIDs: Set<String> = ["oni", "mokugyo", "kasa", "kitsune", "tengu"]
+
+    private var reduceMotion: Bool {
+        ParadeMotionPreference.resolve(
+            systemReduceMotion: systemReduceMotion,
+            previewOverride: previewReduceMotionOverride
+        )
+    }
 
     var body: some View {
         GeometryReader { geometry in

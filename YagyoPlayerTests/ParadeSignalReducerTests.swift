@@ -66,6 +66,33 @@ final class ParadeSignalReducerTests: XCTestCase {
         XCTAssertEqual(ParadeSignalSnapshot.preview(activity: .normal, level: 0.65).levelBand, .high)
     }
 
+    func testParadeMotionPreferenceUsesSystemSettingUnlessPreviewOverrideIsExplicit() {
+        XCTAssertFalse(
+            ParadeMotionPreference.resolve(
+                systemReduceMotion: false,
+                previewOverride: nil
+            )
+        )
+        XCTAssertTrue(
+            ParadeMotionPreference.resolve(
+                systemReduceMotion: true,
+                previewOverride: nil
+            )
+        )
+        XCTAssertTrue(
+            ParadeMotionPreference.resolve(
+                systemReduceMotion: false,
+                previewOverride: true
+            )
+        )
+        XCTAssertFalse(
+            ParadeMotionPreference.resolve(
+                systemReduceMotion: true,
+                previewOverride: false
+            )
+        )
+    }
+
     func testAccessibilityValueDescribesQuietUnavailableAndStrongStatesExactly() {
         XCTAssertEqual(
             ParadeSignalSnapshot.preview(activity: .quietProxy)

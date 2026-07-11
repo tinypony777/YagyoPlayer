@@ -23,9 +23,9 @@ struct ParadePreviewHarness: View {
                             signal: scenario.snapshot,
                             residentSpriteID: residentSpriteID,
                             isUshimitsu: isUshimitsu,
-                            onMoonTap: { isUshimitsu.toggle() }
+                            onMoonTap: { isUshimitsu.toggle() },
+                            previewReduceMotionOverride: previewReduceMotion
                         )
-                        .environment(\.accessibilityReduceMotion, previewReduceMotion)
 
                         controls
 
