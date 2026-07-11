@@ -6,17 +6,17 @@
 
 Step 4 feature branch では、15 Hz の `AVAudioPlayer.averagePower` から得る単一の `ParadeSignalSnapshot` を、小さな `ReactiveVisualStage` だけが coordinator から購読する。この wrapper が snapshot を夜行絵巻へ、snapshot の `level / activity / levelBand` を円形波形へ渡し、root `ContentView` やライブラリ全体を 15 Hz 更新へ巻き込まない。snapshot は `level / activity / strongPhase / strongSequence` を持ち、停止、meter 利用不可、`quietProxy`、通常状態を区別する。現在トラックの resident は固定 roster による互換割当を保ったまま先導へ移る。
 
-これはまだ製品版の完成表示ではない。ローカル Xcode build / test、Simulator の通常・丑三つ時・Reduce Motion、ユーザーによる唐傘の見た目承認が残っている。新規の SNES 相当アートは唐傘だけで、他の妖怪との混在状態は feature branch と Draft PR に留め、`main` へ統合しない。
+これはまだ製品版の完成表示ではない。ローカル Xcode build、focused 32 tests、全57 tests、iPhone 17 Proの5状態と最小幅iPhone 17eのSimulator確認は完了した。Reduce Motionは座標とscaleの静止表示まで確認したが、単一画像だけでは時間経過後も完全に静止することまでは実測していない。ユーザーによる唐傘の見た目承認は残っている。新規の SNES 相当アートは唐傘だけで、他の妖怪との混在状態は feature branch と Draft PR に留め、`main` へ統合しない。
 
 | 入力・状態 | snapshot と表示 | 現在地 |
 |---|---|---|
-| stopped | 中立姿勢で移動、揺れ、歩行フレームを停止 | feature branch 実装・ローカル検証待ち |
-| unavailable | 再生は継続するが音量反応は出さず、位相固定・中立色・破線の CircularWaveform と破線の提灯 halo で low / stopped と区別する | feature branch 実装・ローカル検証待ち |
-| level | 通常時は固定 4 fps で歩行し、level を bob の振幅、提灯 halo、Reduce Motion の円形波形の離散形状へ翻訳 | feature branch 実装・ローカル検証待ち |
-| `quietProxy` | 低レベル継続を遅い行進と小さな bob へ翻訳。専用 `hush` は唐傘だけで、他の妖怪は `idle` fallback | feature branch 実装・ローカル検証待ち |
-| `strongRiseProxy` | `anticipate / open / recover` の一回の反応へ翻訳 | feature branch 実装・ローカル検証待ち |
-| resident | 現在トラックの妖怪を重複なく先頭へ移し、先導灯と VoiceOver で示す | feature branch 実装。聴取史による進行は未接続 |
-| 丑三つ時 | 一つ目小僧を最後尾へ追加。音量由来の状態ではない | 既存機能を snapshot 表示へ接続・ローカル検証待ち |
+| stopped | 中立姿勢で移動、揺れ、歩行フレームを停止 | feature branch実装。unit tests / code review検証済み |
+| unavailable | 再生は継続するが音量反応は出さず、位相固定・中立色・破線の CircularWaveform と破線の提灯 halo で low / stopped と区別する | feature branch実装。破線の提灯haloはSimulator確認済み。CircularWaveformはunit tests / code review検証済み |
+| level | 通常時は固定 4 fps で歩行し、level を bob の振幅、提灯 halo、Reduce Motion の円形波形の離散形状へ翻訳 | unit testsとnormal Simulator表示を検証済み |
+| `quietProxy` | 低レベル継続を遅い行進と小さな bob へ翻訳。専用 `hush` は唐傘だけで、他の妖怪は `idle` fallback | unit testsとquiet Simulator表示を検証済み |
+| `strongRiseProxy` | `anticipate / open / recover` の一回の反応へ翻訳 | unit testsとstrong open Simulator表示を検証済み |
+| resident | 現在トラックの妖怪を重複なく先頭へ移し、先導灯と VoiceOver で示す | unit testsとSimulatorの先導markerを検証済み。聴取史による進行は未接続 |
+| 丑三つ時 | 一つ目小僧を最後尾へ追加。音量由来の状態ではない | snapshot表示への接続とSimulatorの追加表示を検証済み |
 
 判定値、reset 境界、Reduce Motion の静止代替は [CHOREOGRAPHY.md](CHOREOGRAPHY.md) に集約する。歩行周期は画面上の行進テンポで、楽曲の BPM ではない。
 
@@ -40,7 +40,7 @@ Step 4 feature branch では、15 Hz の `AVAudioPlayer.averagePower` から得�
 | アート | 唐傘だけが新しい 40×48 px・8フレーム基準体。他の行列妖怪は従来アートのまま |
 | residency | UUID 由来の安定した割当を維持。feature branch では現在曲の resident が先導する |
 | 再生統計 | `playCount / lastPlayedAt / playHourCounts` は記録・永続化済み。歴史による行列振付には未接続 |
-| Accessibility | 夜行絵巻の VoiceOver 値と、夜行絵巻・円形波形の Reduce Motion 代替を feature branch に実装。Simulator 検証待ち |
+| Accessibility | 夜行絵巻の VoiceOver 値と、夜行絵巻・円形波形の Reduce Motion 代替をfeature branchに実装し、unit tests / code review済み。SimulatorではReduce Motionの座標・scale固定表示を確認したが、時間経過の完全静止は単一画像では未実測 |
 | Step 3 | iOS 27 の正式 SDK で Music Understanding / Core AI を再検証できるまで保留。Core AI / DSP は未実装 |
 
 ## 唐傘の SNES 相当アート契約
@@ -106,7 +106,7 @@ Step 4 feature branch では、15 Hz の `AVAudioPlayer.averagePower` から得�
 
 ## 更新履歴
 
-- 2026-07-12: Step 4 唐傘縦切りの snapshot 振付、正式翻訳帳、resident / 統計の現在地、40×48 基準体と承認ゲートへ同期。旧スクリーンショットと Claude artifact、新規妖怪案を歴史的資料・未承認提案として明記。
+- 2026-07-12: Step 4 唐傘縦切りの snapshot 振付、正式翻訳帳、resident / 統計の現在地、40×48 基準体と承認ゲートへ同期。ローカルbuild / testsとiPhone 17 Pro・最小幅iPhone 17eのSimulator検証実績を反映。旧スクリーンショットと Claude artifact、新規妖怪案を歴史的資料・未承認提案として明記。
 - 2026-07-10: 全妖怪を SNES 相当へ刷新する方向案を記録し、がしゃどくろを 125×105 px・限定11色へ更新。
 - 2026-07-09: がしゃどくろ案と当時のインタラクティブ版を更新。
 - 2026-07-08: 初版。PRODUCT_DIRECTION.md v3 のデザインイメージと人魂・がしゃどくろ案を追加。
