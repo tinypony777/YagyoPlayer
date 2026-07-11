@@ -2,7 +2,7 @@
 
 **日付:** 2026-07-11  
 **状態:** 方針承認済み・記述仕様レビュー待ち  
-**対象:** Step 4「夜行絵巻 2.0」の最初の縦切りと、その後の全妖怪展開に使う共通契約
+**対象:** Step 4「夜行絵巻 2.0」の最初の唐傘縦切り。残りの妖怪へ展開する前提となる共通契約
 
 ## 1. 目的
 
@@ -82,22 +82,36 @@ Step 3「狐火の調律」は iOS 27 の Music Understanding / Core AI を正�
 
 ## 6. 視覚信号アーキテクチャ
 
-### 6.1 境界
+### 6.1 境界と所有者
 
-`PlaybackController` の再生方式、Audio Session、15 Hz メータリング、音量正規化は維持する。新しい `ParadeSignalReducer` はスムージング済み `audioLevel`、再生中か、時刻、リセット事由だけを受け取る純粋な値型とする。
+`PlaybackController` の再生方式、Audio Session、15 Hz メータリング、音量正規化は維持する。新しい `ParadeSignalReducer` はスムージング済み `audioLevel`、メータ利用可否、再生中か、時刻、リセット事由だけを受け取る純粋な値型とする。
+
+`@MainActor` の `ParadeSignalCoordinator: ObservableObject` を `PlaybackController` が `let` プロパティとして所有する。coordinator は再生を操作せず、次だけを担当する。
+
+- 既存 `updateMeter()` の15 Hz tickごとに、スムージング後の level を reducer へ1回渡す。
+- reducer が返す単一の `ParadeSignalSnapshot` を1回だけ publish する。
+- `pause / stop / seek / track load開始 / track change / load failure` の既存処理から、明示的な `reset(reason:)` を受け取る。
+
+`audioLevel` は coordinator の snapshot.level を返す読み取り専用の互換アクセサにし、高頻度の独立した publisher を増やさない。`YagyoParadeView` と `CircularWaveform` を包む小さな表示コンポーネントだけが coordinator を監視し、root `ContentView`、ライブラリ、プレイリストを15 Hz更新へ巻き込まない。
 
 reducer の出力は単一の `ParadeSignalSnapshot` とする。
 
 ```text
-averagePower → 既存 audioLevel → ParadeSignalReducer → ParadeSignalSnapshot
-                                              ├─ YagyoParadeView
-                                              └─ CircularWaveform
+averagePower → 既存の正規化・平滑化 → ParadeSignalCoordinator (15 Hz)
+                                          │
+                                          ▼
+                                  ParadeSignalReducer
+                                          │
+                                          ▼
+                                  ParadeSignalSnapshot
+                                    ├─ YagyoParadeView
+                                    └─ CircularWaveform
 ```
 
 `ParadeSignalSnapshot` は少なくとも次を持つ。
 
 - `level: Double` — `0...1` に clamp した表示用音量。
-- `activity: stopped | quietProxy | normal` — 停止と曲中の低レベルを混同しない。
+- `activity: stopped | unavailable | quietProxy | normal` — 停止、メータ不明、曲中の低レベルを混同しない。
 - `strongPhase: inactive | anticipate | open | recover` — 強反応の保持を決定論的に表す。
 - `sequence: UInt64` — 新しい強反応だけを識別する単調増加番号。
 
@@ -107,7 +121,7 @@ averagePower → 既存 audioLevel → ParadeSignalReducer → ParadeSignalSnaps
 
 入力は音響解析結果ではなく、現行のスムージング済み音量である。初期値は実音源と Simulator で調整できる実装定数だが、意味は次で固定する。
 
-- quiet 進入: `level <= 0.08` が **0.70秒**継続。
+- quiet 進入: 利用可能な `level <= 0.08` が **0.70秒**継続。
 - quiet 離脱: `level >= 0.14`。異なる閾値でヒステリシスを持たせる。
 - strong 候補: `level >= 0.55` かつ、低速基準包絡との差が `>= 0.18`。
 - 低速基準包絡: 時定数 **0.80秒**の時間補正 EMA。差分判定は現在サンプルを取り込む前の基準値に対して行う。
@@ -117,13 +131,15 @@ averagePower → 既存 audioLevel → ParadeSignalReducer → ParadeSignalSnaps
 - reset 後の strong 判定ウォームアップ: **0.30秒**。
 - サンプル間隔が負、または **0.50秒**を超えた場合は時間依存状態を reset し、そのサンプルでは strong を発火しない。
 
-低速基準包絡は reducer 内で経過時間を考慮して更新する。閾値ぎりぎりの揺れ、一定大音量、メータ更新間隔の軽微な変動で状態がばたつかないことを優先する。
+低速基準包絡は `alpha = 1 - exp(-dt / 0.80)`、`baseline += alpha * (level - baseline)` で更新する。閾値ぎりぎりの揺れ、一定大音量、メータ更新間隔の軽微な変動で状態がばたつかないことを優先する。
+
+reset直後は `seeded = false`、`strongArmed = false` とする。最初の利用可能な有限サンプルで `baseline = level` と時刻を seed し、そのサンプルでは strong を出さない。ウォームアップ終了後、再武装条件を一度満たしてから `strongArmed = true` にするため、曲頭が大音量というだけでは強反応を出さない。
 
 `pause / stop / seek / track change / load failure` では reducer を reset する。再生再開後はウォームアップが終わるまで strong を出さない。停止は quiet ではない。
 
 ### 6.3 語彙の制限
 
-コード、UI、VoiceOver、文書では `quietProxy` を「静音近似」、strong event を `strongRiseProxy`／「強い音量上昇近似」と呼ぶ。デジタル無音、アタック、パーカッション、拍、盛り上がり、サビを検出したとは記述しない。
+コードと技術文書では `quietProxy`／「静音近似」、`strongRiseProxy`／「強い音量上昇近似」と呼ぶ。ユーザー向け表示では、より直接的に「音量は低め」「音量が強く上昇」と表現してよいが、翻訳帳で `averagePower` 由来の近似と明記する。デジタル無音、アタック、パーカッション、拍、盛り上がり、サビを検出したとは記述しない。
 
 ## 7. 振付
 
@@ -140,7 +156,7 @@ averagePower → 既存 audioLevel → ParadeSignalReducer → ParadeSignalSnaps
 
 ## 8. Residency 接続
 
-- resident の候補順は `YokaiGallery.parade` の配列順から切り離した固定 sprite ID 配列にする。将来 gallery を並べ替えたり追加しても既存 UUID の resident は変えない。
+- resident の候補順は `YokaiGallery.parade` の配列順から切り離し、互換性契約として **`[oni, mokugyo, kasa, kappa, kitsune, tengu, yuki, biwa]`** に固定する。将来 gallery を並べ替えたり追加しても既存 UUID の resident は変えない。
 - 現在の UUID 由来割当を維持し、既存ユーザーの割当を移行時に変えない。
 - 現在トラックの resident を 8 体の先頭へ移し、元位置からは除いて重複させない。残り 7 体は固定相対順を保つ。
 - トラック未選択時は従来の固定順で、先導灯を出さない。
@@ -161,8 +177,9 @@ averagePower → 既存 audioLevel → ParadeSignalReducer → ParadeSignalSnaps
 絵巻は一つの accessibility element とし、月のカスタム action は維持する。値は状態変化を自動読み上げせず、フォーカス時に次の情報をまとめて読めるようにする。
 
 ```text
-再生中、静かな音、先導は唐傘
-再生中、強い音量上昇、先導は天狗
+再生中、音量は低め、先導は唐傘
+再生中、音量が強く上昇、先導は天狗
+再生中、音量表示を利用できません、先導は河童
 一時停止、先導は狐火
 ```
 
@@ -171,7 +188,7 @@ averagePower → 既存 audioLevel → ParadeSignalReducer → ParadeSignalSnaps
 ## 10. エラーとフォールバック
 
 - トラック未選択または再生停止は `stopped`、level 0 として描画する。
-- メータ取得不能・非有限値は level 0 として扱うが、再生状態そのものは偽装しない。低レベルが0.70秒続いた場合にだけ `quietProxy` へ入る。
+- メータ取得不能・非有限値は `unavailable` とし、neutralな行進または静止リングへフォールバックする。level 0や `quietProxy` として扱わない。
 - 有限な `level` の範囲外入力は clamp する。
 - resident ID の解決に失敗した場合は固定順へ戻し、再生には影響させない。
 - optional の再生統計がない旧 `library.json` は従来どおり読み込む。
@@ -185,7 +202,9 @@ averagePower → 既存 audioLevel → ParadeSignalReducer → ParadeSignalSnaps
 - strong の一回発火、一定大音量での非連打、0.45秒内の抑止、低下後の再発火。
 - strong の anticipate/open/recover 時間。
 - reset 後0.30秒の抑止と、pause/seek/track change/load failure の reset。
-- `NaN / ±infinity / 0...1外` の安全な正規化。
+- `NaN / ±infinity` が `unavailable` となり、`0...1外` の有限値だけが clamp されること。
+- reset後の最初の有限サンプルがEMAをseedし、再武装前と曲頭大音量でstrongを出さないこと。
+- サンプル間隔に基づくEMA式が、固定入力列に対して決定論的な値を返すこと。
 - 同一 UUID の resident が gallery 並べ替え後も同じ sprite ID になること。
 - resident を先頭へ移しても8体が一度ずつ現れ、未選択時は固定順になること。
 
@@ -204,7 +223,7 @@ averagePower → 既存 audioLevel → ParadeSignalReducer → ParadeSignalSnaps
 
 - `docs/CHOREOGRAPHY.md` を正式公開し、各入力、閾値、振付、Reduce Motion 代替、近似の限界を書く。
 - `docs/PRODUCT_DIRECTION.md` の Step 3 を iOS 27正式SDK待ちの保留として明記する。
-- 同文書の Step 4 を「アタック・無音・盛り上がり検出」ではなく、現段階の「音量・静音近似・強い音量上昇近似」として正す。真の解析は完了条件にしない。
+- 同文書の Step 4 の目的を「曲を読んでいる」から、現段階に正直な「音の大小と変化が、説明可能な振付として伝わる」へ正す。release criteria も「アタック・無音・盛り上がり検出」ではなく「音量・静音近似・強い音量上昇近似」とし、真の解析は完了条件にしない。
 - `PRODUCT_DIRECTION.md` と `DESIGN_NAV.md` の「統計はゼロ」を、記録・永続化済み、絵巻への利用は未接続という現在地へ直す。
 - `DESIGN_NAV.md` のアセット順を、唐傘基準体 → 縦切り検証 → 残りの妖怪へ更新する。
 
@@ -214,14 +233,16 @@ averagePower → 既存 audioLevel → ParadeSignalReducer → ParadeSignalSnaps
 2. **唐傘基準体:** 40×48 px・8フレームを制作し、既存 renderer で整数倍率表示する。
 3. **縦切り:** 唐傘へ quiet/strong/resident と Reduce Motion を接続し、他妖怪には既存アートで同じ snapshot の意味を接続する。
 4. **文書:** 翻訳帳と正本の現在地を実装事実へ同期する。
-5. **ローカル検証:** Remote Desktop Commander からローカル Codex を呼び、Xcode build/test と Simulator の通常・丑三つ時・Reduce Motion を確認する。ローカル Codex は実装やレビューを行わない。
-6. **視覚承認:** 唐傘の Simulator 結果をユーザーが承認する。
-7. **全妖怪展開:** 同じ契約で残りの行列妖怪を順次刷新する。混在状態を `main` へ統合しない。
-8. **レビューと公開:** ネイティブの別サブエージェントがコードと仕様をレビューし、全テスト後に GitHub へ反映する。
+5. **縦切りレビュー:** ネイティブの別サブエージェントがコードと仕様をレビューし、指摘を解消する。
+6. **ローカル検証:** Remote Desktop Commander からローカル Codex を呼び、Xcode build/test と Simulator の通常・丑三つ時・Reduce Motion を確認する。ローカル Codex は実装やレビューを行わない。
+7. **視覚承認:** 唐傘の Simulator 結果をユーザーが承認し、GitHubのDraft PRへ反映する。混在状態を `main` へ統合しない。
+8. **次設計:** 唐傘の承認後、残り7体と一つ目小僧について個別の状態／フレーム matrix を別仕様として提示し、ユーザー承認後に全妖怪展開へ進む。この仕様だけでは全面展開を開始しない。
 
 ## 14. 完了の定義
 
-この最初の縦切りは、唐傘、視覚 reducer、resident 先導、Reduce Motion、VoiceOver、翻訳帳が検証できた時点で完了する。Step 4全体の完了は、それに加えて次を満たした時点とする。
+この仕様の完了は、唐傘、視覚 reducer、resident 先導、Reduce Motion、VoiceOver、翻訳帳がfeature branch上で検証でき、ユーザーが唐傘の見た目を承認した時点とする。この時点ではStep 4全体も、SNES刷新も、`main`統合も完了とはしない。
+
+Step 4全体の将来の完了条件は次とするが、残り妖怪の制作は別仕様の承認を必要とする。
 
 - 行列8体と丑三つ時の一つ目小僧が、承認済みの行列用 SNES 契約へ統一されている。
 - 混在画風が残っていない。
