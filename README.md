@@ -17,14 +17,16 @@ Yagyo Player is a SwiftUI audio player for iOS 26 and later. It takes the dark f
 
 The visual language is ported directly from the Hyakki Yagyo Beat Machine web app:
 
-- **Night parade (夜行絵巻)** — a Canvas hero view where the pixel-art yokai procession (oni, mokugyo, kasa-obake, kappa, kitsunebi, tengu, yuki-onna, biwa-bokuboku) walks right-to-left under a moonlit sky with twinkling stars, drifting fog, and swaying lanterns. While audio plays, `AVAudioPlayer` metering drives the parade: yokai hop to the loudness of the track and the lanterns pulse.
+- **Night parade (夜行絵巻)** — a Canvas hero view where the pixel-art yokai procession (oni, mokugyo, kasa-obake, kappa, kitsunebi, tengu, yuki-onna, biwa-bokuboku) walks right-to-left under a moonlit sky with twinkling stars, drifting fog, and swaying lanterns. While audio plays, 15 Hz `AVAudioPlayer.averagePower` metering is normalized and smoothed into an explainable level band, sustained-low-level proxy (`quietProxy`), and strong-level-rise proxy (`strongRiseProxy`). These are visual proxies, not beat, digital-silence, BPM, or song-structure detection.
 - **Ushimitsu mode (丑三つ時)** — tap the moon (or wait until 2 AM) and the night deepens: the sky shifts to a red-tinged palette, the moon turns crimson, and hitotsume-kozo joins the end of the parade.
 - **Step-cell seek bar** — the transport progress bar is drawn as 16 sequencer cells; played cells burn 朱 (vermilion), the current cell glows 提灯 (lantern amber).
-- **Yokai library icons** — every imported track is assigned a resident yokai sprite, stable across launches.
+- **Yokai library icons** — every imported track is assigned a resident yokai sprite, stable across launches. On the Step 4 validation branch, that same resident leads the procession; playback statistics are persisted but do not drive visual progression.
+
+The exact input limits, thresholds, choreography, and Reduce Motion alternatives are published in [docs/CHOREOGRAPHY.md](docs/CHOREOGRAPHY.md). The Step 4 branch is a Karakasa-only 40×48 SNES-grade visual slice pending local Simulator and user approval; the mixed-art state is not a completed all-yokai refresh and is not intended to merge to `main`.
 
 ## Design Nav
 
-See [docs/DESIGN_NAV.md](docs/DESIGN_NAV.md) for a visual companion to the product direction — screenshots of the current implementation, a translation-ledger preview, design tokens, and two proposals not yet in the charter (hitodama artwork visualizer, a witching-hour-only Gashadokuro).
+See [docs/DESIGN_NAV.md](docs/DESIGN_NAV.md) for the Step 4 visual contract, the Karakasa approval gate, design tokens, clearly labeled pre-Step-4 screenshots, and archived proposals.
 
 ## Product Direction
 
