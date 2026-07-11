@@ -8,12 +8,25 @@
 
 **Tech Stack:** Swift 6、SwiftUI Canvas、AVFoundation `AVAudioPlayer`、Combine `ObservableObject`、XCTest、XcodeGen、iOS 26+。
 
+> **2026-07-12 supersession note:** 本planのreducer、resident、playback表示境界、Reduce Motion、VoiceOver等の実装履歴は有効だが、Task 3で制作した初期の紫色・横向き／長い柄・横に開く唐傘と、Task 7で得たそのスクリーンショットは不採用となった。唐傘アートの現行正本は [`2026-07-12-karakasa-reference-fidelity-redesign.md`](../specs/2026-07-12-karakasa-reference-fidelity-redesign.md)、実行手順は [`2026-07-12-karakasa-reference-fidelity-implementation.md`](./2026-07-12-karakasa-reference-fidelity-implementation.md) とする。互換性のため reducer phase `.open`、`strongOpen`、旧証跡ファイル名に含まれる `open` は維持してよいが、現行の見た目は横に開いた傘ではなく正面reactionである。
+
+## 現在のアート候補（2026-07-12）
+
+現在の40×48 px候補は、8枚すべてを一つの coherent frame family とし、正面向きの赤〜珊瑚色の円錐形、茶色の頭頂と金色の帯、中央の一つ目、曲線の笑い口、桃色の舌、淡色の一本足、一足の茶／金色の下駄を共有する。`idle 1 + walk 4 + hush 1 + strong 2` の接続は変えず、strongは正面形を保つ anticipate／reaction として描く。
+
+- 旧アートを拒否する参照忠実度Task 1は、Xcode 27／iOS 27で意味的なREDを確認済み。
+- 現在候補は、Xcode 27／iOS 27で構造テスト9件とQA artifactテスト2件の **11 / 11 focused QA GREEN**。同じソースからPNG contact sheetとGIF motion previewを抽出し、独立視覚QAも承認済み。
+- 再設計Task 4はXcode 27.0 generic build、checked projectのfull suite **65 / 65**、Pro semantic AX **4 + 1**、17e default **1 / 1**（すべてskip 0）まで完了。Reduce Motionの`t0`／`t+2 s` full PNGは同一でcanvas crop差分0。[現在の証跡ledger](../../evidence/step4-karakasa/README.md)を正本とする。
+- contact sheet／GIFの独立native QAはAPPROVED。Simulator画像の最終native目視QA、GitHub同期の最終確認、ユーザー見た目承認は未完了。このplan末尾の旧full-suite／Simulator結果を現在候補へ流用しない。
+- Draft PRを維持し、`main`へmergeしない。唐傘だけが新画風のmixed-art状態であり、残りの妖怪はユーザーの唐傘承認後に別frame matrixを提示し、別承認を得るまで制作しない。
+
 ## Global Constraints
 
 - Step 3、Core AI、Music Understanding、DSP、FFT、PCM tap、`AVAudioEngine`、FFmpegは使用しない。
 - 再生音、Audio Session、Remote Command、Now Playing、統計の記録条件を変更しない。
 - 技術語は`quietProxy`／静音近似、`strongRiseProxy`／強い音量上昇近似とし、拍・アタック・デジタル無音・サビ・曲構成を検出したと書かない。
 - 唐傘は40×48 px、2倍整数表示、透明を除き最大12色、共通baseline、`idle 1 + walk 4 + hush 1 + strong 2`の8フレームとする。
+- 現行唐傘は全フレームで正面向きの赤〜珊瑚色の円錐形、茶色の頭頂／金帯、一つ目／笑い口／桃色の舌、淡色の一本足／一足の下駄を保持する。紫、横顔、長い柄、横に開いた傘や裏面は不採用で再導入しない。
 - resident互換rosterは`[oni, mokugyo, kasa, kappa, kitsune, tengu, yuki, biwa]`から並べ替えない。
 - `playCount / lastPlayedAt / playHourCounts`をアンロック、ランク、色強度、収集UIへ使わない。
 - Reduce Motionでは位置、scale、位相、フレーム循環を止めても、音量帯、strong、residentの意味を形とVoiceOverで残す。
@@ -343,7 +356,9 @@ git commit -m "feat: stabilize resident yokai ordering"
 
 ---
 
-### Task 3: 検証可能な唐傘SNES基準体
+### Task 3: 検証可能な唐傘SNES基準体（初期アート実装の履歴・造形はsuperseded）
+
+> このTaskの型、40×48 contract、8フレーム接続の実装履歴は保持する。一方、下記Step 4の紫パレット、閉じた横向きシルエット、柄、横に開いた傘骨という造形指示と、その採用結果はユーザー確認で不採用となった。現在の造形判断には参照忠実度再設計spec／planだけを使用する。
 
 **Files:**
 - Create: `YagyoPlayer/Views/KarakasaSprite.swift`
@@ -425,7 +440,7 @@ struct PixelSpriteDefinition: Sendable {
 
 `PixelArt.frame(_ definition:)`はwidth 40、height 48、unknownSymbols emptyを`precondition`し、既存CGImage生成へ渡す。既存`frame(rows:palette:)`は既存妖怪用に残す。
 
-- [x] **Step 4: 唐傘8フレームを二案作り、独立アートレビューで一案へ絞る**
+- [x] **Step 4: 唐傘8フレームを二案作り、独立アートレビューで一案へ絞る（superseded historical step）**
 
 2体のネイティブsubagentへ同じ契約を渡し、別々に`KarakasaSpriteArt`のASCII rowsを提案させる。両者とも次の共通paletteを使う。
 
@@ -441,6 +456,8 @@ static let palette: [Character: UInt32] = [
 
 各案は40文字×48行を8枚すべて実データで提出する。idleは閉じた傘、一つ目、舌、柄、一本足が読めること。walkは足だけでなく柄・舌・傘布の慣性を4相でずらすこと。hushはbaselineを変えず低いシルエットにすること。strongは予備動作と開いた傘骨を使い、40 px内で切らないこと。第三のネイティブreview subagentがシルエット、民話的な唐傘らしさ、フレーム連続性、既存paletteとの調和を比較し、採用案または明示的な合成修正を返す。採用データだけを`KarakasaSprite.swift`へ書く。
 
+上のpaletteと造形文は初期制作時の履歴であり、現行候補へ適用しない。現行候補は紫と柄を持たず、赤〜珊瑚色の正面円錐形と中央の顔、一本足／一足の下駄を全8枚で維持し、strongでも正面reactionに留める。
+
 - [x] **Step 5: 意味付きframeを`YokaiSprite`へ接続する**
 
 既存initializerを壊さず、次をdefault付きで追加する。
@@ -454,7 +471,7 @@ var resolvedIdleFrame: SpriteFrame { idleFrame ?? frames[0] }
 var resolvedHushFrame: SpriteFrame { hushFrame ?? resolvedIdleFrame }
 ```
 
-唐傘だけは`frames = KarakasaSpriteArt.walk.map { PixelArt.frame($0) }`、`idleFrame = PixelArt.frame(KarakasaSpriteArt.idle[0])`、`hushFrame = PixelArt.frame(KarakasaSpriteArt.hush[0])`、`strongFrames = KarakasaSpriteArt.strong.map { PixelArt.frame($0) }`を渡す。legacy `hitFrame`にはstrongのopenを渡し、他妖怪はdefault fallbackを使う。
+唐傘だけは`frames = KarakasaSpriteArt.walk.map { PixelArt.frame($0) }`、`idleFrame = PixelArt.frame(KarakasaSpriteArt.idle[0])`、`hushFrame = PixelArt.frame(KarakasaSpriteArt.hush[0])`、`strongFrames = KarakasaSpriteArt.strong.map { PixelArt.frame($0) }`を渡す。legacy `hitFrame`には互換名`strongOpen`のframeを渡すが、現行アート上は正面reactionである。他妖怪はdefault fallbackを使う。
 
 - [x] **Step 6: pixel contract testsを通す**
 
@@ -624,10 +641,10 @@ struct YagyoParadeView: View {
 - stoppedまたはReduce Motionなら速度0。quietは14 pt/s、normalとunavailableは46 pt/s。
 - 固定サイン波×levelの`react`を削除する。normal bobは固定行進周期で最大`1.3 + level * 0.5` px、quietは0.4 px、stopped/Reduce Motionは0。
 - stoppedは`resolvedIdleFrame`、quietは`resolvedHushFrame`、normalは4 fpsのwalk frameを使う。
-- 唐傘はstrong anticipate/open/recoverを`strongFrames[0] / strongFrames[1] / resolvedIdleFrame`へ対応させる。
+- 唐傘はstrong anticipate/open/recoverという互換phaseを`strongFrames[0] / strongFrames[1] / resolvedIdleFrame`へ対応させる。`strongFrames[1]`の現行視覚は横に開いた傘ではなく正面reactionである。
 - 木魚のバチとsquash、天狗hit、鬼太鼓の小さな持ち上がり、狐火flareはactive strong phaseだけに限定する。河童、雪女、琵琶牧々、一つ目小僧はstrongで変えない。
 - resident先頭の上へ6×6 pxの菱形と5 pxのstemからなる先導灯markerを描き、色だけでなく形で区別する。
-- Reduce Motionではactive strongをopen静止姿勢とmarker輪郭で保持し、scale、jump、sway、歩行frameを変えない。
+- Reduce Motionではactive strongを正面reactionの静止姿勢とmarker輪郭で保持し、scale、jump、sway、歩行frameを変えない。内部phase名`.open`は互換性のため維持する。
 - accessibility elementは一つに保ち、label、月action、snapshotのaccessibility valueを付ける。自動announcementは追加しない。
 
 - [x] **Step 3: 高頻度観測を`ContentView`の小さなwrapperへ隔離する**
@@ -771,14 +788,14 @@ xcodebuild -project YagyoPlayer.xcodeproj -scheme YagyoPlayer -destination 'plat
 
 Expected: `BUILD SUCCEEDED`、全tests PASS。環境依存でskipされたPlayback testは件名と理由を記録し、失敗と混同しない。生成された`project.pbxproj`差分だけをscratch worktreeへ戻し、root agentがコミットする。
 
-- [x] **Step 4: Simulator preview harnessを検証する**
+- [x] **Step 4: Simulator preview harnessを検証する（初期アートの履歴・視覚証跡はsuperseded）**
 
-ローカルCodexはiPhone 17 Proと、利用可能な最小幅iPhone SimulatorへDebug appをinstallし、bundle ID `com.codex.yagyoplayer`を`-step4-parade-preview`付きで起動する。次を操作してscreenshotsを取得する。
+ローカルCodexはiPhone 17 Proと、利用可能な最小幅iPhone SimulatorへDebug appをinstallし、bundle ID `com.codex.yagyoplayer`を`-step4-parade-preview`付きで起動する。次を操作してscreenshotsを取得した。これは初期の紫色・横向き唐傘に対して実施した履歴であり、各画像と視覚所見は現在候補の承認証跡には使用しない。
 
 1. normal・唐傘resident・通常時を`/tmp/yagyo-step4-normal.png`へ保存。
 2. quiet・唐傘resident・通常時を`/tmp/yagyo-step4-quiet.png`へ保存。
-3. strong open・唐傘resident・丑三つ時を`/tmp/yagyo-step4-strong-ushimitsu.png`へ保存。
-4. strong open・唐傘resident・Reduce Motionを`/tmp/yagyo-step4-strong-reduce-motion.png`へ保存。
+3. strong open（互換phase名）・唐傘resident・丑三つ時を`/tmp/yagyo-step4-strong-ushimitsu.png`へ保存。
+4. strong open（互換phase名）・唐傘resident・Reduce Motionを`/tmp/yagyo-step4-strong-reduce-motion.png`へ保存。
 5. unavailable・別residentを`/tmp/yagyo-step4-unavailable.png`へ保存。
 
 確認点は80×96 ptの唐傘が86 ptのwalker gap内で切れないこと、baselineが変わらないこと、nearest-neighborでにじまないこと、markerが色なしでも読めること、Reduce Motionで座標とscaleが変わらないこと。ローカルCodexはコードを編集・レビューしない。
@@ -798,16 +815,28 @@ base `main`、head `agent/step4-yagyo-emaki-2`。PR本文にdesign spec、implem
 
 作成済み: [Draft PR #13](https://github.com/tinypony777/YagyoPlayer/pull/13)。Draft・`main`未merge・ユーザー視覚承認待ち。
 
-## 検証実績 2026-07-12
+## 失効した初期アートの検証実績 2026-07-12（履歴）
+
+> 以下は初期の紫色・横向き／長い柄・横に開いた唐傘を含む旧headでの実績である。Xcode 26.6／iOS 26.5のSimulator確認、スクリーンショット、目視所見を削除せず監査履歴として残すが、参照忠実度再設計後の唐傘候補には適用せず、視覚承認証跡として扱わない。旧headのXcode 27 build／full testsも、現在候補のTask 4全suite完了を示すものではない。
 
 - **検証対象:** remote code head `2a6dfdee751a41ba193b5c3cecfec40bb3aaa6de` を fresh clone `/tmp/yagyo-step4-validation-20260712-025257` で検証した。
 - **生成とbuild:** XcodeGen 2.45.4による生成に成功。生成前はcleanで、生成後の差分は`project.pbxproj`の生成順による72 insertions / 72 deletionsだけだったため、feature branchへは戻していない。macOS 27.0 / Xcode 27.0 betaのgeneric iOS buildはexit 0。
 - **tests:** iOS 27.0のiPhone 17 Proでfocused tests **32 / 32 PASS、skip 0**、`YagyoPlayerTests`全体 **57 / 57 PASS、skip 0**。両`xcresult`ともPassed、`xcodebuild`はexit 0。test完了後の`simctl diagnose`だけが各600秒でtimeoutした。`PlaybackControllerTests`中にAVAudioSessionのmain-thread runtime warningが出たが、test failureはなかった。
 - **起動:** Debug appをinstallし、bundle ID `com.codex.yagyoplayer`を`-step4-parade-preview`付きでlaunchできた。
-- **iPhone 17 Pro:** 安定版Xcode 26.6 / iOS 26.5でAX識別子を使い、`normal / kasa / Ushimitsu off / Reduce Motion off`、`quiet / kasa / off / off`、`strong / kasa / on / off`、`strong / kasa / off / on`、`unavailable / kappa / off / off`の5状態を確認した。各画像は1206×2622 px。
-- **最小幅:** iOS 26.5のiPhone 17e（390×844 pt、preview 355×159 pt）で`normal / kasa / Ushimitsu off / Reduce Motion off`を確認した。画像は1170×2532 px。
-- **Simulator目視:** nearest-neighborの整数拡大、足元baseline、菱形+stemのresident marker、quietの`hush`、strongの`open`、丑三つ時の一つ目小僧追加、unavailable時の破線の提灯halo（chochin色を維持）、旧spriteとの衝突と意図しない切れがないことを確認した。viewport端での切れは通常の行進による端通過である。Reduce Motionは座標とscaleの静止表示を確認したが、単一画像の比較だけでは時間経過後も完全に静止することまでは実測していない（code、unit tests、reviewは合格）。40×48 px source、2倍整数表示、80×96 ptはcontract testsとcodeで確認し、画像では整数拡大を確認した。
+- **iPhone 17 Pro（superseded visual evidence）:** 安定版Xcode 26.6 / iOS 26.5でAX識別子を使い、`normal / kasa / Ushimitsu off / Reduce Motion off`、`quiet / kasa / off / off`、`strong / kasa / on / off`、`strong / kasa / off / on`、`unavailable / kappa / off / off`の5状態を確認した。各画像は1206×2622 px。
+- **最小幅（superseded visual evidence）:** iOS 26.5のiPhone 17e（390×844 pt、preview 355×159 pt）で`normal / kasa / Ushimitsu off / Reduce Motion off`を確認した。画像は1170×2532 px。
+- **Simulator目視（superseded visual evidence）:** nearest-neighborの整数拡大、足元baseline、菱形+stemのresident marker、quietの`hush`、strongの`open`（互換phase名。当時は横に開いた紫色アート）、丑三つ時の一つ目小僧追加、unavailable時の破線の提灯halo（chochin色を維持）、旧spriteとの衝突と意図しない切れがないことを確認した。viewport端での切れは通常の行進による端通過である。Reduce Motionは座標とscaleの静止表示を確認したが、単一画像の比較だけでは時間経過後も完全に静止することまでは実測していない（code、unit tests、reviewは合格）。40×48 px source、2倍整数表示、80×96 ptはcontract testsとcodeで確認し、画像では整数拡大を確認した。
 - **CircularWaveform:** DEBUG `ParadePreviewHarness`にはCircularWaveform自体がないため、unavailableの中立色・破線・位相固定はSimulator画像の目視証拠ではない。これは`CircularWaveformPresentation`のunit testsとcode reviewで確認した。
-- **証拠保存先:** `/Users/ryuseinaito/automation-mcp/yagyo-step4-validation/`（full screenshots、crops、review images、`ax-summary`）。唐傘のユーザー見た目承認は未完了。
+- **証拠保存先（superseded）:** `/Users/ryuseinaito/automation-mcp/yagyo-step4-validation/`（full screenshots、crops、review images、`ax-summary`）。これらは初期アートの履歴であり、唐傘のユーザー見た目承認には使用しない。
 - **review:** native final code reviewはAPPROVED、BLOCKER / MAJOR / MINORはいずれも0。GitHub CIはない。電話 / Siri、イヤホン抜去、バックグラウンド等の手動interrupt確認は今回未実施。
 - **公開ゲート:** SNES相当は唐傘だけで、他の妖怪は従来アートのmixed-art状態。Draft PRに留めて`main`へmergeせず、ユーザーの唐傘見た目承認と別frame matrix承認まで残り妖怪へ展開しない。Step 3は保留のままで、FFmpegは採用していない。
+
+## 参照忠実度再設計・現在候補の検証状況 2026-07-12
+
+- **Task 1 RED:** 旧紫アートを参照忠実度契約へ当て、Xcode 27／iOS 27のfocused runで9件実行、3件PASS、6件が期待どおり意味的にFAILした。compile、test discovery、Simulator infrastructureの失敗ではない。
+- **focused QA GREEN:** 現在の赤い正面向き候補とtest-only QA artifact rendererを、Xcode 27／iOS 27で **11 / 11 PASS、fail 0、skip 0**（構造9件＋artifact 2件）まで確認した。
+- **build／full GREEN:** Xcode 27.0のgeneric iOS buildに成功。checked projectをiOS 27のiPhone 17 Proで **65 / 65 PASS、fail 0、skip 0**。
+- **semantic Simulator GREEN:** 座標tapなしで、iPhone 17 ProのNormal／Quiet／Strong／Strong + Ushimitsu state matrix **4 / 4**、Strong + Reduce Motion stability **1 / 1**、最小幅iPhone 17eのdefault Normal + Karakasa **1 / 1**を通過。Reduce Motionの`t0`／`t+2 s` full PNGは同一SHA-256、canvas cropのdiffering bytesは0。最初の17e menu試行失敗とauto diagnostics終了は除外し、follow-up GREENを正本とする。
+- **QA artifacts:** 現在ASCIIソースから最近傍2倍のPNG contact sheetと15-frame GIF motion previewを抽出し、デコード／フレーム整合性を確認した。元参照、PNG、GIFを比較した独立native QAはAPPROVED。生成commitは`d1eca866`、画像とSHA-256は[証跡ledger](../../evidence/step4-karakasa/README.md)に集約する。
+- **未完了:** 保存済みSimulator画像の最終native目視QA、GitHub同期とDraft PR画像リンクの最終確認、ユーザー見た目承認。旧headの57 / 57結果やiOS 26.5画像をこれらの代用にしない。
+- **公開ゲート:** [Draft PR #13](https://github.com/tinypony777/YagyoPlayer/pull/13)をDraftのまま維持し、`main`へmergeしない。現時点は唐傘だけが新画風のmixed-art状態であり、残り妖怪は唐傘のユーザー承認後に別frame matrixを提示し、別途承認されるまで制作しない。

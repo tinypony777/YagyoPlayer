@@ -1,8 +1,16 @@
 # 夜行絵巻 2.0 — 唐傘基準体と正直な音量振付 設計仕様
 
 **日付:** 2026-07-11
-**状態:** 方針・記述仕様承認済み・feature branch実装済み。主要Xcode build / tests / Simulator検証済み、手動interrupt未実施・ユーザー見た目承認待ち
+**状態:** 方針・記述仕様承認済み・feature branch実装済み。初期の紫色・横向き唐傘とそのSimulator証跡は不採用。参照忠実度再設計のbuild／tests／semantic AX検証と証跡生成は完了し、Simulator画像の最終native目視QAとユーザー見た目承認待ち
 **対象:** Step 4「夜行絵巻 2.0」の最初の唐傘縦切り。残りの妖怪へ展開する前提となる共通契約
+
+> **2026-07-12 追補・優先関係:** 唐傘の色、姿勢、輪郭、部位、`strong` の見た目は [`2026-07-12-karakasa-reference-fidelity-redesign.md`](./2026-07-12-karakasa-reference-fidelity-redesign.md) と、その [`implementation plan`](../plans/2026-07-12-karakasa-reference-fidelity-implementation.md) を正本とする。本書に残る初期の紫パレット、横向き／長い柄、横に開いた傘の記述と、それを写した検証結果は履歴としてのみ保存され、現行アート仕様・視覚承認証跡には使用しない。reducer の互換フェーズ名 `.open`、`strongOpen`、旧ファイル名に含まれる `open` は残してよいが、見た目は「傘を横に開く」ではなく正面姿勢の reaction を意味する。
+
+## 0. 現在の唐傘正本と検証ゲート
+
+現在候補は、全8フレームで**正面向きの赤〜珊瑚色の円錐形**を守り、**茶色の頭頂、金色の帯、中央の一つ目、曲線の笑い口、桃色の舌、淡色の一本足、一足の茶／金色の下駄**を共有する coherent frame family とする。構成は `idle 1 + walk 4 + hush 1 + strong 2` のまま、`strong` は正面形を保った anticipate／reaction の二次動作で表す。
+
+参照忠実度テストは旧アートに対するTask 1の意味的REDをXcode 27／iOS 27で確認済みである。現在候補は、Xcode 27.0のgeneric iOS build、checked projectの **11 / 11 focused QA GREEN** と **65 / 65 full suite GREEN**（ともにskip 0）を完了した。座標tapなしのsemantic AX validationも、iPhone 17 Proのstate matrix **4 / 4**、Reduce Motion stability **1 / 1**、最小幅iPhone 17eのdefault Normal + Karakasa **1 / 1**をskip 0で通過した。Reduce Motionの`t0`／`t+2 s` full PNGは同一SHA-256で、canvas cropのdiffering bytesは0である。同じASCIIソースからのPNG contact sheet／GIF motion previewは独立native QA APPROVED。現在の画像とhashは[証跡ledger](../../evidence/step4-karakasa/README.md)を正本とする。Simulator画像の最終native目視QAとユーザー見た目承認は未完了であり、視覚完了とは扱わない。
 
 ## 1. 目的
 
@@ -23,7 +31,7 @@ Step 3「狐火の調律」は iOS 27 の Music Understanding / Core AI を正�
 
 ## 3. 成功条件
 
-1. 唐傘の SNES 基準体が iPhone 上で輪郭・一つ目・傘骨・足運びまで読め、全フレームで位置が跳ねない。
+1. 唐傘の SNES 基準体が iPhone 上で正面の赤い円錐形、頭頂と帯、一つ目、笑い口と舌、一本足と下駄まで読め、全フレームで位置が跳ねない。
 2. 再生中の絵巻が `level / quietProxy / strongRiseProxy` に決定論的に反応する。
 3. 一定の大音量を強反応として連打せず、いったん落ちて再上昇したときだけ再発火する。
 4. 短い音量谷を静音扱いせず、低レベルが継続したときだけ行列が息を潜める。
@@ -60,8 +68,8 @@ Step 3「狐火の調律」は iOS 27 の Music Understanding / Core AI を正�
 
 - 共通キャンバス: **40×48 px**。
 - 表示: **2倍の整数倍率を基準**とし、補間は常に `.none`。画面幅に応じた非整数拡縮は行わない。
-- 色: 透明を除き **最大 12 色**。共通の墨・月白と、唐傘固有の紫・朱・木色を名前付きパレットで管理する。
-- 全フレームで足元基準線、視覚中心、傘の軸を一致させる。強反応で傘が広がってもキャンバス内に収め、描画 rect の変化で位置を補正しない。
+- 色: 透明を除き **最大 12 色**。濃茶の輪郭／瞳、赤〜珊瑚色、生成りの目、桃色の舌、淡色の脚、茶／金色の頭頂と下駄を名前付きパレットで管理する。初期実装の紫系パレットは不採用で、再導入しない。
+- 全フレームで足元基準線、視覚中心、傘の軸を一致させる。強反応でも正面の円錐形を保ち、reactionは裾・目・舌の小さな強調だけで表す。描画 rect の変化で位置を補正しない。
 - 元データは現行方式と同じ 1文字=1ドットの行文字列と限定パレットを正本とする。生成画像をそのまま製品アセットにはしない。
 - 行列用規格と、背景に置く巨大妖怪の規格は別物として扱う。
 
@@ -72,13 +80,13 @@ Step 3「狐火の調律」は iOS 27 の Music Understanding / Core AI を正�
 | `idle` | 1 | 停止中の中立姿勢 |
 | `walk` | 4 | 固定テンポの足運び。楽曲の拍ではない |
 | `hush` | 1 | 静音近似中。傘と身体を低くし、息を潜める |
-| `strong` | 2 | 予備動作から傘が開く。強い音量上昇近似への一回の反応 |
+| `strong` | 2 | 正面の円錐形を保った予備動作とreaction。強い音量上昇近似への一回の反応 |
 
-4枚歩行は足だけでなく、柄・舌・傘布の慣性を少量ずつずらす。`strong` は現行の open frame の意味を継承する。Reduce Motion では連続再生せず、`hush` または開いた `strong` の静止画を使う。
+4枚歩行は一本足と下駄だけでなく、舌・傘布の内部折り／ハイライトを少量ずつずらす。`strong` は既存の `.open` phase／`strongOpen` という互換名を継承するが、表示するのは横に開いた傘や裏面ではなく正面向きのreactionである。Reduce Motion では連続再生せず、`hush` またはreactionの静止画を使う。
 
 ### 5.3 基準体ゲート
 
-唐傘は通常時・丑三つ時、resident 先導時、Reduce Motion、狭い iPhone 幅で確認する。切れ、補間、基準線の揺れ、周囲の旧スプライトとの衝突がないことを Simulator で確認し、ユーザーが見た目を承認してから残りの妖怪へ展開する。検証中の混在状態は feature branch に留め、唐傘だけが異なる画風の状態では `main` へ統合しない。
+唐傘は通常時・丑三つ時、resident先導時、Reduce Motion、狭いiPhone幅を座標tapなしのsemantic AX testで検証済みである。Reduce Motionは2秒差のfull PNG同一性とcanvas crop差分0も確認した。保存済みSimulator画像について切れ、補間、基準線の揺れ、周囲の旧スプライトとの衝突を最終native目視QAし、ユーザーが見た目を承認してから残りの妖怪へ展開する。検証中の混在状態はfeature branchとDraft PRに留め、唐傘だけが異なる画風の状態では`main`へ統合しない。
 
 ## 6. 視覚信号アーキテクチャ
 
@@ -148,7 +156,7 @@ reset直後は `seeded = false`、`strongArmed = false` とする。最初の利
 | 停止・一時停止 | 行列、歩行フレーム、揺れを停止 | 同じ中立静止画 |
 | 通常再生 | 固定歩行4 fpsの一定速度行進。levelはbob振幅と提灯 halo の大きさ・濃さだけに使う | 位置を固定し、提灯 halo の離散的な形で音量帯を示す |
 | 静音近似 | 行進速度とbobを落とし、唐傘は`hush`、他の妖怪は`idle`へfallback。強反応は解除 | 唐傘は`hush`、他の妖怪は`idle`へfallbackし、低音量帯の提灯 halo と`CircularWaveform`の離散形状を残す |
-| 強い音量上昇近似 | 木魚のバチと squash、唐傘の open、天狗の hit、鬼太鼓の小さな持ち上がり、狐火の flare | active strong中は開いた静止姿勢と静的な破線輪郭を保持する |
+| 強い音量上昇近似 | 木魚のバチと squash、唐傘の正面reaction（互換phase名は`.open`）、天狗の hit、鬼太鼓の小さな持ち上がり、狐火の flare | active strong中は正面reactionの静止姿勢と静的な破線輪郭を保持する |
 | resident | 現在曲の妖怪を先頭へ移し、先導灯を与える | 同じ先頭位置と先導灯 |
 | 丑三つ時 | 一つ目小僧を最後尾へ追加。共通の通常／quiet速度とbobに参加し、strong固有反応は持たない | 同じ静止追加。quietでは共通の`idle` fallbackを使う |
 
@@ -168,7 +176,7 @@ reset直後は `seeded = false`、`strongArmed = false` とする。最初の利
 ### 9.1 Reduce Motion
 
 - 横移動、bob、sway、連続 scale、歩行フレーム循環、波形リングの位相移動を止める。
-- `level` は低・中・高の3形状の halo、quiet は `hush`、strong は開いた姿勢と静的な破線輪郭、resident は先頭位置と先導灯で残す。
+- `level` は低・中・高の3形状の halo、quiet は `hush`、strong は正面reactionの姿勢と静的な破線輪郭、resident は先頭位置と先導灯で残す。
 - 色だけに依存しない。異なる時刻に描画しても位置と scale が一致する。
 - `CircularWaveform` は時間・再生位置による位相を固定し、音量帯が変わったときだけバー形状を離散的に更新する。
 

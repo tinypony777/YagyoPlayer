@@ -1,7 +1,7 @@
 # 唐傘・参照忠実度再設計 補足仕様
 
 **日付:** 2026-07-12
-**状態:** ユーザー承認済み。実装着手可。
+**状態:** 仕様承認・実装・build／tests／semantic AX検証・証跡生成まで完了。contact sheet／GIFの独立native QAはAPPROVED。Simulator画像の最終native目視QAとユーザー見た目承認待ち
 **対象:** Step 4「夜行絵巻 2.0」の唐傘 40×48 px・8フレームのみ
 
 ## 1. 目的と優先関係
@@ -10,7 +10,7 @@
 
 本書は `2026-07-11-yagyo-emaki-2-design.md` の唐傘アセット契約を補足する。両者が衝突する場合、唐傘の色、姿勢、輪郭、`strong` の見た目については本書を優先する。既存の状態名や reducer の `.open` という内部フェーズ名は互換性のため残してよいが、横に開いた傘や裏面を描く許可を意味しない。
 
-現在の紫色・横向きの唐傘と、それを収めた通常、quiet、strong、丑三つ時、最小幅等のスクリーンショットは明示的に不採用・失効とする。新しい証跡に置き換わるまで、唐傘の視覚承認には使用できない。
+旧紫色・横向きの唐傘と、それを収めた通常、quiet、strong、丑三つ時、最小幅等のスクリーンショットは明示的に不採用・失効とする。現在の承認候補は[証跡ledger](../../evidence/step4-karakasa/README.md)だけに集約し、旧画像を唐傘の視覚承認には使用しない。
 
 ## 2. 検討した方針
 
@@ -141,3 +141,14 @@ Hatch Petの全出力仕様は採用せず、キャラクター同一性とア�
 6. 独立視覚QAの合格後、ユーザーが新しい証跡を見て明示的に承認するまで、唐傘を視覚完了とせず、残りの妖怪への展開や `main` 統合へ進まない。
 
 合格条件は、構造契約を満たすことに加え、ユーザーが参照画と同じ唐傘だと認識できることである。自動テストの合格だけでは視覚承認を代替しない。
+
+### 8.1 現在の検証実績
+
+- 生成commit: `d1eca866`。
+- Xcode 27.0 generic iOS build: SUCCESS。
+- checked project／iOS 27／iPhone 17 Pro: focused QA **11 / 11**、full suite **65 / 65**、ともにfail 0／skip 0。
+- semantic AX／iPhone 17 Pro: Normal、Quiet、Strong、Strong + Ushimitsuのstate matrix **4 / 4**、Strong + Reduce Motion stability **1 / 1**。座標tapは使用していない。
+- Reduce Motion: `t0`／`t+2 s`のfull PNGは同一SHA-256で、canvas cropのdiffering bytesは0。
+- semantic AX／最小幅iPhone 17e: default Normal + Karakasa **1 / 1**、skip 0。最初のmenu試行失敗とauto diagnostics終了は正本から除外し、follow-up GREENを採用する。
+- 最新ASCIIから生成した696×96 contact sheetと80×96／15-frame GIFは、参照画と比較する独立native QAでAPPROVED。
+- Simulator screenshot一式はsemantic testとhash記録まで完了したが、最終native目視QAは未完了。ユーザー承認も未完了なので、残り妖怪と`main`統合のゲートは閉じたままとする。

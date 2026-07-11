@@ -8,6 +8,14 @@
 
 **Tech Stack:** Swift 6、SwiftUI、CoreGraphics、UIKit、ImageIO、XCTest、XcodeGen、iOS Simulator
 
+## Current execution status — 2026-07-12
+
+- Tasks 1–3 are complete. The rejected art produced a semantic RED; the current coherent family and QA renderer pass the checked focused suite **11 / 11**, skip 0.
+- Task 4 Steps 1–6 are complete: Xcode 27.0 generic build SUCCESS、iOS 27／iPhone 17 Pro full suite **65 / 65** skip 0、semantic AX Pro **4 + 1** and 17e **1 / 1** skip 0、[evidence ledger](../../evidence/step4-karakasa/README.md) generation commit `d1eca866`。
+- Reduce Motion `t0`／`t+2 s` full PNGs are identical and the canvas crop has 0 differing bytes. All semantic state selection used AX element references with no coordinate taps.
+- Contact sheet／GIF independent native QA is APPROVED. Simulator screenshots still require final native visual QA; user visual approval is not complete.
+- Task 4 Step 7 remains pending for GitHub branch/image-link synchronization and final confirmation. Draft PR、`main` unmerged、mixed-art、remaining-yokai separate matrix gates remain unchanged.
+
 ## Global Constraints
 
 - 正本はユーザー提供画像 `/workspace/scratch/3ec5d53af5a1/upload/C56C38FF-7552-4132-AFEA-D0A5A729376E.jpeg`。
@@ -40,7 +48,7 @@
 - Consumes: `KarakasaSpriteArt.palette`、`KarakasaSpriteArt.allDefinitions`、`PixelSpriteDefinition.rows`。
 - Produces: test-only `PixelPoint`、`PixelBounds`、`points(in:symbols:yRange:)`、`bounds(of:)`、`componentCount(_:)`。
 
-- [ ] **Step 1: test-only解析helperを書く**
+- [x] **Step 1: test-only解析helperを書く**
 
 ```swift
 private struct PixelPoint: Hashable {
@@ -108,7 +116,7 @@ private func componentCount(_ source: Set<PixelPoint>) -> Int {
 }
 ```
 
-- [ ] **Step 2: 現行アートで失敗する参照契約testを書く**
+- [x] **Step 2: 現行アートで失敗する参照契約testを書く**
 
 ```swift
 func testKarakasaPaletteIsReferenceFaithfulAndContainsNoLegacyPurple() {
@@ -179,7 +187,7 @@ func testKarakasaAnimationPreservesTheRegisteredIdleGeometry() {
 }
 ```
 
-- [ ] **Step 3: Remote Desktopのlocal CodexでREDを確認する**
+- [x] **Step 3: Remote Desktopのlocal CodexでREDを確認する**
 
 tests-only checkpointをfeature branchへ同期してから、local Codexはコードを編集せず次を実行する。
 
@@ -192,7 +200,7 @@ xcodebuild -project YagyoPlayer.xcodeproj -scheme YagyoPlayer \
 
 Expected: 既存紫パレット、赤canopy不足、中心／一本足契約のいずれかでFAIL。test discoveryやcompile errorでの失敗はREDとして受け入れず修正する。
 
-- [ ] **Step 4: tests-only checkpointをコミットする**
+- [x] **Step 4: tests-only checkpointをコミットする**
 
 ```bash
 git add YagyoPlayerTests/PixelSpriteContractTests.swift
@@ -210,7 +218,7 @@ git commit -m "test: reject off-model Karakasa frames"
 - Consumes: Task 1のpalette、symbol、座標帯、drift contract。
 - Produces: `KarakasaSpriteArt.idle/walk/hush/strong/allDefinitions` の既存surfaceを維持した新しい8枚。
 
-- [ ] **Step 1: 承認パレットへ置換する**
+- [x] **Step 1: 承認パレットへ置換する**
 
 ```swift
 static let palette: [Character: UInt32] = [
@@ -223,23 +231,23 @@ static let palette: [Character: UInt32] = [
 ]
 ```
 
-- [ ] **Step 2: idleをcanonical registration frameとして描き直す**
+- [x] **Step 2: idleをcanonical registration frameとして描き直す**
 
 40文字×48行を実データで書く。全体は概ね `x3...36/y1...45`、canopy `x3...36/y6...35`、cap `x15...24/y1...8`、eye `x16...23/y12...18`、mouth `x14...25/y18...21`、tongue `x17...22/y20...27`、leg `x18...21/y34...43`、geta `x16...23/y43...45`。赤い三角形を主面積とし、中央から裾への布の折りだけでSNES陰影を付ける。
 
-- [ ] **Step 3: walk4をidleから派生させる**
+- [x] **Step 3: walk4をidleから派生させる**
 
 全4枚で下駄をy45へ接地。下駄軸±2 px、脚±1 px、裾と舌の遅れ1 pxだけでcontact→push→cross→settleを作る。顔・cap・canopy中心を±1 px以内に保ち、4枚を一組でself-reviewする。
 
-- [ ] **Step 4: hush1とstrong2をidleから派生させる**
+- [x] **Step 4: hush1とstrong2をidleから派生させる**
 
 hushはbodyを最大2 px下げ、脚を2〜3 px畳み、舌を2 px収納、上瞼を1 px下げる。strong anticipateは最大1 px圧縮、reactionは裾を片側最大2 px張り、目と舌を1〜2 px強調する。横長open、傘裏面、横顔は禁止。
 
-- [ ] **Step 5: focused testをGREENにする**
+- [x] **Step 5: focused testをGREENにする**
 
 Remote Desktopのlocal CodexでTask 1と同じcommandを実行する。Expected: `PixelSpriteContractTests` PASS。実装subagentは結果を受けて8枚をfamily単位で修正する。
 
-- [ ] **Step 6: sprite replacementをコミットする**
+- [x] **Step 6: sprite replacementをコミットする**
 
 ```bash
 git add YagyoPlayer/Views/KarakasaSprite.swift
@@ -257,11 +265,11 @@ git commit -m "fix: redraw Karakasa from the approved reference"
 - Consumes: `KarakasaSpriteArt.allDefinitions` の順序 `idle + walk + hush + strong`。
 - Produces: XCTest attachments `karakasa-contact-sheet.png` と `karakasa-motion-preview.gif`。
 
-- [ ] **Step 1: nearest-neighbor raster helperをtest targetへ書く**
+- [x] **Step 1: nearest-neighbor raster helperをtest targetへ書く**
 
 `rows/palette`からRGBA bufferを作り、1 pixelを2×2へ整数複製する。contact sheetは8枚を状態順に横並びとし、生成途中の画像や別sourceを混在させない。
 
-- [ ] **Step 2: contact sheet testを追加する**
+- [x] **Step 2: contact sheet testを追加する**
 
 ```swift
 func testExportsReferenceFaithfulKarakasaContactSheet() throws {
@@ -277,11 +285,11 @@ func testExportsReferenceFaithfulKarakasaContactSheet() throws {
 }
 ```
 
-- [ ] **Step 3: motion preview GIF testを追加する**
+- [x] **Step 3: motion preview GIF testを追加する**
 
 `idle, walk0...3, walk0...3, hush, hush, strong0, strong1, strong1, idle`をImageIOでGIF化する。walkは125 ms、idle/hushは300 ms、strong anticipateは70 ms、reactionは270 msを基準とし、nearest-neighborの2倍画像だけを使う。
 
-- [ ] **Step 4: artifact testを実行・抽出する**
+- [x] **Step 4: artifact testを実行・抽出する**
 
 ```bash
 xcodebuild -project YagyoPlayer.xcodeproj -scheme YagyoPlayer \
@@ -295,11 +303,11 @@ xcrun xcresulttool export attachments \
 
 Expected: PNG/GIFが抽出され、テストPASS。Xcode版でexport構文が異なる場合は `xcresulttool help export attachments` を確認し、repoを編集せず正しい引数で再実行する。
 
-- [ ] **Step 5: 独立native art reviewを行う**
+- [x] **Step 5: 独立native art reviewを行う**
 
 実作者ではないsubagentへ、参照JPEG、idle、contact sheet、GIFを渡す。輪郭、顔、比率、赤palette、中央軸、接地、walk cadence、hush、strong、size poppingを比較し、identity/style driftをBLOCKERとする。walkに指摘があれば4枚すべて、strongなら2枚すべてを再確認して修正し、同じreviewerが解消を確認する。
 
-- [ ] **Step 6: QA artifact supportをコミットする**
+- [x] **Step 6: QA artifact supportをコミットする**
 
 ```bash
 git add YagyoPlayerTests/KarakasaQAArtifactTests.swift
@@ -322,11 +330,11 @@ git commit -m "test: render coherent Karakasa QA artifacts"
 - Consumes: review済み8-frame family、focused/full test結果、QA attachments、Simulator screenshots。
 - Produces: rejected purple evidenceを含まないDraft PR上の新しい承認候補。
 
-- [ ] **Step 1: native final code/spec reviewを行う**
+- [x] **Step 1: native final code/spec reviewを行う**
 
 変更範囲がsprite、tests、docs/evidenceだけで、reducer/playback/layout/other yokaiに差分がないことを確認する。BLOCKER/MAJORを解消する。
 
-- [ ] **Step 2: Remote Desktopのlocal Codexで生成・build・testsを実行する**
+- [x] **Step 2: Remote Desktopのlocal Codexで生成・build・testsを実行する**
 
 ```bash
 xcodegen --version
@@ -343,29 +351,34 @@ xcodebuild -project YagyoPlayer.xcodeproj -scheme YagyoPlayer \
 
 Expected: BUILD SUCCEEDED、focused/full tests PASS、skip数を記録。生成順だけのpbxproj churnは戻さない。
 
-- [ ] **Step 3: semantic Simulator evidenceを取得する**
+- [x] **Step 3: semantic Simulator evidenceを取得する**
 
-`-step4-parade-preview`で起動し、AX elementRefだけでnormal/kasa、quiet/kasa、strong+kasa+Ushimitsu、strong+kasa+Reduce Motionを選択する。iPhone 17 Proと最小幅iPhone 17eで、赤い正面姿勢、中央の顔、一本足、baseline、marker、旧妖怪との衝突、nearest-neighborを確認する。座標推測tapは禁止。
+`-step4-parade-preview`で起動し、AX elementRefだけでNormal／Karakasa、Quiet／Karakasa、Strong／Karakasa、Strong／Karakasa／Ushimitsu、Strong／Karakasa／Reduce Motionを選択した。iPhone 17 Proはstate matrix 4 / 4とReduce Motion stability 1 / 1、最小幅iPhone 17eはdefault Normal + Karakasa 1 / 1で、すべてskip 0。座標推測tapは使用していない。Reduce Motionの`t0`／`t+2 s` full PNGは同一SHA-256で、canvas cropのdiffering bytesは0。
 
-- [ ] **Step 4: rejected evidenceを完全に差し替える**
+- [x] **Step 4: rejected evidenceを完全に差し替える**
 
-旧紫画像を同じフォルダに承認候補として残さない。新contact sheet、GIF、normal/quiet/strong/丑三つ時/最小幅画像とREADMEだけを `docs/evidence/step4-karakasa/` に置く。READMEへ参照忠実度spec、検証条件、ユーザー承認待ちを記録する。
+旧紫画像を同じフォルダに承認候補として残さない。新contact sheet、GIF、Normal／Quiet／Strong／Strong + Ushimitsu／Strong + Reduce Motion `t0`／`t+2 s`／最小幅画像とREADMEだけを`docs/evidence/step4-karakasa/`の正本とする。READMEへ参照忠実度spec、semantic order、device、test結果、hash、QA状態、ユーザー承認待ちを記録する。
 
-- [ ] **Step 5: docsとDraft PRを更新する**
+- [x] **Step 5: docsとDraft PR用ledgerを更新する**
 
-parent specの旧「紫」と横長openを補足specへ委譲し、旧検証実績をsupersededとして明記する。PR本文の不採用警告を新しい画像リンクへ置換するが、Draft、`main`未merge、ユーザー視覚承認待ちは維持する。
+parent specの旧「紫」と横長openを補足specへ委譲し、旧検証実績をsupersededとして明記した。Draft PR用の画像リンクとledgerを準備し、Draft、`main`未merge、ユーザー視覚承認待ちを維持する。GitHub上の最終同期確認はStep 7に残す。
 
-- [ ] **Step 6: validation commitを作る**
+- [x] **Step 6: validation commitを作る**
 
 ```bash
-git add YagyoPlayer/Views/KarakasaSprite.swift \
-  YagyoPlayerTests/PixelSpriteContractTests.swift \
-  YagyoPlayerTests/KarakasaQAArtifactTests.swift \
+git add README.md \
+  docs/CHOREOGRAPHY.md \
+  docs/DESIGN_NAV.md \
+  docs/PRODUCT_DIRECTION.md \
   docs/superpowers/specs/2026-07-11-yagyo-emaki-2-design.md \
   docs/superpowers/plans/2026-07-12-yagyo-emaki-2-karakasa-vertical-slice.md \
-  docs/evidence/step4-karakasa
-git commit -m "test: verify the reference-faithful Karakasa"
+  docs/superpowers/specs/2026-07-12-karakasa-reference-fidelity-redesign.md \
+  docs/superpowers/plans/2026-07-12-karakasa-reference-fidelity-implementation.md \
+  docs/evidence/step4-karakasa/README.md
+git commit -m "docs: publish current Karakasa evidence"
 ```
+
+Binary artifacts were generated from `d1eca866`; their GitHub path synchronization and link confirmation remain Step 7.
 
 - [ ] **Step 7: GitHub同期と最終確認**
 
