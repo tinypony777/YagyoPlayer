@@ -22,7 +22,7 @@ The visual language is ported directly from the Hyakki Yagyo Beat Machine web ap
 - **Step-cell seek bar** — the transport progress bar is drawn as 16 sequencer cells; played cells burn 朱 (vermilion), the current cell glows 提灯 (lantern amber).
 - **Yokai library icons** — every imported track is assigned a resident yokai sprite, stable across launches. On the Step 4 validation branch, that same resident leads the procession; playback statistics are persisted but do not drive visual progression.
 
-The exact input limits, thresholds, choreography, and Reduce Motion alternatives are published in [docs/CHOREOGRAPHY.md](docs/CHOREOGRAPHY.md). The Step 4 branch is a Karakasa-only 40×48 SNES-grade visual slice pending local Simulator and user approval; the mixed-art state is not a completed all-yokai refresh and is not intended to merge to `main`.
+The exact input limits, thresholds, choreography, and Reduce Motion alternatives are published in [docs/CHOREOGRAPHY.md](docs/CHOREOGRAPHY.md). The Step 4 branch is a Karakasa-only 40×48 SNES-grade visual slice that has passed local Xcode build/tests and Simulator checks on iPhone 17 Pro and the narrow iPhone 17e; user visual approval is still pending. The mixed-art state is not a completed all-yokai refresh and is not intended to merge to `main`.
 
 ## Design Nav
 
