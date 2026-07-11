@@ -65,7 +65,7 @@
 - Consumes: 15 Hzで得た`Double?` level、`isPlaying`、単調増加する`TimeInterval`。
 - Produces: `ParadeSignalConfiguration.production`、`ParadeSignalInput`、`ParadeSignalSnapshot`、`ParadeSignalReducer.ingest(_:)`、`ParadeSignalReducer.reset(isPlaying:)`。
 
-- [ ] **Step 1: reducerの失敗テストを書く**
+- [x] **Step 1: reducerの失敗テストを書く**
 
 `ParadeSignalReducerTests.swift`に次の表面を固定する。
 
@@ -92,6 +92,7 @@ final class ParadeSignalReducerTests: XCTestCase {
     func testQuietRequiresDwellAndExitsWithHysteresis() {
         var reducer = ParadeSignalReducer(configuration: configuration)
         _ = reducer.ingest(input(0, 0.05))
+        _ = reducer.ingest(input(0.35, 0.05))
         XCTAssertEqual(reducer.ingest(input(0.69, 0.05)).activity, .normal)
         XCTAssertEqual(reducer.ingest(input(0.70, 0.05)).activity, .quietProxy)
         XCTAssertEqual(reducer.ingest(input(0.80, 0.10)).activity, .quietProxy)
@@ -127,7 +128,7 @@ final class ParadeSignalReducerTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: MacのローカルCodexで失敗を確認する**
+- [x] **Step 2: MacのローカルCodexで失敗を確認する**
 
 Run in repository root:
 
@@ -138,7 +139,7 @@ xcodebuild -project YagyoPlayer.xcodeproj -scheme YagyoPlayer -destination 'plat
 
 Expected: FAIL because the `ParadeSignal*` types do not exist.
 
-- [ ] **Step 3: 最小の純粋reducerを実装する**
+- [x] **Step 3: 最小の純粋reducerを実装する**
 
 `ParadeSignal.swift`のpublic-to-module surfaceを次で固定する。
 
@@ -220,11 +221,11 @@ struct ParadeSignalReducer: Sendable {
 7. warmupと0.45秒cooldownを終え、`level <= 0.32`または差`<= 0.06`を一度満たしたときだけ再武装する。
 8. 武装中に`level >= 0.55`かつ差`>= 0.18`ならsequenceを1増やし、0.07秒anticipate、続く0.27秒open、続く0.20秒recoverを時刻から選ぶ。一定大音量では再発火しない。
 
-- [ ] **Step 4: reducer testsを通す**
+- [x] **Step 4: reducer testsを通す**
 
 Run the Task 1 command again. Expected: `ParadeSignalReducerTests` PASS.
 
-- [ ] **Step 5: Task 1をコミットする**
+- [x] **Step 5: Task 1をコミットする**
 
 ```bash
 git add YagyoPlayer/Models/ParadeSignal.swift YagyoPlayerTests/ParadeSignalReducerTests.swift YagyoPlayer.xcodeproj/project.pbxproj
@@ -244,7 +245,7 @@ git commit -m "feat: add deterministic parade signal reducer"
 - Consumes: `AudioTrack.ID`、固定sprite ID roster。
 - Produces: `YokaiResidency.spriteID(for:)`、`YokaiResidency.processionIDs(residentID:isUshimitsu:)`、`YokaiGallery.sprite(withID:)`。
 
-- [ ] **Step 1: 互換割当と重複なし先導順の失敗テストを書く**
+- [x] **Step 1: 互換割当と重複なし先導順の失敗テストを書く**
 
 ```swift
 import XCTest
@@ -280,11 +281,11 @@ final class YokaiResidencyTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Macで失敗を確認する**
+- [x] **Step 2: Macで失敗を確認する**
 
 Run `xcodegen generate`, then the Task 1 test command with `-only-testing:YagyoPlayerTests/YokaiResidencyTests`. Expected: missing `YokaiResidency` failures.
 
-- [ ] **Step 3: 固定IDモデルを実装する**
+- [x] **Step 3: 固定IDモデルを実装する**
 
 ```swift
 import Foundation
@@ -325,7 +326,7 @@ static func sprite(for id: UUID) -> YokaiSprite {
 }
 ```
 
-- [ ] **Step 4: resident testsと既存library testsを通す**
+- [x] **Step 4: resident testsと既存library testsを通す**
 
 ```bash
 xcodebuild -project YagyoPlayer.xcodeproj -scheme YagyoPlayer -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' -only-testing:YagyoPlayerTests/YokaiResidencyTests -only-testing:YagyoPlayerTests/AudioLibraryStoreTests test
@@ -333,7 +334,7 @@ xcodebuild -project YagyoPlayer.xcodeproj -scheme YagyoPlayer -destination 'plat
 
 Expected: PASS。既存trackのresident表示が変わらない。
 
-- [ ] **Step 5: Task 2をコミットする**
+- [x] **Step 5: Task 2をコミットする**
 
 ```bash
 git add YagyoPlayer/Models/YokaiResidency.swift YagyoPlayer/Views/PixelSprites.swift YagyoPlayerTests/YokaiResidencyTests.swift YagyoPlayer.xcodeproj/project.pbxproj
@@ -353,7 +354,7 @@ git commit -m "feat: stabilize resident yokai ordering"
 - Consumes: 1文字=1ドットのASCII rowsと`[Character: UInt32]` palette。
 - Produces: `PixelSpriteDefinition`、`KarakasaSpriteArt.idle/walk/hush/strong`、意味付き`YokaiSprite` frame accessors。
 
-- [ ] **Step 1: pixel source contractの失敗テストを書く**
+- [x] **Step 1: pixel source contractの失敗テストを書く**
 
 `PixelSpriteDefinition`は`name / rows / palette / anchorX / baselineY`を保持する前提で、次を検証する。
 
@@ -391,11 +392,11 @@ final class PixelSpriteContractTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Macで失敗を確認する**
+- [x] **Step 2: Macで失敗を確認する**
 
 Run `xcodegen generate` and only `PixelSpriteContractTests`. Expected: missing contract and art types.
 
-- [ ] **Step 3: `PixelSpriteDefinition`と厳格rendererを実装する**
+- [x] **Step 3: `PixelSpriteDefinition`と厳格rendererを実装する**
 
 `PixelSprites.swift`へ次の値型を追加し、未定義記号を黙って透明化しない。
 
@@ -424,7 +425,7 @@ struct PixelSpriteDefinition: Sendable {
 
 `PixelArt.frame(_ definition:)`はwidth 40、height 48、unknownSymbols emptyを`precondition`し、既存CGImage生成へ渡す。既存`frame(rows:palette:)`は既存妖怪用に残す。
 
-- [ ] **Step 4: 唐傘8フレームを二案作り、独立アートレビューで一案へ絞る**
+- [x] **Step 4: 唐傘8フレームを二案作り、独立アートレビューで一案へ絞る**
 
 2体のネイティブsubagentへ同じ契約を渡し、別々に`KarakasaSpriteArt`のASCII rowsを提案させる。両者とも次の共通paletteを使う。
 
@@ -440,7 +441,7 @@ static let palette: [Character: UInt32] = [
 
 各案は40文字×48行を8枚すべて実データで提出する。idleは閉じた傘、一つ目、舌、柄、一本足が読めること。walkは足だけでなく柄・舌・傘布の慣性を4相でずらすこと。hushはbaselineを変えず低いシルエットにすること。strongは予備動作と開いた傘骨を使い、40 px内で切らないこと。第三のネイティブreview subagentがシルエット、民話的な唐傘らしさ、フレーム連続性、既存paletteとの調和を比較し、採用案または明示的な合成修正を返す。採用データだけを`KarakasaSprite.swift`へ書く。
 
-- [ ] **Step 5: 意味付きframeを`YokaiSprite`へ接続する**
+- [x] **Step 5: 意味付きframeを`YokaiSprite`へ接続する**
 
 既存initializerを壊さず、次をdefault付きで追加する。
 
@@ -455,11 +456,11 @@ var resolvedHushFrame: SpriteFrame { hushFrame ?? resolvedIdleFrame }
 
 唐傘だけは`frames = KarakasaSpriteArt.walk.map { PixelArt.frame($0) }`、`idleFrame = PixelArt.frame(KarakasaSpriteArt.idle[0])`、`hushFrame = PixelArt.frame(KarakasaSpriteArt.hush[0])`、`strongFrames = KarakasaSpriteArt.strong.map { PixelArt.frame($0) }`を渡す。legacy `hitFrame`にはstrongのopenを渡し、他妖怪はdefault fallbackを使う。
 
-- [ ] **Step 6: pixel contract testsを通す**
+- [x] **Step 6: pixel contract testsを通す**
 
 Run only `PixelSpriteContractTests`. Expected: 8 frames pass every dimension/palette/anchor assertion.
 
-- [ ] **Step 7: Task 3をコミットする**
+- [x] **Step 7: Task 3をコミットする**
 
 ```bash
 git add YagyoPlayer/Views/KarakasaSprite.swift YagyoPlayer/Views/PixelSprites.swift YagyoPlayerTests/PixelSpriteContractTests.swift YagyoPlayer.xcodeproj/project.pbxproj
@@ -480,7 +481,7 @@ git commit -m "feat: add SNES-grade karakasa reference sprite"
 - Consumes: Task 1のreducer、既存`updateMeter()`の平滑化済みlevel。
 - Produces: `PlaybackController.paradeSignals`、読み取り互換`audioLevel`、明示reset hook。
 
-- [ ] **Step 1: coordinatorとPlayback resetの失敗テストを書く**
+- [x] **Step 1: coordinatorとPlayback resetの失敗テストを書く**
 
 ```swift
 import XCTest
@@ -509,11 +510,11 @@ final class ParadeSignalCoordinatorTests: XCTestCase {
 
 `PlaybackControllerTests`へ、missing file load後、`pause()`後、loaded playerの`seek()`後に`paradeSignals.snapshot`がstrongを保持しない回帰を追加する。audio環境が必要なtestだけは既存方針どおり`XCTSkipUnless`を使う。
 
-- [ ] **Step 2: Macで失敗を確認する**
+- [x] **Step 2: Macで失敗を確認する**
 
 Run coordinator tests and PlaybackControllerTests. Expected: missing coordinator/reset APIs.
 
-- [ ] **Step 3: coordinatorを実装する**
+- [x] **Step 3: coordinatorを実装する**
 
 ```swift
 import Combine
@@ -540,7 +541,7 @@ final class ParadeSignalCoordinator: ObservableObject {
 }
 ```
 
-- [ ] **Step 4: PlaybackControllerを最小配線する**
+- [x] **Step 4: PlaybackControllerを最小配線する**
 
 - `@Published private(set) var audioLevel`を削除し、`let paradeSignals = ParadeSignalCoordinator()`、`private var smoothedAudioLevel = 0.0`、`var audioLevel: Double { paradeSignals.snapshot.level }`へ置換する。
 - `updateMeter()`の既存normalizeと0.65/0.18平滑化係数は変えず、`smoothedAudioLevel`を更新して`paradeSignals.ingest(... sampledAt: ProcessInfo.processInfo.systemUptime)`へ渡す。
@@ -549,7 +550,7 @@ final class ParadeSignalCoordinator: ObservableObject {
 - `resetParadeSignal(reason:isPlaying:)`を別に作り、平滑化値を0へ戻してcoordinatorをresetする。第二引数は省略不可とし、呼び出し地点の意味を明示する。
 - reset hookは`load`入口を`isPlaying: false`、load catchの最終`.loadFailure`をfalse、play失敗をfalse、`pause()`をfalse、`seek()`の時刻変更前を現在の`isPlaying`、`stopForDeletedTrack()`をfalseとして置く。next/previous/完走は`load()`経由で網羅する。`transitionToPausedStateAfterLoad()`では二重resetしない。
 
-- [ ] **Step 5: coordinator、Playback、全既存testを通す**
+- [x] **Step 5: coordinator、Playback、全既存testを通す**
 
 ```bash
 xcodebuild -project YagyoPlayer.xcodeproj -scheme YagyoPlayer -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' -only-testing:YagyoPlayerTests/ParadeSignalCoordinatorTests -only-testing:YagyoPlayerTests/PlaybackControllerTests test
@@ -557,7 +558,7 @@ xcodebuild -project YagyoPlayer.xcodeproj -scheme YagyoPlayer -destination 'plat
 
 Expected: PASS。割り込みとroute changeは既存`pause()`経路のまま。
 
-- [ ] **Step 6: Task 4をコミットする**
+- [x] **Step 6: Task 4をコミットする**
 
 ```bash
 git add YagyoPlayer/Services/ParadeSignalCoordinator.swift YagyoPlayer/Services/PlaybackController.swift YagyoPlayerTests/ParadeSignalCoordinatorTests.swift YagyoPlayerTests/PlaybackControllerTests.swift YagyoPlayer.xcodeproj/project.pbxproj
@@ -579,7 +580,7 @@ git commit -m "feat: connect parade signals without changing playback"
 - Consumes: `ParadeSignalSnapshot`、`YokaiResidency`、Task 3の意味付きframes。
 - Produces: snapshot駆動の絵巻、resident marker、Reduce Motion静止代替、`-step4-parade-preview` debug surface。
 
-- [ ] **Step 1: 描画前のpure presentation helper testsをTask 1 testへ追加する**
+- [x] **Step 1: 描画前のpure presentation helper testsをTask 1 testへ追加する**
 
 `ParadeSignalSnapshot`へ次のcomputed propertiesを実装対象として失敗testを書く。
 
@@ -604,7 +605,7 @@ XCTAssertEqual(
 
 `preview(activity:level:strongPhase:strongSequence:)` factoryは`internal`とし、本番state mutationには使わない。level省略時はstopped/unavailableが0、quietが0.05、normalが0.5を使う。strongPhaseとsequenceのdefaultはinactiveと0。`levelBand`は`.unavailable / .low / .medium / .high`、有限levelの境界は`0.20`と`0.65`に固定する。
 
-- [ ] **Step 2: `YagyoParadeView`をsnapshotとresident ID入力へ変える**
+- [x] **Step 2: `YagyoParadeView`をsnapshotとresident ID入力へ変える**
 
 signatureを次に置換する。
 
@@ -629,7 +630,7 @@ struct YagyoParadeView: View {
 - Reduce Motionではactive strongをopen静止姿勢とmarker輪郭で保持し、scale、jump、sway、歩行frameを変えない。
 - accessibility elementは一つに保ち、label、月action、snapshotのaccessibility valueを付ける。自動announcementは追加しない。
 
-- [ ] **Step 3: 高頻度観測を`ContentView`の小さなwrapperへ隔離する**
+- [x] **Step 3: 高頻度観測を`ContentView`の小さなwrapperへ隔離する**
 
 `ContentView.swift`内に`ReactiveVisualStage`を置く。
 
@@ -662,17 +663,17 @@ private struct ReactiveVisualStage: View {
 
 root bodyの直接`player.audioLevel`参照を全廃する。trackは`player.currentTrack.id`をキーに`library.tracks`から最新値を引き、見つからない場合だけ`player.currentTrack`へfallbackする。coordinatorは`@Published`にせず、wrapperだけがsnapshotを15 Hz購読する。
 
-- [ ] **Step 4: CircularWaveformのReduce Motionを実装する**
+- [x] **Step 4: CircularWaveformのReduce Motionを実装する**
 
 `@Environment(\.accessibilityReduceMotion)`を追加する。Reduce Motion時はphaseを0へ固定し、`progress`を長さ計算へ入れない。levelを低・中・高の3段階へ量子化し、暗い短線・中線・長線として即時切替する。通常時の既存位相と配色は維持する。`.accessibilityHidden(true)`は、同じ情報を絵巻の統合valueが伝えるため維持する。
 
-- [ ] **Step 5: DEBUG preview harnessを実装する**
+- [x] **Step 5: DEBUG preview harnessを実装する**
 
-`ParadePreviewHarness`はstopped、unavailable、quiet、normal、strong、resident 8種、丑三つ時、Reduce Motionを画面上のPicker/Toggleで切り替える。`.environment(\.accessibilityReduceMotion, previewReduceMotion)`で静止代替も同じbinaryから確認できるようにする。
+`ParadePreviewHarness`はstopped、unavailable、quiet、normal、strong、resident 8種、丑三つ時、Reduce Motionを画面上のPicker/Toggleで切り替える。`previewReduceMotionOverride`を`YagyoParadeView`のinitializerへ明示注入し、静止代替も同じbinaryから確認できるようにする。製品経路ではoverrideを未指定のままにし、読み取り専用の`@Environment(\.accessibilityReduceMotion)`を参照する。
 
 `YagyoPlayerApp`は`#if DEBUG`内でlaunch argumentsに`-step4-parade-preview`がある場合だけharnessをrootへ出す。通常起動、Release build、deep link、library loadは従来`ContentView`経路を使う。
 
-- [ ] **Step 6: Macでbuildとfocused testsを通す**
+- [x] **Step 6: Macでbuildとfocused testsを通す**
 
 ```bash
 xcodegen generate
@@ -682,7 +683,7 @@ xcodebuild -project YagyoPlayer.xcodeproj -scheme YagyoPlayer -destination 'plat
 
 Expected: BUILD SUCCEEDED and focused tests PASS.
 
-- [ ] **Step 7: Task 5をコミットする**
+- [x] **Step 7: Task 5をコミットする**
 
 ```bash
 git add YagyoPlayer/Views/YagyoParadeView.swift YagyoPlayer/Views/ContentView.swift YagyoPlayer/Views/VisualComponents.swift YagyoPlayer/Views/ParadePreviewHarness.swift YagyoPlayer/YagyoPlayerApp.swift YagyoPlayer/Models/ParadeSignal.swift YagyoPlayerTests/ParadeSignalReducerTests.swift YagyoPlayer.xcodeproj/project.pbxproj
@@ -703,11 +704,11 @@ git commit -m "feat: choreograph the parade from honest level signals"
 - Consumes: Task 1–5で実装された事実と定数。
 - Produces: ユーザーと次の実装者が同じ意味で読める正本文書。
 
-- [ ] **Step 1: `docs/CHOREOGRAPHY.md`を実装値から書く**
+- [x] **Step 1: `docs/CHOREOGRAPHY.md`を実装値から書く**
 
 冒頭に「入力は15 Hzの`AVAudioPlayer.averagePower`を正規化・平滑化した音量近似で、拍・アタック・デジタル無音・BPM・サビ・曲構成解析ではない」と明記する。表の列は`入力 / 判定 / 通常振付 / Reduce Motion / 実装状態`とし、stopped、unavailable、level、quietProxy、strongRiseProxy、resident、丑三つ時を一行ずつ書く。Task 1の閾値・時間を数値のまま転記する。
 
-- [ ] **Step 2: PRODUCT_DIRECTIONの古い現在地とStep 4を更新する**
+- [x] **Step 2: PRODUCT_DIRECTIONの古い現在地とStep 4を更新する**
 
 - Step 3は「iOS 27正式SDKで再検証できるまで保留」とする。
 - Step 4目的を「音の大小と変化が、説明可能な振付として伝わる」へ変更する。
@@ -715,14 +716,14 @@ git commit -m "feat: choreograph the parade from honest level signals"
 - §4.3の統計を「記録・永続化済み、絵巻の履歴演出には未接続」へ直す。
 - 唐傘縦切りはfeature branch検証中で、全妖怪SNES刷新やStep 4完了とは書かない。
 
-- [ ] **Step 3: DESIGN_NAVとREADMEを現在実装へ合わせる**
+- [x] **Step 3: DESIGN_NAVとREADMEを現在実装へ合わせる**
 
 - DESIGN_NAVに40×48、2倍、最大12色、8フレーム、唐傘→Simulator承認→別仕様という順序を書く。
 - 翻訳帳previewを`CHOREOGRAPHY.md`へリンクし、現行の固定サイン波説明を実装後のsnapshot振付へ置換する。
 - READMEの「yokai hop to loudness」を、音量帯・低レベル継続・強い上昇近似へ反応する説明に直す。
 - stats、mixed art、未実装の残り妖怪を誇張しない。
 
-- [ ] **Step 4: 文書整合性を機械確認する**
+- [x] **Step 4: 文書整合性を機械確認する**
 
 ```bash
 rg -n "averagePower|quietProxy|strongRiseProxy|0\.70|0\.45|40×48|最大12色|iOS 27|保留" docs/CHOREOGRAPHY.md docs/PRODUCT_DIRECTION.md docs/DESIGN_NAV.md README.md
@@ -731,7 +732,7 @@ rg -n "統計はゼロ|曲を読んでいる|アタック・無音・盛り上�
 
 Expected: first command finds the agreed facts. Second command returns no stale claims except clearly labeled historical quotations in archive files, which are outside this command.
 
-- [ ] **Step 5: Task 6をコミットする**
+- [x] **Step 5: Task 6をコミットする**
 
 ```bash
 git add docs/CHOREOGRAPHY.md docs/PRODUCT_DIRECTION.md docs/DESIGN_NAV.md README.md
@@ -750,15 +751,15 @@ git commit -m "docs: publish the night parade choreography ledger"
 - Consumes: complete vertical slice branch。
 - Produces: review済みcode、全test結果、Simulator screenshots、GitHub Draft PR。`main` mergeは行わない。
 
-- [ ] **Step 1: ネイティブsubagentでspec compliance reviewを行う**
+- [x] **Step 1: ネイティブsubagentでspec compliance reviewを行う**
 
 reviewerへdesign spec、plan、`git diff origin/main...HEAD`を渡し、40×48 contract、近似語彙、reset、resident互換、Reduce Motion、非目標を一項ずつ照合させる。BLOCKER/MAJORがあれば実装subagentへ戻し、同じreviewerが解消を確認する。
 
-- [ ] **Step 2: 別のネイティブsubagentでcode quality reviewを行う**
+- [x] **Step 2: 別のネイティブsubagentでcode quality reviewを行う**
 
 純粋reducerの境界、15 Hz publish数、Timer lifecycle、MainActor、SwiftUI再描画範囲、Canvas index safety、pixel source validation、accessibilityを重点レビューする。PlaybackControllerの音声挙動変更、force unwrap、unknown symbolの黙殺、15 Hz root invalidationをblockingとする。
 
-- [ ] **Step 3: Remote DesktopのローカルCodexでXcodeGenと全testを実行する**
+- [x] **Step 3: Remote DesktopのローカルCodexでXcodeGenと全testを実行する**
 
 ```bash
 xcodegen --version
@@ -770,7 +771,7 @@ xcodebuild -project YagyoPlayer.xcodeproj -scheme YagyoPlayer -destination 'plat
 
 Expected: `BUILD SUCCEEDED`、全tests PASS。環境依存でskipされたPlayback testは件名と理由を記録し、失敗と混同しない。生成された`project.pbxproj`差分だけをscratch worktreeへ戻し、root agentがコミットする。
 
-- [ ] **Step 4: Simulator preview harnessを検証する**
+- [x] **Step 4: Simulator preview harnessを検証する**
 
 ローカルCodexはiPhone 17 Proと、利用可能な最小幅iPhone SimulatorへDebug appをinstallし、bundle ID `com.codex.yagyoplayer`を`-step4-parade-preview`付きで起動する。次を操作してscreenshotsを取得する。
 
@@ -782,7 +783,7 @@ Expected: `BUILD SUCCEEDED`、全tests PASS。環境依存でskipされたPlayba
 
 確認点は80×96 ptの唐傘が86 ptのwalker gap内で切れないこと、baselineが変わらないこと、nearest-neighborでにじまないこと、markerが色なしでも読めること、Reduce Motionで座標とscaleが変わらないこと。ローカルCodexはコードを編集・レビューしない。
 
-- [ ] **Step 5: 検証結果をplanへ記録して最終コミットする**
+- [x] **Step 5: 検証結果をplanへ記録して最終コミットする**
 
 Task 1–7のcheckboxを実績どおり更新し、末尾にbuild/test件数、skip、Simulator機種、screenshots、既知の制限「唐傘のみSNES・main未統合」を記録する。
 
@@ -794,3 +795,17 @@ git commit -m "test: verify the karakasa vertical slice"
 - [ ] **Step 6: GitHubプラグインでDraft PRを作る**
 
 base `main`、head `agent/step4-yagyo-emaki-2`。PR本文にdesign spec、implementation plan、test結果、Simulator evidence、Step 3保留、mixed-artのためmerge禁止、ユーザー視覚承認後に残り妖怪の別仕様を作ることを書く。PRはDraftのままにし、mergeしない。
+
+## 検証実績 2026-07-12
+
+- **検証対象:** remote code head `2a6dfdee751a41ba193b5c3cecfec40bb3aaa6de` を fresh clone `/tmp/yagyo-step4-validation-20260712-025257` で検証した。
+- **生成とbuild:** XcodeGen 2.45.4による生成に成功。生成前はcleanで、生成後の差分は`project.pbxproj`の生成順による72 insertions / 72 deletionsだけだったため、feature branchへは戻していない。macOS 27.0 / Xcode 27.0 betaのgeneric iOS buildはexit 0。
+- **tests:** iOS 27.0のiPhone 17 Proでfocused tests **32 / 32 PASS、skip 0**、`YagyoPlayerTests`全体 **57 / 57 PASS、skip 0**。両`xcresult`ともPassed、`xcodebuild`はexit 0。test完了後の`simctl diagnose`だけが各600秒でtimeoutした。`PlaybackControllerTests`中にAVAudioSessionのmain-thread runtime warningが出たが、test failureはなかった。
+- **起動:** Debug appをinstallし、bundle ID `com.codex.yagyoplayer`を`-step4-parade-preview`付きでlaunchできた。
+- **iPhone 17 Pro:** 安定版Xcode 26.6 / iOS 26.5でAX識別子を使い、`normal / kasa / Ushimitsu off / Reduce Motion off`、`quiet / kasa / off / off`、`strong / kasa / on / off`、`strong / kasa / off / on`、`unavailable / kappa / off / off`の5状態を確認した。各画像は1206×2622 px。
+- **最小幅:** iOS 26.5のiPhone 17e（390×844 pt、preview 355×159 pt）で`normal / kasa / Ushimitsu off / Reduce Motion off`を確認した。画像は1170×2532 px。
+- **Simulator目視:** nearest-neighborの整数拡大、足元baseline、菱形+stemのresident marker、quietの`hush`、strongの`open`、丑三つ時の一つ目小僧追加、unavailable時の破線の提灯halo（chochin色を維持）、旧spriteとの衝突と意図しない切れがないことを確認した。viewport端での切れは通常の行進による端通過である。Reduce Motionは座標とscaleの静止表示を確認したが、単一画像の比較だけでは時間経過後も完全に静止することまでは実測していない（code、unit tests、reviewは合格）。40×48 px source、2倍整数表示、80×96 ptはcontract testsとcodeで確認し、画像では整数拡大を確認した。
+- **CircularWaveform:** DEBUG `ParadePreviewHarness`にはCircularWaveform自体がないため、unavailableの中立色・破線・位相固定はSimulator画像の目視証拠ではない。これは`CircularWaveformPresentation`のunit testsとcode reviewで確認した。
+- **証拠保存先:** `/Users/ryuseinaito/automation-mcp/yagyo-step4-validation/`（full screenshots、crops、review images、`ax-summary`）。唐傘のユーザー見た目承認は未完了。
+- **review:** native final code reviewはAPPROVED、BLOCKER / MAJOR / MINORはいずれも0。GitHub CIはない。電話 / Siri、イヤホン抜去、バックグラウンド等の手動interrupt確認は今回未実施。
+- **公開ゲート:** SNES相当は唐傘だけで、他の妖怪は従来アートのmixed-art状態。Draft PRに留めて`main`へmergeせず、ユーザーの唐傘見た目承認と別frame matrix承認まで残り妖怪へ展開しない。Step 3は保留のままで、FFmpegは採用していない。
