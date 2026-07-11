@@ -1,23 +1,50 @@
 import SwiftUI
 
-/// 夜行絵巻 — 妖怪の行列が右から左へ流れる。Web版「百鬼夜行ビートマシン」の
-/// 看板ビジュアルを SwiftUI Canvas に移植したもの。再生中は音声レベルに
-/// 合わせて妖怪が跳ね、提灯が明滅する。月に触れると刻が変わる。
+struct ParadeProcessionLayout: Sendable {
+    static let staticLeadingInset: Double = 12
+    private static let animatedLeadingOffset: Double = 70
+
+    static func xPosition(
+        index: Int,
+        walkerCount: Int,
+        gap: Double,
+        speed: Double,
+        time: TimeInterval
+    ) -> Double {
+        let staticPosition = staticLeadingInset + Double(index) * gap
+        guard speed > 0, walkerCount > 0, gap > 0 else { return staticPosition }
+
+        let loop = gap * Double(walkerCount)
+        var x = (-time * speed + Double(index) * gap).truncatingRemainder(dividingBy: loop)
+        if x < 0 { x += loop }
+        return x - animatedLeadingOffset
+    }
+}
+
+/// 夜行絵巻 — 音量近似を、説明可能な行進・静音・強反応へ翻訳する表示層。
+/// 楽曲の拍や構成を推定せず、再生は一切操作しない。
 struct YagyoParadeView: View {
-    var isPlaying: Bool
-    var level: Double
+    var signal: ParadeSignalSnapshot
+    var residentSpriteID: String?
     var isUshimitsu: Bool
     var onMoonTap: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private static let launch = Date()
-    private static let spriteScale: Double = 3
+    private static let legacySpriteScale: Double = 3
+    private static let karakasaSpriteScale: Double = 2
     private static let moonRadius: Double = 19
+    private static let strongReactiveIDs: Set<String> = ["oni", "mokugyo", "kasa", "kitsune", "tengu"]
 
     var body: some View {
         GeometryReader { geometry in
-            TimelineView(.animation(minimumInterval: nil, paused: reduceMotion)) { timeline in
+            TimelineView(
+                .animation(
+                    minimumInterval: 1.0 / 30.0,
+                    paused: reduceMotion || signal.activity == .stopped
+                )
+            ) { timeline in
                 Canvas { context, size in
                     var context = context
                     let time = max(0, timeline.date.timeIntervalSince(Self.launch))
@@ -41,8 +68,14 @@ struct YagyoParadeView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color(yagyoHex: 0x3a3524).opacity(0.9), lineWidth: 1)
         }
-        .accessibilityElement()
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("妖怪の夜行絵巻")
+        .accessibilityValue(
+            signal.accessibilityValue(
+                residentName: residentSprite?.name,
+                isUshimitsu: isUshimitsu
+            )
+        )
         .accessibilityHint("月に触れると刻が変わる")
         .accessibilityAction(named: "月に触れる") { onMoonTap() }
     }
@@ -55,15 +88,27 @@ struct YagyoParadeView: View {
         isUshimitsu ? .ushimitsu : .day
     }
 
+    private var residentSprite: YokaiSprite? {
+        guard let residentSpriteID else { return nil }
+        return YokaiGallery.sprite(withID: residentSpriteID)
+    }
+
+    private var isStrongActive: Bool {
+        signal.strongPhase != .inactive
+    }
+
+    private var isSceneAnimated: Bool {
+        !reduceMotion && signal.activity != .stopped
+    }
+
     // MARK: - Drawing
 
     private func draw(in context: inout GraphicsContext, size: CGSize, time: TimeInterval) {
         let pal = palette
-        let animated = !reduceMotion
+        let animated = isSceneAnimated
         let width = Double(size.width)
         let height = Double(size.height)
 
-        // 夜空
         context.fill(
             Path(CGRect(x: 0, y: 0, width: width, height: height)),
             with: .linearGradient(
@@ -77,7 +122,6 @@ struct YagyoParadeView: View {
         drawMoon(in: &context, width: width, palette: pal)
         drawFog(in: &context, width: width, time: time, palette: pal, animated: animated)
 
-        // 地面
         context.fill(
             Path(CGRect(x: 0, y: height - 22, width: width, height: 22)),
             with: .color(.black.opacity(0.35))
@@ -87,17 +131,21 @@ struct YagyoParadeView: View {
             with: .color(YagyoColor.geppaku.opacity(0.08))
         )
 
-        // 提灯
-        let pulse = isPlaying ? level : 0
         let sway1 = animated ? sin(time * 0.8) * 3 : 0
         let sway2 = animated ? sin(time * 0.6 + 2) * 4 : 0
-        drawChochin(in: &context, x: 26 + sway1, y: 30, pulse: pulse, time: time, animated: animated)
-        drawChochin(in: &context, x: width * 0.42 + sway2, y: 22, pulse: pulse, time: time + 3, animated: animated)
+        drawChochin(in: &context, x: 26 + sway1, y: 30, time: time, animated: animated)
+        drawChochin(in: &context, x: width * 0.42 + sway2, y: 22, time: time + 3, animated: animated)
 
-        drawProcession(in: &context, width: width, height: height, time: time, animated: animated)
+        drawProcession(in: &context, width: width, height: height, time: time)
     }
 
-    private func drawStars(in context: inout GraphicsContext, width: Double, height: Double, time: TimeInterval, animated: Bool) {
+    private func drawStars(
+        in context: inout GraphicsContext,
+        width: Double,
+        height: Double,
+        time: TimeInterval,
+        animated: Bool
+    ) {
         for index in 0..<26 {
             let seed = Double(index)
             let x = fract(sin(seed * 12.9898) * 43758.5453) * width
@@ -116,28 +164,47 @@ struct YagyoParadeView: View {
     private func drawMoon(in context: inout GraphicsContext, width: Double, palette pal: ParadePalette) {
         let moon = Self.moonCenter(width: width)
         let radius = Self.moonRadius
-
         let haloRadius = radius * 2.1
+
         context.fill(
-            Path(ellipseIn: CGRect(x: moon.x - haloRadius, y: moon.y - haloRadius, width: haloRadius * 2, height: haloRadius * 2)),
+            Path(
+                ellipseIn: CGRect(
+                    x: moon.x - haloRadius,
+                    y: moon.y - haloRadius,
+                    width: haloRadius * 2,
+                    height: haloRadius * 2
+                )
+            ),
             with: .color(pal.halo)
         )
         context.fill(
-            Path(ellipseIn: CGRect(x: moon.x - radius, y: moon.y - radius, width: radius * 2, height: radius * 2)),
+            Path(
+                ellipseIn: CGRect(
+                    x: moon.x - radius,
+                    y: moon.y - radius,
+                    width: radius * 2,
+                    height: radius * 2
+                )
+            ),
             with: .color(pal.moon)
         )
-        // クレーター
         context.fill(
-            Path(ellipseIn: CGRect(x: moon.x - 6 - 3.4, y: moon.y - 3 - 3.4, width: 6.8, height: 6.8)),
+            Path(ellipseIn: CGRect(x: moon.x - 9.4, y: moon.y - 6.4, width: 6.8, height: 6.8)),
             with: .color(.black.opacity(0.12))
         )
         context.fill(
-            Path(ellipseIn: CGRect(x: moon.x + 5 - 2.4, y: moon.y + 6 - 2.4, width: 4.8, height: 4.8)),
+            Path(ellipseIn: CGRect(x: moon.x + 2.6, y: moon.y + 3.6, width: 4.8, height: 4.8)),
             with: .color(.black.opacity(0.12))
         )
     }
 
-    private func drawFog(in context: inout GraphicsContext, width: Double, time: TimeInterval, palette pal: ParadePalette, animated: Bool) {
+    private func drawFog(
+        in context: inout GraphicsContext,
+        width: Double,
+        time: TimeInterval,
+        palette pal: ParadePalette,
+        animated: Bool
+    ) {
         let blobs: [(x0: Double, y: Double, r: Double, v: Double)] = [
             (0.08, 110, 70, 6), (0.36, 96, 95, -4), (0.67, 118, 80, 5)
         ]
@@ -148,14 +215,26 @@ struct YagyoParadeView: View {
             if x < 0 { x += range }
             x -= blob.r
             context.fill(
-                Path(ellipseIn: CGRect(x: x - blob.r, y: blob.y - blob.r * 0.32, width: blob.r * 2, height: blob.r * 0.64)),
+                Path(
+                    ellipseIn: CGRect(
+                        x: x - blob.r,
+                        y: blob.y - blob.r * 0.32,
+                        width: blob.r * 2,
+                        height: blob.r * 0.64
+                    )
+                ),
                 with: .color(pal.fog)
             )
         }
     }
 
-    private func drawChochin(in context: inout GraphicsContext, x: Double, y: Double, pulse: Double, time: TimeInterval, animated: Bool) {
-        // 紐の先で振り子のように揺れる
+    private func drawChochin(
+        in context: inout GraphicsContext,
+        x: Double,
+        y: Double,
+        time: TimeInterval,
+        animated: Bool
+    ) {
         let sway = animated ? sin(time * 1.3) * 2 : 0
         var cord = Path()
         cord.move(to: CGPoint(x: x, y: 0))
@@ -163,17 +242,33 @@ struct YagyoParadeView: View {
         context.stroke(cord, with: .color(YagyoColor.geppaku.opacity(0.2)), lineWidth: 1)
 
         let bx = x + sway
-        let glowRadius = 17 + pulse * 6
+        let halo = chochinHalo
         let glowY = y + 11
-        context.fill(
-            Path(ellipseIn: CGRect(x: bx - glowRadius, y: glowY - glowRadius, width: glowRadius * 2, height: glowRadius * 2)),
-            with: .radialGradient(
-                Gradient(colors: [YagyoColor.chochin.opacity(0.14 + pulse * 0.2), .clear]),
-                center: CGPoint(x: bx, y: glowY),
-                startRadius: 0,
-                endRadius: glowRadius
-            )
+        let glowRect = CGRect(
+            x: bx - halo.width / 2,
+            y: glowY - halo.height / 2,
+            width: halo.width,
+            height: halo.height
         )
+        let glowPath = Path(ellipseIn: glowRect)
+
+        if signal.activity == .unavailable {
+            context.stroke(
+                glowPath,
+                with: .color(YagyoColor.chochin.opacity(0.34)),
+                style: StrokeStyle(lineWidth: 1, dash: [2, 2])
+            )
+        } else {
+            context.fill(
+                glowPath,
+                with: .radialGradient(
+                    Gradient(colors: [YagyoColor.chochin.opacity(halo.opacity), .clear]),
+                    center: CGPoint(x: bx, y: glowY),
+                    startRadius: 0,
+                    endRadius: max(halo.width, halo.height) / 2
+                )
+            )
+        }
 
         context.fill(Path(CGRect(x: bx - 4, y: y, width: 8, height: 3)), with: .color(Color(yagyoHex: 0x191420)))
         context.fill(Path(CGRect(x: bx - 5, y: y + 3, width: 10, height: 14)), with: .color(Color(yagyoHex: 0xe2903a)))
@@ -181,82 +276,232 @@ struct YagyoParadeView: View {
         context.fill(Path(CGRect(x: bx - 4, y: y + 17, width: 8, height: 3)), with: .color(Color(yagyoHex: 0x191420)))
     }
 
-    private func drawProcession(in context: inout GraphicsContext, width: Double, height: Double, time: TimeInterval, animated: Bool) {
-        var walkers = YokaiGallery.parade
-        if isUshimitsu {
-            walkers.append(YokaiGallery.hitotsume)
+    private var chochinHalo: (width: Double, height: Double, opacity: Double) {
+        if reduceMotion {
+            switch signal.levelBand {
+            case .unavailable:
+                return (28, 20, 0.18)
+            case .low:
+                return (22, 14, 0.12)
+            case .medium:
+                return (32, 22, 0.22)
+            case .high:
+                return (42, 30, 0.34)
+            }
         }
+
+        let displayLevel = signal.activity == .unavailable ? 0.35 : signal.level
+        return (
+            34 + displayLevel * 12,
+            34 + displayLevel * 12,
+            0.14 + displayLevel * 0.2
+        )
+    }
+
+    private func drawProcession(
+        in context: inout GraphicsContext,
+        width: Double,
+        height: Double,
+        time: TimeInterval
+    ) {
+        let ids = YokaiResidency.processionIDs(
+            residentID: residentSpriteID,
+            isUshimitsu: isUshimitsu
+        )
+        let walkers = ids.compactMap { YokaiGallery.sprite(withID: $0) }
+        guard !walkers.isEmpty else { return }
 
         let count = Double(walkers.count)
         let gap = max(86, (width + 140) / count)
-        let loop = gap * count
-        let speed: Double = animated ? 46 : 0
-        let frameIndex = animated ? Int(time * 4) % 2 : 0
+        let speed = processionSpeed
         let ground = height - 20
-        let scale = Self.spriteScale
 
         for (index, sprite) in walkers.enumerated() {
-            // 丑三つ時のしんがり(一つ目小僧)は何にも反応せず、ただ付いてくる
-            let isExtra = index >= YokaiGallery.parade.count
+            let isExtra = sprite.id == "hitotsume"
+            let x = ParadeProcessionLayout.xPosition(
+                index: index,
+                walkerCount: walkers.count,
+                gap: gap,
+                speed: speed,
+                time: time
+            )
 
-            var x = (-time * speed + Double(index) * gap).truncatingRemainder(dividingBy: loop)
-            if x < 0 { x += loop }
-            x -= 70
+            guard let frame = frame(for: sprite, time: time) else { continue }
 
-            let bob = animated ? sin(time * 4 + Double(index) * 1.7) * 1.6 : 0
-
-            // 音の山に合わせた跳ね — 妖怪ごとに位相をずらす
-            var react: Double = 0
-            if isPlaying && animated && !isExtra {
-                let wave = max(0, sin(time * 2 * .pi * 1.9 + Double(index) * 1.13))
-                react = wave * wave * level
-            }
-            let jump = Double(sprite.jump) * react * 1.6
-
-            var frame = sprite.frames[frameIndex % sprite.frames.count]
-            if let hit = sprite.hitFrame, react > (sprite.hitOnStrongOnly ? 0.8 : 0.6) {
-                frame = hit
-            }
-
+            let bob = bobOffset(index: index, time: time)
+            let strongAmount = strongReactionAmount
+            let reactsToStrong = !isExtra && Self.strongReactiveIDs.contains(sprite.id)
+            let lift = !reduceMotion && sprite.id == "oni" && reactsToStrong ? 4 * strongAmount : 0
+            let scale = sprite.id == "kasa" ? Self.karakasaSpriteScale : Self.legacySpriteScale
             let baseWidth = Double(frame.pixelWidth) * scale
+            let baseHeight = Double(frame.pixelHeight) * scale
             var drawWidth = baseWidth
-            var drawHeight = Double(frame.pixelHeight) * scale
-            if react > 0 {
-                if sprite.flare {
-                    drawWidth *= 1 + 0.22 * react
-                    drawHeight *= 1 + 0.22 * react
+            var drawHeight = baseHeight
+
+            if !reduceMotion, reactsToStrong {
+                if sprite.id == "kitsune", sprite.flare {
+                    drawWidth *= 1 + 0.22 * strongAmount
+                    drawHeight *= 1 + 0.22 * strongAmount
                 }
-                if sprite.squash {
-                    drawHeight *= 1 - 0.16 * react
+                if sprite.id == "mokugyo", sprite.squash {
+                    drawHeight *= 1 - 0.16 * strongAmount
                 }
             }
 
             let rect = CGRect(
                 x: x - (drawWidth - baseWidth) / 2,
-                y: ground - drawHeight - bob - jump,
+                y: ground - drawHeight - bob - lift,
                 width: drawWidth,
                 height: drawHeight
             )
             context.draw(frame.image, in: rect)
 
-            // 木魚のバチ — 山が来ると振り上がる
-            if index == 1 {
-                var stick = context
-                stick.translateBy(x: rect.maxX + 2, y: rect.minY + 4)
-                stick.rotate(by: .radians(-0.6 + min(1, react) * 1.1))
-                stick.fill(
-                    Path(CGRect(x: 0, y: 0, width: 3, height: 16)),
-                    with: .color(Color(yagyoHex: 0xf0e2c0))
-                )
+            if sprite.id == "mokugyo", reactsToStrong {
+                drawMokugyoStick(in: &context, beside: rect, strongAmount: strongAmount)
             }
 
-            // 強い山で白くひらめく
-            if react > 0.85 {
-                context.blendMode = .plusLighter
-                context.fill(Path(rect), with: .color(.white.opacity((react - 0.85) * 1.2)))
-                context.blendMode = .normal
+            let isResident = index == 0 && residentSpriteID == sprite.id
+            if isResident {
+                drawResidentMarker(in: &context, above: rect)
+            }
+
+            if reduceMotion, isStrongActive, reactsToStrong {
+                drawStaticStrongOutline(in: &context, around: rect)
             }
         }
+    }
+
+    private var processionSpeed: Double {
+        guard !reduceMotion else { return 0 }
+        switch signal.activity {
+        case .stopped:
+            return 0
+        case .quietProxy:
+            return 14
+        case .normal, .unavailable:
+            return 46
+        }
+    }
+
+    private func bobOffset(index: Int, time: TimeInterval) -> Double {
+        guard !reduceMotion else { return 0 }
+        let amplitude: Double
+        switch signal.activity {
+        case .stopped:
+            return 0
+        case .quietProxy:
+            amplitude = 0.4
+        case .normal:
+            amplitude = 1.3 + signal.level * 0.5
+        case .unavailable:
+            amplitude = 1.3
+        }
+        return sin(time * 4 + Double(index) * 1.7) * amplitude
+    }
+
+    private var strongReactionAmount: Double {
+        guard isStrongActive else { return 0 }
+        if reduceMotion { return 1 }
+        switch signal.strongPhase {
+        case .inactive:
+            return 0
+        case .anticipate:
+            return 0.55
+        case .open:
+            return 1
+        case .recover:
+            return 0.35
+        }
+    }
+
+    private func frame(for sprite: YokaiSprite, time: TimeInterval) -> SpriteFrame? {
+        let idle = sprite.idleFrame ?? sprite.frames.first
+        let hush = sprite.hushFrame ?? idle
+
+        if sprite.id == "kasa", isStrongActive {
+            if reduceMotion {
+                return sprite.strongFrames.dropFirst().first ?? sprite.strongFrames.first ?? idle
+            }
+            switch signal.strongPhase {
+            case .inactive:
+                break
+            case .anticipate:
+                return sprite.strongFrames.first ?? idle
+            case .open:
+                return sprite.strongFrames.dropFirst().first ?? sprite.strongFrames.first ?? idle
+            case .recover:
+                return idle
+            }
+        }
+
+        if sprite.id == "tengu", isStrongActive {
+            return sprite.hitFrame ?? idle
+        }
+
+        switch signal.activity {
+        case .stopped:
+            return idle
+        case .quietProxy:
+            return hush
+        case .normal, .unavailable:
+            guard !reduceMotion, !sprite.frames.isEmpty else { return idle }
+            let frameIndex = Int(max(0, time) * 4).quotientAndRemainder(dividingBy: sprite.frames.count).remainder
+            return sprite.frames.dropFirst(frameIndex).first ?? idle
+        }
+    }
+
+    private func drawMokugyoStick(
+        in context: inout GraphicsContext,
+        beside rect: CGRect,
+        strongAmount: Double
+    ) {
+        var stick = context
+        stick.translateBy(x: rect.maxX + 2, y: rect.minY + 4)
+        stick.rotate(by: .radians(-0.6 + strongAmount * 1.1))
+        stick.fill(
+            Path(CGRect(x: 0, y: 0, width: 3, height: 16)),
+            with: .color(Color(yagyoHex: 0xf0e2c0))
+        )
+    }
+
+    private func drawResidentMarker(in context: inout GraphicsContext, above rect: CGRect) {
+        let center = CGPoint(x: rect.midX, y: rect.minY - 11)
+        var diamond = Path()
+        diamond.move(to: CGPoint(x: center.x, y: center.y - 3))
+        diamond.addLine(to: CGPoint(x: center.x + 3, y: center.y))
+        diamond.addLine(to: CGPoint(x: center.x, y: center.y + 3))
+        diamond.addLine(to: CGPoint(x: center.x - 3, y: center.y))
+        diamond.closeSubpath()
+        context.fill(diamond, with: .color(YagyoColor.chochin))
+        context.stroke(diamond, with: .color(YagyoColor.geppaku.opacity(0.9)), lineWidth: 1)
+
+        var stem = Path()
+        stem.move(to: CGPoint(x: center.x, y: center.y + 3))
+        stem.addLine(to: CGPoint(x: center.x, y: center.y + 8))
+        context.stroke(stem, with: .color(YagyoColor.geppaku), lineWidth: 1)
+
+        if reduceMotion, isStrongActive {
+            context.stroke(
+                Path(
+                    CGRect(
+                        x: center.x - 5,
+                        y: center.y - 5,
+                        width: 10,
+                        height: 10
+                    )
+                ),
+                with: .color(YagyoColor.kitsunebi.opacity(0.9)),
+                lineWidth: 1
+            )
+        }
+    }
+
+    private func drawStaticStrongOutline(in context: inout GraphicsContext, around rect: CGRect) {
+        context.stroke(
+            Path(rect.insetBy(dx: -2, dy: -2)),
+            with: .color(YagyoColor.kitsunebi.opacity(0.72)),
+            style: StrokeStyle(lineWidth: 1, dash: [3, 2])
+        )
     }
 
     private func fract(_ value: Double) -> Double {

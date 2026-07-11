@@ -37,6 +37,12 @@ final class PlaybackControllerTests: XCTestCase {
         }
     }
 
+    private func primeStrongParadeSignal(on player: PlaybackController) {
+        player.paradeSignals.ingest(level: 0.20, isPlaying: true, sampledAt: 0)
+        player.paradeSignals.ingest(level: 0.20, isPlaying: true, sampledAt: 0.31)
+        player.paradeSignals.ingest(level: 0.80, isPlaying: true, sampledAt: 0.40)
+    }
+
     // MARK: - ファイル欠落・読み込み失敗は無言で止まらない
 
     func testLoadingMissingFileSurfacesPlaybackError() async throws {
@@ -55,6 +61,25 @@ final class PlaybackControllerTests: XCTestCase {
         XCTAssertFalse(player.isPlaying)
         let message = try XCTUnwrap(player.playbackErrorMessage)
         XCTAssertTrue(message.contains(ghostTrack.title))
+    }
+
+    func testLoadingMissingFileClearsStrongParadeSignal() {
+        let store = makeStore()
+        store.load()
+        let player = PlaybackController()
+        let ghostTrack = AudioTrack(
+            title: "行方知れず",
+            originalFilename: "ghost.wav",
+            storedFilename: "does-not-exist-\(UUID().uuidString).wav"
+        )
+        primeStrongParadeSignal(on: player)
+        XCTAssertNotEqual(player.paradeSignals.snapshot.strongPhase, .inactive)
+
+        player.load(ghostTrack, from: store)
+
+        XCTAssertEqual(player.paradeSignals.snapshot.strongPhase, .inactive)
+        XCTAssertEqual(player.paradeSignals.snapshot.activity, .stopped)
+        XCTAssertEqual(player.audioLevel, 0)
     }
 
     func testLoadingCorruptFileSurfacesPlaybackError() async throws {
@@ -92,6 +117,38 @@ final class PlaybackControllerTests: XCTestCase {
         let nowPlayingInfo = try XCTUnwrap(MPNowPlayingInfoCenter.default().nowPlayingInfo)
         XCTAssertEqual(nowPlayingInfo[MPMediaItemPropertyTitle] as? String, "月下のデモ")
         XCTAssertEqual(nowPlayingInfo[MPMediaItemPropertyArtist] as? String, "Ryusei")
+    }
+
+    // MARK: - 再生境界では古い強い音量上昇近似を保持しない
+
+    func testPauseClearsStrongParadeSignal() {
+        let player = PlaybackController()
+        primeStrongParadeSignal(on: player)
+        XCTAssertNotEqual(player.paradeSignals.snapshot.strongPhase, .inactive)
+
+        player.pause()
+
+        XCTAssertEqual(player.paradeSignals.snapshot.strongPhase, .inactive)
+        XCTAssertEqual(player.paradeSignals.snapshot.activity, .stopped)
+        XCTAssertEqual(player.audioLevel, 0)
+    }
+
+    func testSeekClearsStrongParadeSignalWithoutStoppingPlayback() async throws {
+        let store = makeStore()
+        store.load()
+        let track = try await importPlayableTrack(into: store)
+        let player = PlaybackController()
+        player.load(track, from: store, autoplay: true)
+        try XCTSkipUnless(player.isPlaying, "Audio playback is not available in this test environment")
+        primeStrongParadeSignal(on: player)
+        XCTAssertNotEqual(player.paradeSignals.snapshot.strongPhase, .inactive)
+
+        player.seek(to: 0.25)
+
+        XCTAssertTrue(player.isPlaying)
+        XCTAssertEqual(player.paradeSignals.snapshot.strongPhase, .inactive)
+        XCTAssertEqual(player.paradeSignals.snapshot.activity, .unavailable)
+        XCTAssertEqual(player.audioLevel, 0)
     }
 
     // MARK: - 割り込み(電話・Siri)からの復帰は、中断前に再生中だった場合のみ

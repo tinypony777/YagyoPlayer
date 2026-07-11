@@ -13,17 +13,52 @@ struct SpriteFrame: @unchecked Sendable {
     var pixelSize: CGSize { CGSize(width: pixelWidth, height: pixelHeight) }
 }
 
+struct PixelSpriteDefinition: Sendable {
+    let name: String
+    let rows: [String]
+    let palette: [Character: UInt32]
+    let anchorX: Int
+    let baselineY: Int
+
+    var usedSymbols: Set<Character> {
+        Set(rows.joined()).subtracting(["."])
+    }
+
+    var unknownSymbols: Set<Character> {
+        usedSymbols.subtracting(palette.keys)
+    }
+
+    var usedColorCount: Int {
+        Set(usedSymbols.compactMap { palette[$0] }).count
+    }
+
+    var lowestOpaqueY: Int {
+        rows.indices.last { rows[$0].contains { $0 != "." } } ?? -1
+    }
+
+    var hasTransparentTopAndSideMargins: Bool {
+        guard rows.first?.allSatisfy({ $0 == "." }) == true else { return false }
+        return rows.allSatisfy { $0.first == "." && $0.last == "." }
+    }
+}
+
 struct YokaiSprite: @unchecked Sendable {
     let id: String
     let name: String
     let role: String
     let frames: [SpriteFrame]
     let hitFrame: SpriteFrame?
+    let idleFrame: SpriteFrame?
+    let hushFrame: SpriteFrame?
+    let strongFrames: [SpriteFrame]
     let jump: CGFloat
     let squash: Bool
     let flare: Bool
     /// 強打(大きな山)のときだけ hitFrame を見せる
     let hitOnStrongOnly: Bool
+
+    var resolvedIdleFrame: SpriteFrame { idleFrame ?? frames[0] }
+    var resolvedHushFrame: SpriteFrame { hushFrame ?? resolvedIdleFrame }
 
     init(
         id: String,
@@ -31,6 +66,9 @@ struct YokaiSprite: @unchecked Sendable {
         role: String,
         frames: [SpriteFrame],
         hitFrame: SpriteFrame? = nil,
+        idleFrame: SpriteFrame? = nil,
+        hushFrame: SpriteFrame? = nil,
+        strongFrames: [SpriteFrame] = [],
         jump: CGFloat,
         squash: Bool = false,
         flare: Bool = false,
@@ -41,6 +79,9 @@ struct YokaiSprite: @unchecked Sendable {
         self.role = role
         self.frames = frames
         self.hitFrame = hitFrame
+        self.idleFrame = idleFrame
+        self.hushFrame = hushFrame
+        self.strongFrames = strongFrames
         self.jump = jump
         self.squash = squash
         self.flare = flare
@@ -49,6 +90,19 @@ struct YokaiSprite: @unchecked Sendable {
 }
 
 enum PixelArt {
+    static func frame(_ definition: PixelSpriteDefinition) -> SpriteFrame {
+        precondition(definition.rows.count == 48, "\(definition.name) must be 48 pixels high")
+        precondition(
+            definition.rows.allSatisfy { $0.utf8.count == 40 },
+            "\(definition.name) must be exactly 40 ASCII pixels wide"
+        )
+        precondition(
+            definition.unknownSymbols.isEmpty,
+            "\(definition.name) contains unknown palette symbols: \(definition.unknownSymbols)"
+        )
+        return frame(rows: definition.rows, palette: definition.palette)
+    }
+
     static func frame(rows: [String], palette: [Character: UInt32]) -> SpriteFrame {
         let height = rows.count
         let width = rows.map(\.count).max() ?? 1
@@ -155,59 +209,6 @@ enum YokaiGallery {
         "..rrrrrrrrr..",
         ".rrRrrrrrRrr.",
     ], palette: mokuPal)
-
-    // --- 唐傘 ---
-    private static let kasaPal = palette([
-        "i": 0x4a3f78, "I": 0x2c2450, "r": 0xd9503a, "t": 0xcaa46a
-    ])
-    private static let kasaA = PixelArt.frame(rows: [
-        "....kk....",
-        "...kiik...",
-        "...kiik...",
-        "..kiiiik..",
-        "..kiwwik..",
-        "..kiwkik..",
-        "..kiiiik..",
-        "..kIiiIk..",
-        "...kiik...",
-        "...krrk...",
-        "....rr....",
-        "....rr....",
-        "....t.....",
-        "....t.....",
-        "...ttt....",
-    ], palette: kasaPal)
-    private static let kasaB = PixelArt.frame(rows: [
-        "....kk....",
-        "...kiik...",
-        "...kiik...",
-        "..kiiiik..",
-        "..kiwwik..",
-        "..kiwkik..",
-        "..kiiiik..",
-        "..kIiiIk..",
-        "...kiik...",
-        "...krrk...",
-        "...rr.....",
-        "...rr.....",
-        ".....t....",
-        "....t.....",
-        "...ttt....",
-    ], palette: kasaPal)
-    private static let kasaOpen = PixelArt.frame(rows: [
-        "......kk......",
-        "....kiiiik....",
-        "..kiiiiiiiik..",
-        ".kiiiwwiiiiik.",
-        ".kiiiwkiiiiik.",
-        "kiiiiiiiiiiiik",
-        ".IIIIIIIIIIII.",
-        ".....krrk.....",
-        "......rr......",
-        "......t.......",
-        "......t.......",
-        ".....ttt......",
-    ], palette: kasaPal)
 
     // --- 河童 ---
     private static let kappaPal = palette([
@@ -464,7 +465,18 @@ enum YokaiGallery {
     static let parade: [YokaiSprite] = [
         YokaiSprite(id: "oni", name: "鬼太鼓", role: "Taiko Oni", frames: [oniA, oniB], jump: 7),
         YokaiSprite(id: "mokugyo", name: "木魚", role: "Mokugyo", frames: [mokuA, mokuA], jump: 5, squash: true),
-        YokaiSprite(id: "kasa", name: "唐傘", role: "Kasa-obake", frames: [kasaA, kasaB], hitFrame: kasaOpen, jump: 6, hitOnStrongOnly: true),
+        YokaiSprite(
+            id: "kasa",
+            name: "唐傘",
+            role: "Kasa-obake",
+            frames: KarakasaSpriteArt.walk.map { PixelArt.frame($0) },
+            hitFrame: PixelArt.frame(KarakasaSpriteArt.strong[1]),
+            idleFrame: PixelArt.frame(KarakasaSpriteArt.idle[0]),
+            hushFrame: PixelArt.frame(KarakasaSpriteArt.hush[0]),
+            strongFrames: KarakasaSpriteArt.strong.map { PixelArt.frame($0) },
+            jump: 6,
+            hitOnStrongOnly: true
+        ),
         YokaiSprite(id: "kappa", name: "河童", role: "Kappa", frames: [kappaA, kappaB], jump: 6),
         YokaiSprite(id: "kitsune", name: "狐火", role: "Kitsunebi", frames: [kitsA, kitsB], jump: 3, flare: true),
         YokaiSprite(id: "tengu", name: "天狗", role: "Tengu", frames: [tenguA, tenguB], hitFrame: tenguHit, jump: 8),
@@ -477,9 +489,13 @@ enum YokaiGallery {
         frames: [hitoA, hitoB], jump: 0
     )
 
+    static func sprite(withID id: String) -> YokaiSprite? {
+        if id == hitotsume.id { return hitotsume }
+        return parade.first { $0.id == id }
+    }
+
     /// トラックに妖怪を割り当てる — UUIDから安定して同じ妖怪が出る。
     static func sprite(for id: UUID) -> YokaiSprite {
-        let sum = id.uuidString.unicodeScalars.reduce(0) { $0 &+ Int($1.value) }
-        return parade[sum % parade.count]
+        sprite(withID: YokaiResidency.spriteID(for: id)) ?? parade[0]
     }
 }

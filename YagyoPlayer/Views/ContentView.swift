@@ -20,17 +20,12 @@ struct ContentView: View {
                 ScrollView {
                     VStack(spacing: 18) {
                         HeaderView(isUshimitsu: ushimitsu.isNight, importAction: { isImporterPresented = true })
-                        YagyoParadeView(
-                            isPlaying: player.isPlaying,
-                            level: player.audioLevel,
+                        ReactiveVisualStage(
+                            signals: player.paradeSignals,
+                            track: latestCurrentTrack,
+                            progress: player.progress,
                             isUshimitsu: ushimitsu.isNight,
                             onMoonTap: { ushimitsu.toggleForced() }
-                        )
-                        ArtworkStage(
-                            track: player.currentTrack,
-                            progress: player.progress,
-                            isPlaying: player.isPlaying,
-                            level: player.audioLevel
                         )
                         TransportView()
                         LibrarySection(importAction: { isImporterPresented = true })
@@ -156,6 +151,11 @@ struct ContentView: View {
         }
         return lines.joined(separator: "\n")
     }
+
+    private var latestCurrentTrack: AudioTrack? {
+        guard let currentTrack = player.currentTrack else { return nil }
+        return library.tracks.first { $0.id == currentTrack.id } ?? currentTrack
+    }
 }
 
 private struct HeaderView: View {
@@ -208,11 +208,39 @@ private struct HeaderView: View {
     }
 }
 
+private struct ReactiveVisualStage: View {
+    @ObservedObject var signals: ParadeSignalCoordinator
+    var track: AudioTrack?
+    var progress: Double
+    var isUshimitsu: Bool
+    var onMoonTap: () -> Void
+
+    var body: some View {
+        let snapshot = signals.snapshot
+        let residentID = track.map { YokaiResidency.spriteID(for: $0.id) }
+
+        YagyoParadeView(
+            signal: snapshot,
+            residentSpriteID: residentID,
+            isUshimitsu: isUshimitsu,
+            onMoonTap: onMoonTap
+        )
+        ArtworkStage(
+            track: track,
+            progress: progress,
+            level: snapshot.level,
+            activity: snapshot.activity,
+            levelBand: snapshot.levelBand
+        )
+    }
+}
+
 private struct ArtworkStage: View {
     var track: AudioTrack?
     var progress: Double
-    var isPlaying: Bool
     var level: Double
+    var activity: ParadeSignalSnapshot.Activity
+    var levelBand: ParadeSignalSnapshot.LevelBand
 
     var body: some View {
         VStack(spacing: 16) {
@@ -228,7 +256,12 @@ private struct ArtworkStage: View {
                             .stroke(YagyoColor.line.opacity(0.9), lineWidth: 1)
                     }
 
-                CircularWaveform(progress: progress, isPlaying: isPlaying, level: level)
+                CircularWaveform(
+                    progress: progress,
+                    level: level,
+                    activity: activity,
+                    levelBand: levelBand
+                )
                     .padding(28)
             }
 
@@ -253,7 +286,7 @@ private struct ArtworkStage: View {
             }
         }
         .ritualPanel(radius: 32, padding: 12, tint: YagyoColor.kitsunebi.opacity(0.08))
-        .shadow(color: YagyoColor.chochin.opacity(isPlaying ? 0.1 + level * 0.15 : 0), radius: 24)
+        .shadow(color: YagyoColor.chochin.opacity(activity == .stopped ? 0 : 0.16), radius: 24)
     }
 }
 
@@ -285,7 +318,7 @@ private struct TransportView: View {
                         .foregroundStyle(YagyoColor.chochin)
                         .overlay(Circle().stroke(YagyoColor.chochin, lineWidth: 2))
                         .shadow(
-                            color: YagyoColor.chochin.opacity(player.isPlaying ? 0.3 + player.audioLevel * 0.35 : 0.15),
+                            color: YagyoColor.chochin.opacity(player.isPlaying ? 0.3 : 0.15),
                             radius: 16
                         )
                 }

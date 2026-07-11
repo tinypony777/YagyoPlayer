@@ -8,15 +8,22 @@
 
 /* Begin PBXBuildFile section */
 		136A42DFE6E979D39D727986 /* PixelSprites.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4044CF17D5AC4B92CC0F3C3B /* PixelSprites.swift */; };
+		6ACB2C6C0895CF954E44BC10 /* KarakasaSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6389ED07ADB58D318A07CB3C /* KarakasaSprite.swift */; };
 		250E9A7346FB7374DD1960B8 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = D79B2B99B83398BAB69DC334 /* DesignTokens.swift */; };
+		5BD6A15264C17984A0B07F0B /* ParadeSignal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E26516089682AF3581DD42 /* ParadeSignal.swift */; };
 		50723FFDABDE8219969C9C02 /* UshimitsuWatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66DE83FC0E7196105934F455 /* UshimitsuWatch.swift */; };
 		A473E640BC086F2589647E53 /* YagyoParadeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D9E5953E0F9E6CC85DBCA3 /* YagyoParadeView.swift */; };
+		E6B9F104D2C3587AB5F92345 /* ParadePreviewHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A8E0F3C1B24769A4E81234 /* ParadePreviewHarness.swift */; };
 		6AB494FB98028D7497DCC50C /* MusicKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 301E9CBCD2076B4C94F2C87F /* MusicKit.framework */; };
 		6CF615A930DE9D845F3F57C3 /* PlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81C4BE9E308A1B398FCC749 /* PlaybackController.swift */; };
+		61C8D2E4F5A697B8031D4E6F /* ParadeSignalCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6F3C1D8E5B74029C4A791DE /* ParadeSignalCoordinator.swift */; };
 		8D11AB6599E537AB3E159AEF /* AudioTrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25089FD8B7B3584C1950CD9B /* AudioTrackTests.swift */; };
 		9A1B2C3D4E5F60718293A4B5 /* AudioLibraryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F2E3D4C5B6A798081920A3B /* AudioLibraryStoreTests.swift */; };
 		3F8A2C1D9B4E5678AFC01234 /* PlaybackControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F8A2C1D9B4E5678AFC05678 /* PlaybackControllerTests.swift */; };
 		4D0B17E8F1C6423B9A51D02C /* LibraryConfidenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B63C5A4D8E142719F0A6B32 /* LibraryConfidenceTests.swift */; };
+		B4CD88C51960CB356BFE9C19 /* ParadeSignalReducerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9EF0E58BD669BF9DC7082D3 /* ParadeSignalReducerTests.swift */; };
+		29FD40AE7C156B83D904E2F1 /* ParadeSignalCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7E4A1B8923D4F56A709BCDE /* ParadeSignalCoordinatorTests.swift */; };
+		5CDD9938B803D6247E94C371 /* PixelSpriteContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8C546B469F4E3D3228C418D /* PixelSpriteContractTests.swift */; };
 		A703B0828489B95B8B9FB869 /* YagyoPlayerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25C215A13FBD2FF5FA19ECFB /* YagyoPlayerApp.swift */; };
 		B19BADCB0624C48620272C1D /* VisualComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B13D8A65B01B04F9BD642237 /* VisualComponents.swift */; };
 		B4C130EA40CACEAF7872EDED /* YagyoPlayerIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 025BE94FAA9D790E8896BF44 /* YagyoPlayerIntents.swift */; };
@@ -27,6 +34,8 @@
 		5C4B3A2918070F6E5D4C3B2A /* Playlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* Playlist.swift */; };
 		6D5C4B3A2918070F6E5D4C3B /* PlaylistSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6D /* PlaylistSection.swift */; };
 		7E6D5C4B3A2918070F6E5D4C /* PlaylistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F60718293A4B5C6D7E /* PlaylistTests.swift */; };
+		A8949AA41A1CB98A1CDA2BA2 /* YokaiResidency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5517F1D3862B56B64A6F36B6 /* YokaiResidency.swift */; };
+		4A49F2C2AE9465A59D0019F9 /* YokaiResidencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF7DA41CFBDA8507D6137D9B /* YokaiResidencyTests.swift */; };
 		F553274643EE8B8A838C9B97 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A3693A3D5090FDEC93959BD /* ContentView.swift */; };
 		F9991556DDF047A16C7EABDD /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66B26F6B600C8B8FB1995EFA /* MediaPlayer.framework */; };
 		FAF6648B6E5D6DFA7E4E2B98 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7C108546297C058BDF30B16F /* AppIntents.framework */; };
@@ -50,11 +59,14 @@
 		9B63C5A4D8E142719F0A6B32 /* LibraryConfidenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryConfidenceTests.swift; sourceTree = "<group>"; };
 		25C215A13FBD2FF5FA19ECFB /* YagyoPlayerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YagyoPlayerApp.swift; sourceTree = "<group>"; };
 		2A3693A3D5090FDEC93959BD /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		58E26516089682AF3581DD42 /* ParadeSignal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeSignal.swift; sourceTree = "<group>"; };
 		301E9CBCD2076B4C94F2C87F /* MusicKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MusicKit.framework; path = System/Library/Frameworks/MusicKit.framework; sourceTree = SDKROOT; };
 		33D8F8BED25A829B3E5EF537 /* AudioLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLibraryStore.swift; sourceTree = "<group>"; };
 		4044CF17D5AC4B92CC0F3C3B /* PixelSprites.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelSprites.swift; sourceTree = "<group>"; };
+		6389ED07ADB58D318A07CB3C /* KarakasaSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KarakasaSprite.swift; sourceTree = "<group>"; };
 		66DE83FC0E7196105934F455 /* UshimitsuWatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UshimitsuWatch.swift; sourceTree = "<group>"; };
 		B7D9E5953E0F9E6CC85DBCA3 /* YagyoParadeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YagyoParadeView.swift; sourceTree = "<group>"; };
+		D5A8E0F3C1B24769A4E81234 /* ParadePreviewHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadePreviewHarness.swift; sourceTree = "<group>"; };
 		52B6474115C670A861E1F6EC /* YagyoPlayer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = YagyoPlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		66B26F6B600C8B8FB1995EFA /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
 		76389A5952E76C7CE5A22B96 /* AudioTrack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTrack.swift; sourceTree = "<group>"; };
@@ -64,12 +76,18 @@
 		7C108546297C058BDF30B16F /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		7FEEC5F390CD3E9B6E288C6F /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		817E3E6F64CD12B7179418DF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		E9EF0E58BD669BF9DC7082D3 /* ParadeSignalReducerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeSignalReducerTests.swift; sourceTree = "<group>"; };
+		C7E4A1B8923D4F56A709BCDE /* ParadeSignalCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeSignalCoordinatorTests.swift; sourceTree = "<group>"; };
 		B13D8A65B01B04F9BD642237 /* VisualComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualComponents.swift; sourceTree = "<group>"; };
 		B81C4BE9E308A1B398FCC749 /* PlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackController.swift; sourceTree = "<group>"; };
+		A6F3C1D8E5B74029C4A791DE /* ParadeSignalCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeSignalCoordinator.swift; sourceTree = "<group>"; };
 		D79B2B99B83398BAB69DC334 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		DDC21A8FC3FC543E1CAE93C0 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		E3041BBBEE3EE97F35C80624 /* YagyoPlayerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = YagyoPlayerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EA706A94AFF32D4A08A9A32F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		5517F1D3862B56B64A6F36B6 /* YokaiResidency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YokaiResidency.swift; sourceTree = "<group>"; };
+		FF7DA41CFBDA8507D6137D9B /* YokaiResidencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YokaiResidencyTests.swift; sourceTree = "<group>"; };
+		F8C546B469F4E3D3228C418D /* PixelSpriteContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelSpriteContractTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -122,6 +140,8 @@
 			isa = PBXGroup;
 			children = (
 				2A3693A3D5090FDEC93959BD /* ContentView.swift */,
+				6389ED07ADB58D318A07CB3C /* KarakasaSprite.swift */,
+				D5A8E0F3C1B24769A4E81234 /* ParadePreviewHarness.swift */,
 				4044CF17D5AC4B92CC0F3C3B /* PixelSprites.swift */,
 				B2C3D4E5F60718293A4B5C6D /* PlaylistSection.swift */,
 				B13D8A65B01B04F9BD642237 /* VisualComponents.swift */,
@@ -156,6 +176,7 @@
 			isa = PBXGroup;
 			children = (
 				33D8F8BED25A829B3E5EF537 /* AudioLibraryStore.swift */,
+				A6F3C1D8E5B74029C4A791DE /* ParadeSignalCoordinator.swift */,
 				B81C4BE9E308A1B398FCC749 /* PlaybackController.swift */,
 			);
 			path = Services;
@@ -167,9 +188,13 @@
 				25089FD8B7B3584C1950CD9B /* AudioTrackTests.swift */,
 				1F2E3D4C5B6A798081920A3B /* AudioLibraryStoreTests.swift */,
 				9B63C5A4D8E142719F0A6B32 /* LibraryConfidenceTests.swift */,
+				C7E4A1B8923D4F56A709BCDE /* ParadeSignalCoordinatorTests.swift */,
+				E9EF0E58BD669BF9DC7082D3 /* ParadeSignalReducerTests.swift */,
+				F8C546B469F4E3D3228C418D /* PixelSpriteContractTests.swift */,
 				3F8A2C1D9B4E5678AFC05678 /* PlaybackControllerTests.swift */,
 				817E3E6F64CD12B7179418DF /* Info.plist */,
 				C3D4E5F60718293A4B5C6D7E /* PlaylistTests.swift */,
+				FF7DA41CFBDA8507D6137D9B /* YokaiResidencyTests.swift */,
 			);
 			path = YagyoPlayerTests;
 			sourceTree = "<group>";
@@ -187,7 +212,9 @@
 			isa = PBXGroup;
 			children = (
 				76389A5952E76C7CE5A22B96 /* AudioTrack.swift */,
+				58E26516089682AF3581DD42 /* ParadeSignal.swift */,
 				A1B2C3D4E5F60718293A4B5C /* Playlist.swift */,
+				5517F1D3862B56B64A6F36B6 /* YokaiResidency.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -277,8 +304,12 @@
 				8D11AB6599E537AB3E159AEF /* AudioTrackTests.swift in Sources */,
 				9A1B2C3D4E5F60718293A4B5 /* AudioLibraryStoreTests.swift in Sources */,
 				4D0B17E8F1C6423B9A51D02C /* LibraryConfidenceTests.swift in Sources */,
+				29FD40AE7C156B83D904E2F1 /* ParadeSignalCoordinatorTests.swift in Sources */,
+				B4CD88C51960CB356BFE9C19 /* ParadeSignalReducerTests.swift in Sources */,
+				5CDD9938B803D6247E94C371 /* PixelSpriteContractTests.swift in Sources */,
 				3F8A2C1D9B4E5678AFC01234 /* PlaybackControllerTests.swift in Sources */,
 				7E6D5C4B3A2918070F6E5D4C /* PlaylistTests.swift in Sources */,
+				4A49F2C2AE9465A59D0019F9 /* YokaiResidencyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -291,13 +322,18 @@
 				ED30E11EDA4E3545119F08D0 /* AudioTrack.swift in Sources */,
 				F553274643EE8B8A838C9B97 /* ContentView.swift in Sources */,
 				250E9A7346FB7374DD1960B8 /* DesignTokens.swift in Sources */,
+				5BD6A15264C17984A0B07F0B /* ParadeSignal.swift in Sources */,
+				6ACB2C6C0895CF954E44BC10 /* KarakasaSprite.swift in Sources */,
 				136A42DFE6E979D39D727986 /* PixelSprites.swift in Sources */,
+				61C8D2E4F5A697B8031D4E6F /* ParadeSignalCoordinator.swift in Sources */,
 				6CF615A930DE9D845F3F57C3 /* PlaybackController.swift in Sources */,
 				5C4B3A2918070F6E5D4C3B2A /* Playlist.swift in Sources */,
 				6D5C4B3A2918070F6E5D4C3B /* PlaylistSection.swift in Sources */,
 				50723FFDABDE8219969C9C02 /* UshimitsuWatch.swift in Sources */,
 				B19BADCB0624C48620272C1D /* VisualComponents.swift in Sources */,
 				A473E640BC086F2589647E53 /* YagyoParadeView.swift in Sources */,
+				E6B9F104D2C3587AB5F92345 /* ParadePreviewHarness.swift in Sources */,
+				A8949AA41A1CB98A1CDA2BA2 /* YokaiResidency.swift in Sources */,
 				A703B0828489B95B8B9FB869 /* YagyoPlayerApp.swift in Sources */,
 				B4C130EA40CACEAF7872EDED /* YagyoPlayerIntents.swift in Sources */,
 			);
