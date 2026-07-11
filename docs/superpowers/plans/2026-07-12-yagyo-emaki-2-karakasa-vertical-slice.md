@@ -792,9 +792,11 @@ git add YagyoPlayer.xcodeproj/project.pbxproj docs/superpowers/plans/2026-07-12-
 git commit -m "test: verify the karakasa vertical slice"
 ```
 
-- [ ] **Step 6: GitHubプラグインでDraft PRを作る**
+- [x] **Step 6: GitHubプラグインでDraft PRを作る**
 
 base `main`、head `agent/step4-yagyo-emaki-2`。PR本文にdesign spec、implementation plan、test結果、Simulator evidence、Step 3保留、mixed-artのためmerge禁止、ユーザー視覚承認後に残り妖怪の別仕様を作ることを書く。PRはDraftのままにし、mergeしない。
+
+作成済み: [Draft PR #13](https://github.com/tinypony777/YagyoPlayer/pull/13)。Draft・`main`未merge・ユーザー視覚承認待ち。
 
 ## 検証実績 2026-07-12
 
