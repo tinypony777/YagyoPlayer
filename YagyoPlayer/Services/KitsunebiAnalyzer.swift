@@ -675,13 +675,15 @@ enum KitsunebiAnalyzer {
               labels.allSatisfy({ $0 != kAudioChannelLabel_Unknown }) else {
             return nil
         }
+        // BS.1770-4のブースト帯は|方位角|60°〜120°(libebur128の写像と同じ):
+        // ±110(Ls/Rs)・±90(SL/SR)・±60(Lw/Rw)は1.41、±135のリアは1.0のまま。
         return labels.map { label -> Float in
             switch label {
             case kAudioChannelLabel_LFEScreen, kAudioChannelLabel_LFE2:
                 return 0.0
             case kAudioChannelLabel_LeftSurround, kAudioChannelLabel_RightSurround,
                  kAudioChannelLabel_LeftSurroundDirect, kAudioChannelLabel_RightSurroundDirect,
-                 kAudioChannelLabel_RearSurroundLeft, kAudioChannelLabel_RearSurroundRight:
+                 kAudioChannelLabel_LeftWide, kAudioChannelLabel_RightWide:
                 return 1.41
             default:
                 return 1.0
@@ -704,7 +706,7 @@ enum KitsunebiAnalyzer {
     }
 
     /// レイアウトからチャンネルラベル列を得る。descriptions直持ちはそのまま読み、
-    /// タグ形式は kAudioFormatProperty_ChannelLayoutForTag で展開する。
+    /// タグ/ビットマップ形式は AudioToolbox でラベル列へ展開する。
     private static func channelLabels(for format: AVAudioFormat) -> [AudioChannelLabel]? {
         guard let layout = format.channelLayout else { return nil }
         let pointer = layout.layout
@@ -713,15 +715,23 @@ enum KitsunebiAnalyzer {
             return labels(from: pointer)
         }
         if tag == kAudioChannelLayoutTag_UseChannelBitmap {
-            // ビットマップ形式はPhase Aでは展開しない(等重みへ)。
-            return nil
+            var bitmap = pointer.pointee.mChannelBitmap
+            return expandedLabels(property: kAudioFormatProperty_ChannelLayoutForBitmap, specifier: &bitmap)
         }
         var mutableTag = tag
-        let tagSize = UInt32(MemoryLayout<AudioChannelLayoutTag>.size)
+        return expandedLabels(property: kAudioFormatProperty_ChannelLayoutForTag, specifier: &mutableTag)
+    }
+
+    /// タグまたはビットマップを AudioFormatGetProperty で AudioChannelLayout へ展開し、
+    /// ラベル列を返す。
+    private static func expandedLabels<Specifier>(
+        property: AudioFormatPropertyID,
+        specifier: inout Specifier
+    ) -> [AudioChannelLabel]? {
+        let specifierSize = UInt32(MemoryLayout<Specifier>.size)
         var size: UInt32 = 0
-        guard AudioFormatGetPropertyInfo(
-            kAudioFormatProperty_ChannelLayoutForTag, tagSize, &mutableTag, &size
-        ) == noErr, Int(size) >= MemoryLayout<AudioChannelLayout>.size else {
+        guard AudioFormatGetPropertyInfo(property, specifierSize, &specifier, &size) == noErr,
+              Int(size) >= MemoryLayout<AudioChannelLayout>.size else {
             return nil
         }
         let raw = UnsafeMutableRawPointer.allocate(
@@ -729,9 +739,7 @@ enum KitsunebiAnalyzer {
             alignment: MemoryLayout<AudioChannelLayout>.alignment
         )
         defer { raw.deallocate() }
-        guard AudioFormatGetProperty(
-            kAudioFormatProperty_ChannelLayoutForTag, tagSize, &mutableTag, &size, raw
-        ) == noErr else {
+        guard AudioFormatGetProperty(property, specifierSize, &specifier, &size, raw) == noErr else {
             return nil
         }
         return labels(from: raw.bindMemory(to: AudioChannelLayout.self, capacity: 1))

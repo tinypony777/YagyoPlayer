@@ -243,6 +243,25 @@ final class KitsunebiAnalyzerTests: XCTestCase {
         let stereoPair = KitsunebiAnalyzer.correlationChannels(for: stereo)
         XCTAssertEqual(stereoPair.0, 0)
         XCTAssertEqual(stereoPair.1, 1)
+
+        // ビットマップ形式(マルチチャンネルWAVのチャンネルマスク)も展開できる。
+        // ビット順の展開は L R C LFE Ls Rs。
+        var bitmapLayout = AudioChannelLayout()
+        bitmapLayout.mChannelLayoutTag = kAudioChannelLayoutTag_UseChannelBitmap
+        bitmapLayout.mChannelBitmap = AudioChannelBitmap([
+            .bit_Left, .bit_Right, .bit_Center, .bit_LFEScreen,
+            .bit_LeftSurround, .bit_RightSurround,
+        ])
+        let bitmapFormat = withUnsafePointer(to: bitmapLayout) { pointer in
+            AVAudioFormat(
+                standardFormatWithSampleRate: 48000,
+                channelLayout: AVAudioChannelLayout(layout: pointer)
+            )
+        }
+        XCTAssertEqual(
+            KitsunebiAnalyzer.channelWeights(for: bitmapFormat),
+            [1.0, 1.0, 1.0, 0.0, 1.41, 1.41]
+        )
     }
 
     func testCorrelationUsesResolvedChannels() {
