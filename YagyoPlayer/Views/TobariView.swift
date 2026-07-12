@@ -22,34 +22,55 @@ final class TobariAnalysisController: ObservableObject {
         started = true
 
         // 有効なキャッシュがあれば再解析しない(contentHash + analyzerVersion一致)。
-        let contentHash = library.ensureContentHash(for: track.id)
-        if let cached = library.tracks.first(where: { $0.id == track.id })?.tobariMetrics,
-           cached.isValidCache(for: contentHash) {
+        // 重複取込された同一音源(同じcontentHashの別トラック)のキャッシュも共有する。
+        let liveTrack = library.tracks.first(where: { $0.id == track.id }) ?? track
+        let knownHash = liveTrack.contentHash
+        if let cached = liveTrack.tobariMetrics, cached.isValidCache(for: knownHash) {
             state = .finished(cached)
+            return
+        }
+        if let knownHash, let shared = library.sharedTobariMetrics(matching: knownHash) {
+            library.storeTobariMetrics(shared, for: track.id)
+            state = .finished(shared)
             return
         }
 
         let url = library.fileURL(for: track)
         state = .analyzing(0)
 
-        Task.detached(priority: .utility) { [weak self] in
+        // 解析も、旧トラックのhash backfill(ファイル全読みのSHA-256)も、
+        // メインスレッドから逃がす。self は強参照: 帳を閉じても解析を完走させ、
+        // 結果のキャッシュ保存まで済ませる(コントローラは終了後に解放される)。
+        Task.detached(priority: .utility) { [self] in
             do {
+                let contentHash = knownHash ?? AudioLibraryStore.computeContentHash(of: url)
+                if knownHash == nil, let contentHash {
+                    await library.applyBackfilledContentHash(contentHash, for: track.id)
+                    // backfillで判明したhashが既存キャッシュと一致するなら解析を省く。
+                    if let shared = await library.sharedTobariMetrics(matching: contentHash) {
+                        await MainActor.run {
+                            library.storeTobariMetrics(shared, for: track.id)
+                            self.state = .finished(shared)
+                        }
+                        return
+                    }
+                }
                 let measurement = try KitsunebiAnalyzer.analyze(url: url) { fraction in
-                    Task { @MainActor [weak self] in
-                        if case .analyzing = self?.state {
-                            self?.state = .analyzing(fraction)
+                    Task { @MainActor in
+                        if case .analyzing = self.state {
+                            self.state = .analyzing(fraction)
                         }
                     }
                 }
-                await self?.finish(
+                await self.finish(
                     measurement: measurement,
                     contentHash: contentHash,
                     trackID: track.id,
                     library: library
                 )
             } catch {
-                await MainActor.run { [weak self] in
-                    self?.state = .failed(error.localizedDescription)
+                await MainActor.run {
+                    self.state = .failed(error.localizedDescription)
                 }
             }
         }
@@ -143,6 +164,8 @@ struct TobariView: View {
                         .foregroundStyle(YagyoColor.dim)
                 }
             }
+            // タイトル一式は1つのAX要素に束ね、閉じるボタンは独立フォーカスのまま残す。
+            .accessibilityElement(children: .combine)
             Spacer()
             Button {
                 dismiss()
@@ -153,8 +176,6 @@ struct TobariView: View {
             }
             .accessibilityLabel("帳を閉じる")
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("狐火の帳、\(track.title)")
     }
 
     private func progressPanel(text: String, fraction: Double?) -> some View {

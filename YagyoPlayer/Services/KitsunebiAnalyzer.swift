@@ -41,8 +41,10 @@ enum TobariAnalysisError: LocalizedError {
     }
 }
 
-/// ITU-R BS.1770-4 の K-weighting バイクアッド係数。
-/// Mastering-App `KWeightingFilter` の移植。48 kHz は Table 1/2 の公式係数を使う。
+/// ITU-R BS.1770-4 の K-weighting バイクアッド係数。48 kHz は Table 1/2 の公式係数、
+/// それ以外はDe Man系のパラメータ化(pyloudnormと同一)で再設計する。
+/// この式は fs=48000 を代入すると公式係数を機械精度で再現する
+/// (移植元のRBJ cookbook近似は44.1 kHzで-0.25 LUずれるためレビューで差し替えた)。
 enum KWeightingCoefficients {
     /// Stage 1: Pre-filter(High Shelf, +4 dB @ 1681 Hz)。[b0, b1, b2, a1, a2]
     static func stage1(sampleRate: Double) -> [Float] {
@@ -53,36 +55,31 @@ enum KWeightingCoefficients {
         let frequency = 1681.974450955533
         let gainDB = 3.999843853973347
         let q = 0.7071752369554196
-        let amp = pow(10.0, gainDB / 40.0)
-        let w0 = 2.0 * Double.pi * frequency / sampleRate
-        let alpha = sin(w0) / (2.0 * q)
-        let cosW0 = cos(w0)
-        let twoSqrtAAlpha = 2.0 * sqrt(amp) * alpha
-        let b0 = amp * ((amp + 1) + (amp - 1) * cosW0 + twoSqrtAAlpha)
-        let b1 = -2.0 * amp * ((amp - 1) + (amp + 1) * cosW0)
-        let b2 = amp * ((amp + 1) + (amp - 1) * cosW0 - twoSqrtAAlpha)
-        let a0 = (amp + 1) - (amp - 1) * cosW0 + twoSqrtAAlpha
-        let a1 = 2.0 * ((amp - 1) - (amp + 1) * cosW0)
-        let a2 = (amp + 1) - (amp - 1) * cosW0 - twoSqrtAAlpha
-        return [Float(b0 / a0), Float(b1 / a0), Float(b2 / a0), Float(a1 / a0), Float(a2 / a0)]
+        let k = tan(Double.pi * frequency / sampleRate)
+        let vh = pow(10.0, gainDB / 20.0)
+        let vb = pow(vh, 0.4996667741545416)
+        let a0 = 1.0 + k / q + k * k
+        let b0 = (vh + vb * k / q + k * k) / a0
+        let b1 = 2.0 * (k * k - vh) / a0
+        let b2 = (vh - vb * k / q + k * k) / a0
+        let a1 = 2.0 * (k * k - 1.0) / a0
+        let a2 = (1.0 - k / q + k * k) / a0
+        return [Float(b0), Float(b1), Float(b2), Float(a1), Float(a2)]
     }
 
     /// Stage 2: RLB weighting(High Pass, 38 Hz)。[b0, b1, b2, a1, a2]
+    /// 分子は正規化しない [1, -2, 1](公式表と同じく通過帯域+0.03 dBを保つ)。
     static func stage2(sampleRate: Double) -> [Float] {
         if sampleRate == 48000 {
             return [1.0, -2.0, 1.0, -1.99004745483398, 0.99007225036621]
         }
         let frequency = 38.13547087602444
-        let w0 = 2.0 * Double.pi * frequency / sampleRate
-        let alpha = sin(w0) / (2.0 * 0.7071067811865476)
-        let cosW0 = cos(w0)
-        let b0 = (1.0 + cosW0) / 2.0
-        let b1 = -(1.0 + cosW0)
-        let b2 = (1.0 + cosW0) / 2.0
-        let a0 = 1.0 + alpha
-        let a1 = -2.0 * cosW0
-        let a2 = 1.0 - alpha
-        return [Float(b0 / a0), Float(b1 / a0), Float(b2 / a0), Float(a1 / a0), Float(a2 / a0)]
+        let q = 0.5003270373238773
+        let k = tan(Double.pi * frequency / sampleRate)
+        let denominator = 1.0 + k / q + k * k
+        let a1 = 2.0 * (k * k - 1.0) / denominator
+        let a2 = (1.0 - k / q + k * k) / denominator
+        return [1.0, -2.0, 1.0, Float(a1), Float(a2)]
     }
 }
 
@@ -170,21 +167,29 @@ final class KitsunebiAnalyzerEngine {
     private var upsampledWithTail: [Float]
     private var convolutionOutput: [Float]
 
-    init(sampleRate: Double, channelCount: Int, maximumChunkFrames: Int = 65536) {
+    /// - Parameter channelWeights: BS.1770のチャンネル重み。nil なら全チャンネル 1.0
+    ///   (モノラル/ステレオはこれが正式値。レイアウト不明の多チャンネルも、
+    ///   決め打ちでチャンネルを落とすより等重みで全て数える方を選ぶ)。
+    ///   既知の5.1レイアウトはファイル入口が `KitsunebiAnalyzer.channelWeights(for:)` で解決する。
+    init(
+        sampleRate: Double,
+        channelCount: Int,
+        maximumChunkFrames: Int = 65536,
+        channelWeights: [Float]? = nil
+    ) {
         precondition(sampleRate > 0, "sampleRate must be positive")
         precondition(channelCount > 0, "channelCount must be positive")
         precondition(maximumChunkFrames > 0, "maximumChunkFrames must be positive")
+        precondition(
+            channelWeights == nil || channelWeights?.count == channelCount,
+            "channelWeights count mismatch"
+        )
 
         self.sampleRate = sampleRate
         self.channelCount = channelCount
         self.maximumChunkFrames = maximumChunkFrames
         self.hopSize = max(1, Int(sampleRate * 0.1))
-        self.channelWeights = (0..<channelCount).map { channel in
-            if channelCount <= 2 { return 1.0 }
-            if channel == 3 { return 0.0 }
-            if channel == 4 || channel == 5 { return 1.41 }
-            return 1.0
-        }
+        self.channelWeights = channelWeights ?? Array(repeating: 1.0, count: channelCount)
         self.stage1Coefficients = KWeightingCoefficients.stage1(sampleRate: sampleRate)
         self.stage2Coefficients = KWeightingCoefficients.stage2(sampleRate: sampleRate)
         self.firFilter = Self.makeInterpolationFIR()
@@ -379,8 +384,15 @@ final class KitsunebiAnalyzerEngine {
     private func registerClipRun(length: Int, startFrame: Int) {
         guard length >= Self.clipRunMinimumLength else { return }
         clipRunCount += 1
+        // 「先頭から最大8件」の契約: 登録はチャンク×チャンネル順に届くため、
+        // 到着順ではなく開始時刻が小さい8件を保持する(常に昇順)。
+        let seconds = Double(startFrame) / sampleRate
         if clipRunSecondsHead.count < Self.maxClipPositions {
-            clipRunSecondsHead.append(Double(startFrame) / sampleRate)
+            clipRunSecondsHead.append(seconds)
+            clipRunSecondsHead.sort()
+        } else if let latest = clipRunSecondsHead.last, seconds < latest {
+            clipRunSecondsHead[Self.maxClipPositions - 1] = seconds
+            clipRunSecondsHead.sort()
         }
     }
 
@@ -540,7 +552,18 @@ final class KitsunebiAnalyzerEngine {
         let stereoCorrelation: Double?
         if channelCount >= 2 {
             let denominator = (sumL2 * sumR2).squareRoot()
-            stereoCorrelation = denominator > 0 ? dotLR / denominator : 1.0
+            if denominator == 0 {
+                // 無音のステレオ: 打ち消しの根拠がないため 1.0(モノ互換に問題なし)。
+                stereoCorrelation = 1.0
+            } else if denominator.isFinite {
+                // 正常系でも丸めで±1をわずかに越え得るためクランプする。
+                let raw = dotLR / denominator
+                stereoCorrelation = raw.isFinite ? min(1.0, max(-1.0, raw)) : nil
+            } else {
+                // 壊れたサンプル(±inf/NaN)で累積が溢れた場合は計測不能。
+                // 0や偽の負値を出して誤った警告を誘発しない。
+                stereoCorrelation = nil
+            }
         } else {
             stereoCorrelation = nil
         }
@@ -551,12 +574,20 @@ final class KitsunebiAnalyzerEngine {
             frameCount: totalFrames,
             integratedLUFS: integrated,
             maxShortTermLUFS: maxShortTermDB.isFinite ? maxShortTermDB : nil,
-            samplePeakDBFS: samplePeakLinear > 0 ? 20.0 * log10(Double(samplePeakLinear)) : nil,
-            truePeakDBTP: truePeakLinear > 0 ? 20.0 * log10(Double(truePeakLinear)) : nil,
+            samplePeakDBFS: finiteDB(linear: samplePeakLinear),
+            truePeakDBTP: finiteDB(linear: truePeakLinear),
             clipRunCount: clipRunCount,
             clipRunSeconds: clipRunSecondsHead,
             stereoCorrelation: stereoCorrelation
         )
+    }
+
+    /// 線形振幅をdBへ。無音(0)や壊れたサンプル由来の非有限値はnil(計測不能)にし、
+    /// 非有限値がJSONや表示へ漏れない契約を守る。
+    private func finiteDB(linear: Float) -> Double? {
+        guard linear > 0, linear.isFinite else { return nil }
+        let db = 20.0 * log10(Double(linear))
+        return db.isFinite ? db : nil
     }
 
     private func powerMeanDB(_ valuesDB: [Double]) -> Double {
@@ -614,6 +645,26 @@ final class KitsunebiAnalyzerEngine {
 enum KitsunebiAnalyzer {
     static let readBufferFrames: AVAudioFrameCount = 65536
 
+    /// BS.1770-4 のチャンネル重みをレイアウトから解決する。
+    /// 既知の5.1タグのみサラウンド1.41・LFE除外を適用し、レイアウト不明の
+    /// 多チャンネルは nil(=等重み)。順序決め打ちでチャンネルを黙って落とさない。
+    static func channelWeights(for format: AVAudioFormat) -> [Float]? {
+        guard format.channelCount > 2, let tag = format.channelLayout?.layoutTag else {
+            return nil
+        }
+        switch tag {
+        case kAudioChannelLayoutTag_MPEG_5_1_A: // L R C LFE Ls Rs
+            return [1.0, 1.0, 1.0, 0.0, 1.41, 1.41]
+        case kAudioChannelLayoutTag_MPEG_5_1_B: // L R Ls Rs C LFE
+            return [1.0, 1.0, 1.41, 1.41, 1.0, 0.0]
+        case kAudioChannelLayoutTag_MPEG_5_1_C, // L C R Ls Rs LFE
+             kAudioChannelLayoutTag_MPEG_5_1_D: // C L R Ls Rs LFE
+            return [1.0, 1.0, 1.0, 1.41, 1.41, 0.0]
+        default:
+            return nil
+        }
+    }
+
     static func analyze(
         url: URL,
         progress: (@Sendable (Double) -> Void)? = nil
@@ -638,7 +689,8 @@ enum KitsunebiAnalyzer {
         let engine = KitsunebiAnalyzerEngine(
             sampleRate: sampleRate,
             channelCount: channelCount,
-            maximumChunkFrames: Int(readBufferFrames)
+            maximumChunkFrames: Int(readBufferFrames),
+            channelWeights: channelWeights(for: audioFile.processingFormat)
         )
 
         let totalFrames = max(0, Int(audioFile.length))

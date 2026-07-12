@@ -46,6 +46,28 @@ final class KitsunebiAnalyzerTests: XCTestCase {
         XCTAssertTrue(result.clipRunSeconds.isEmpty)
     }
 
+    // MARK: - T1b: EBU基準系(44.1 kHz、係数式ブランチ)
+
+    func testReferenceSineAtFortyFourPointOne() {
+        // 非48kHzはDe Man系のパラメータ化(pyloudnorm同一)で係数を再設計する。
+        // ミラー実測 -19.9972 LUFS(残差は双一次変換の周波数歪みで設計どおり)。
+        // 移植元のRBJ近似では -20.246 と EBU Tech 3341 の許容±0.1を外れていた。
+        let sr = 44100.0
+        let count = Int(sr * 10)
+        let signal: [Float] = (0..<count).map { index in
+            Float(0.1 * sin(2.0 * .pi * 997.0 * Double(index) / sr))
+        }
+        let engine = KitsunebiAnalyzerEngine(sampleRate: sr, channelCount: 2)
+        engine.process(channels: [signal, signal])
+        let result = engine.finalize()
+
+        XCTAssertEqual(result.integratedLUFS ?? .nan, -20.0, accuracy: 0.05)
+        XCTAssertEqual(result.maxShortTermLUFS ?? .nan, -20.0, accuracy: 0.05)
+        XCTAssertEqual(result.samplePeakDBFS ?? .nan, -20.0, accuracy: 0.01)
+        XCTAssertEqual(result.truePeakDBTP ?? .nan, -20.0, accuracy: 0.05)
+        XCTAssertEqual(result.stereoCorrelation ?? .nan, 1.0, accuracy: 0.0001)
+    }
+
     // MARK: - T2: 無音
 
     func testSilenceReportsNothingMeasurable() {
@@ -169,8 +191,14 @@ final class KitsunebiAnalyzerTests: XCTestCase {
 
         XCTAssertEqual(result.clipRunCount, 2)
         XCTAssertEqual(result.clipRunSeconds.count, 2)
-        XCTAssertEqual(result.clipRunSeconds[0], 2000.0 / sampleRate, accuracy: 0.0001)
-        XCTAssertEqual(result.clipRunSeconds[1], 4094.0 / sampleRate, accuracy: 0.0001)
+        // 位置は開始時刻の昇順で保持される契約。regression時にクラッシュではなく
+        // 失敗として記録されるよう、subscriptではなく安全な取り出しで比較する。
+        XCTAssertEqual(result.clipRunSeconds.first ?? .nan, 2000.0 / sampleRate, accuracy: 0.0001)
+        XCTAssertEqual(
+            result.clipRunSeconds.dropFirst().first ?? .nan,
+            4094.0 / sampleRate,
+            accuracy: 0.0001
+        )
     }
 
     // MARK: - キャッシュ契約
@@ -198,6 +226,36 @@ final class KitsunebiAnalyzerTests: XCTestCase {
 
         metrics.analyzerVersion = TobariMetrics.currentAnalyzerVersion - 1
         XCTAssertFalse(metrics.isValidCache(for: "abc"))
+
+        // 自身のhashがnil(backfill不能で表示のみだった結果)はキャッシュとして無効。
+        metrics.analyzerVersion = TobariMetrics.currentAnalyzerVersion
+        metrics.contentHash = nil
+        XCTAssertFalse(metrics.isValidCache(for: "abc"))
+        XCTAssertFalse(metrics.isValidCache(for: nil))
+    }
+
+    func testMonoCompatTextDistinguishesMonoFromUnmeasurable() {
+        var metrics = TobariMetrics(
+            analyzerVersion: TobariMetrics.currentAnalyzerVersion,
+            contentHash: nil,
+            analyzedAt: Date(),
+            sampleRate: 48000,
+            durationSeconds: 1,
+            channelCount: 1,
+            integratedLUFS: nil,
+            maxShortTermLUFS: nil,
+            samplePeakDBFS: nil,
+            truePeakDBTP: nil,
+            clipRunCount: 0,
+            clipRunSeconds: [],
+            stereoCorrelation: nil
+        )
+        XCTAssertEqual(metrics.monoCompatText, "モノラル音源")
+        // ステレオで相関が計測不能(壊れたサンプル)の場合はモノラルと区別する。
+        metrics.channelCount = 2
+        XCTAssertEqual(metrics.monoCompatText, "計測不能")
+        metrics.stereoCorrelation = 0.87
+        XCTAssertEqual(metrics.monoCompatText, "0.87")
     }
 
     func testTobariMetricsSurvivesJSONRoundTrip() throws {

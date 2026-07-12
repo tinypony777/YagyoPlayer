@@ -25,7 +25,8 @@ struct TobariMetrics: Codable, Hashable, Sendable {
     var clipRunCount: Int
     /// クリップ疑いランの開始位置(秒)。先頭から最大8件。
     var clipRunSeconds: [Double]
-    /// L/R の位相相関係数 (-1...+1)。nil はモノラル音源。
+    /// L/R の位相相関係数 (-1...+1)。nil はモノラル音源、または計測不能
+    /// (壊れたサンプルで累積が非有限になった場合)。区別は channelCount で行う。
     var stereoCorrelation: Double?
 }
 
@@ -103,7 +104,8 @@ extension TobariMetrics {
     }
 
     var monoCompatText: String {
-        guard let stereoCorrelation else { return "モノラル音源" }
+        guard channelCount >= 2 else { return "モノラル音源" }
+        guard let stereoCorrelation else { return "計測不能" }
         return String(format: "%.2f", stereoCorrelation)
     }
 

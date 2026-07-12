@@ -5,37 +5,34 @@ import numpy as np
 # ---------- K-weighting (BS.1770-4) ----------
 
 def stage1(sr):
+    """De Man parameterization (same as pyloudnorm). Reproduces the official
+    48k Table 1 to machine precision when sr=48000 is substituted."""
     if sr == 48000:
         return [1.53512485958697, -2.69169618940638, 1.19839281085285,
                 -1.69065929318241, 0.73248077421585]
     f, gdb, q = 1681.974450955533, 3.999843853973347, 0.7071752369554196
-    A = 10 ** (gdb / 40)
-    w0 = 2 * np.pi * f / sr
-    alpha = np.sin(w0) / (2 * q)
-    c, sA = np.cos(w0), np.sqrt(A)
-    t = 2 * sA * alpha
-    b0 = A * ((A + 1) + (A - 1) * c + t)
-    b1 = -2 * A * ((A - 1) + (A + 1) * c)
-    b2 = A * ((A + 1) + (A - 1) * c - t)
-    a0 = (A + 1) - (A - 1) * c + t
-    a1 = 2 * ((A - 1) - (A + 1) * c)
-    a2 = (A + 1) - (A - 1) * c - t
-    return [b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0]
+    k = np.tan(np.pi * f / sr)
+    vh = 10 ** (gdb / 20)
+    vb = vh ** 0.4996667741545416
+    a0 = 1 + k / q + k * k
+    b0 = (vh + vb * k / q + k * k) / a0
+    b1 = 2 * (k * k - vh) / a0
+    b2 = (vh - vb * k / q + k * k) / a0
+    a1 = 2 * (k * k - 1) / a0
+    a2 = (1 - k / q + k * k) / a0
+    return [b0, b1, b2, a1, a2]
 
 def stage2(sr):
+    """High pass with unnormalized numerator [1, -2, 1] (keeps the official
+    +0.03 dB passband), De Man Q. Reproduces 48k Table 2 when sr=48000."""
     if sr == 48000:
         return [1.0, -2.0, 1.0, -1.99004745483398, 0.99007225036621]
-    f = 38.13547087602444
-    w0 = 2 * np.pi * f / sr
-    alpha = np.sin(w0) / (2 * 0.7071067811865476)
-    c = np.cos(w0)
-    b0 = (1 + c) / 2
-    b1 = -(1 + c)
-    b2 = (1 + c) / 2
-    a0 = 1 + alpha
-    a1 = -2 * c
-    a2 = 1 - alpha
-    return [b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0]
+    f, q = 38.13547087602444, 0.5003270373238773
+    k = np.tan(np.pi * f / sr)
+    den = 1 + k / q + k * k
+    a1 = 2 * (k * k - 1) / den
+    a2 = (1 - k / q + k * k) / den
+    return [1.0, -2.0, 1.0, a1, a2]
 
 def biquad(x, k):
     """y[n] = b0x+b1x1+b2x2 - a1y1 - a2y2 (zero initial state)."""
@@ -87,9 +84,9 @@ def analyze(channels, sr):
     n = len(channels[0])
     hop = max(1, int(sr * 0.1))
 
-    # K-weighting + weighted power sum
-    weights = [1.0] * ch_count if ch_count <= 2 else [
-        0.0 if c == 3 else (1.41 if c in (4, 5) else 1.0) for c in range(ch_count)]
+    # K-weighting + weighted power sum. Engine default: equal weights
+    # (known 5.1 layouts get BS.1770 weights at the file entry point only).
+    weights = [1.0] * ch_count
     k1, k2 = stage1(sr), stage2(sr)
     power = np.zeros(n)
     for c, ch in enumerate(channels):
@@ -138,6 +135,9 @@ def analyze(channels, sr):
         if run >= 3:
             clip_runs += 1
             positions.append(start / sr)
+    # Engine keeps the 8 smallest start times in ascending order,
+    # independent of registration order (chunk x channel).
+    positions = sorted(positions)[:8]
     corr = None
     if ch_count >= 2:
         l, r = channels[0], channels[1]
@@ -180,10 +180,24 @@ r5 = analyze([x5], SR)
 print({k: v for k, v in r5.items()})
 
 print("=== K-weighting gain check at 997Hz/48k (both stages) ===")
-import numpy.polynomial as _np
 def gain_at(k, f, sr):
     b = np.array(k[:3]); a = np.array([1.0, k[3], k[4]])
     z = np.exp(2j * np.pi * f / sr)
     return abs(np.polyval(b[::-1], 1/z) / np.polyval(a[::-1], 1/z))
 g = gain_at(stage1(SR), 997, SR) * gain_at(stage2(SR), 997, SR)
 print("K-gain@997Hz:", 20*np.log10(g), "dB")
+
+print("=== formula-vs-table self check: substitute sr=48000.0001 ===")
+print("stage1(≈48k):", [f"{c:.10f}" for c in stage1(48000.0001)])
+print("stage2(≈48k):", [f"{c:.10f}" for c in stage2(48000.0001)])
+
+print("=== T1b: stereo 997Hz sine amp0.1 10s @44.1kHz (formula branch) ===")
+SR2 = 44100
+t2 = np.arange(int(SR2 * 10.0))
+s2 = 0.1 * np.sin(2 * np.pi * 997 * t2 / SR2)
+r1b = analyze([s2, s2.copy()], SR2)
+print({k: v for k, v in r1b.items()})
+print("stage1(44.1k):", [f"{c:.7f}" for c in stage1(SR2)])
+print("stage2(44.1k):", [f"{c:.7f}" for c in stage2(SR2)])
+g2 = gain_at(stage1(SR2), 997, SR2) * gain_at(stage2(SR2), 997, SR2)
+print("K-gain@997Hz/44.1k:", 20*np.log10(g2), "dB")
