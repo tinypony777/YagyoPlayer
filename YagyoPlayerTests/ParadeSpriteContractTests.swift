@@ -213,7 +213,7 @@ final class ParadeSpriteContractTests: XCTestCase {
         }
     }
 
-    func testEveryPaletteMatchesTheApprovedColors() {
+    func testEveryPaletteMatchesTheApprovedColors() throws {
         let approved: [String: [Character: UInt32]] = [
             "oni": [
                 "k": 0x24160f,
@@ -274,7 +274,8 @@ final class ParadeSpriteContractTests: XCTestCase {
             ],
         ]
         for contract in contracts {
-            XCTAssertEqual(contract.palette, approved[contract.id], contract.id)
+            let expected = try XCTUnwrap(approved[contract.id], contract.id)
+            XCTAssertEqual(contract.palette, expected, contract.id)
         }
     }
 

@@ -16,6 +16,7 @@ private enum ParadeQAError: LocalizedError {
     case unknownSymbol(name: String, symbol: Character, x: Int, y: Int)
     case integerOverflow(String)
     case inconsistentCanvas(name: String, expectedWidth: Int, expectedHeight: Int, actualWidth: Int, actualHeight: Int)
+    case invalidTimelineIndex(index: Int, frameCount: Int)
     case imageCreationFailed
     case destinationCreationFailed(String)
     case destinationFinalizationFailed(String)
@@ -40,6 +41,8 @@ private enum ParadeQAError: LocalizedError {
             return "Integer overflow while calculating \(operation)."
         case let .inconsistentCanvas(name, expectedWidth, expectedHeight, actualWidth, actualHeight):
             return "\(name) renders at \(actualWidth)x\(actualHeight); expected \(expectedWidth)x\(expectedHeight)."
+        case let .invalidTimelineIndex(index, frameCount):
+            return "Motion timeline references frame index \(index); only \(frameCount) frames exist."
         case .imageCreationFailed:
             return "Core Graphics could not create an RGBA image."
         case let .destinationCreationFailed(type):
@@ -200,7 +203,10 @@ private enum ParadeQARenderer {
 
         for frame in timeline {
             guard images.indices.contains(frame.definitionIndex) else {
-                throw ParadeQAError.emptyDefinitions
+                throw ParadeQAError.invalidTimelineIndex(
+                    index: frame.definitionIndex,
+                    frameCount: images.count
+                )
             }
             let frameProperties: [CFString: Any] = [
                 kCGImagePropertyGIFDictionary: [
