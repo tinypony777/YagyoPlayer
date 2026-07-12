@@ -28,7 +28,7 @@
 
 ### 4.1 音量の灯芯(スライダー意匠)
 
-標準SliderはtintしかカスタムできずノブØが白のままなので、`StepProgressBar` と同族の自前ビュー `TomoshibiSlider` を作る。
+標準Sliderはtintしかカスタムできずノブが白のままなので、`StepProgressBar` と同族の自前ビュー `TomoshibiSlider` を作る。
 
 - **トラック**: 細い墨色の線(`YagyoColor.line`)。通過側は提灯色(`chochin`)の淡いグラデーションでほのかに灯る。
 - **ノブ**: 小さな提灯玉(chochinの円+柔らかなglow)。ドラッグ中はglowがわずかに強まる。Reduce Motion時はglow変化なし。
