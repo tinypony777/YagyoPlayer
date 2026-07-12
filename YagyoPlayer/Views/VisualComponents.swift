@@ -299,3 +299,95 @@ struct StepProgressBar: View {
         return YagyoColor.line
     }
 }
+
+/// 灯芯 — 音量の自前スライダー。明治大正の計器を思わせる「罫と丸紋」の意匠:
+/// 単罫+四半目盛のトラック、通過側は提灯色の実線、ノブは丸紋(提灯色+
+/// 墨の輪+朱の芯)。フラット塗りで、ドラッグ中は朱の芯がわずかに広がる
+/// (Reduce Motion時は変化なし)。StepProgressBar と同族。
+struct TomoshibiSlider: View {
+    @Binding var value: Double
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @GestureState private var isDragging = false
+
+    /// VoiceOver `.adjustable` の一歩(5%)。
+    static let nudgeStep = 0.05
+
+    /// 提灯玉ノブの直径。ノブ中心の可動域 [r, width - r] が値域0〜1に対応する。
+    static let knobDiameter: CGFloat = 14
+
+    var body: some View {
+        GeometryReader { geometry in
+            let width = geometry.size.width
+            let midY = geometry.size.height / 2
+            let knobRadius = Self.knobDiameter / 2
+            let knobCenterX = knobRadius + CGFloat(value) * max(0, width - Self.knobDiameter)
+            let coreDiameter: CGFloat = isDragging && !reduceMotion ? 7 : 5
+
+            ZStack(alignment: .leading) {
+                Rectangle()
+                    .fill(YagyoColor.line)
+                    .frame(height: 2)
+
+                ForEach([0.0, 0.25, 0.5, 0.75, 1.0], id: \.self) { mark in
+                    Rectangle()
+                        .fill(YagyoColor.line)
+                        .frame(width: 1.5, height: 7)
+                        .position(
+                            x: knobRadius + CGFloat(mark) * max(0, width - Self.knobDiameter),
+                            y: midY
+                        )
+                }
+
+                Rectangle()
+                    .fill(YagyoColor.chochin)
+                    .frame(width: max(knobCenterX, 2), height: 2)
+
+                Circle()
+                    .fill(YagyoColor.chochin)
+                    .overlay(Circle().stroke(YagyoColor.sumi, lineWidth: 2))
+                    .overlay(
+                        Circle()
+                            .fill(YagyoColor.shu)
+                            .frame(width: coreDiameter, height: coreDiameter)
+                    )
+                    .frame(width: Self.knobDiameter, height: Self.knobDiameter)
+                    .position(x: knobCenterX, y: midY)
+            }
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .onTapGesture(coordinateSpace: .local) { location in
+                value = Self.fraction(at: location.x, width: width)
+            }
+            .gesture(
+                DragGesture(minimumDistance: 8)
+                    .updating($isDragging) { _, state, _ in state = true }
+                    .onChanged { drag in
+                        value = Self.fraction(at: drag.location.x, width: width)
+                    }
+            )
+        }
+        .frame(height: 33)
+        .accessibilityElement()
+        .accessibilityLabel("音量")
+        .accessibilityValue("\(Int(value * 100))パーセント")
+        .accessibilityAdjustableAction { direction in
+            value = Self.nudged(value, direction: direction)
+        }
+    }
+
+    /// タップ/ドラッグ位置を0〜1の値へ写す。ノブ中心の可動域 [r, width - r] を
+    /// 値域に対応させ、表示側(knobCenterX)の逆写像にする — ノブ上から
+    /// ドラッグを始めても値が跳ばない。可動域が無いときは0。
+    static func fraction(at x: CGFloat, width: CGFloat) -> Double {
+        let travel = width - knobDiameter
+        guard travel > 0 else { return 0 }
+        return min(max(Double((x - knobDiameter / 2) / travel), 0), 1)
+    }
+
+    /// VoiceOverの増減一歩。0〜1で留める。
+    static func nudged(_ value: Double, direction: AccessibilityAdjustmentDirection) -> Double {
+        let delta = direction == .increment ? nudgeStep : -nudgeStep
+        return min(max(value + delta, 0), 1)
+    }
+}
