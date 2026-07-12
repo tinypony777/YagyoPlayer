@@ -20,8 +20,11 @@ final class PlaybackController: ObservableObject {
         }
     }
 
+    let paradeSignals = ParadeSignalCoordinator()
+    private var smoothedAudioLevel = 0.0
+
     /// いま鳴っている音の大きさ(0...1)。夜行絵巻の妖怪や提灯がこれに反応する。
-    @Published private(set) var audioLevel: Double = 0
+    var audioLevel: Double { paradeSignals.snapshot.level }
 
     /// 読み込み・再生に失敗したとき、無言で止まらずユーザーに伝えるためのメッセージ。
     @Published var playbackErrorMessage: String?
@@ -193,6 +196,7 @@ final class PlaybackController: ObservableObject {
         autoplay: Bool = false,
         context: PlaybackContext? = nil
     ) {
+        resetParadeSignal(reason: .trackLoadStarted, isPlaying: false)
         remoteLibrary = library
         if let context {
             switch context {
@@ -230,6 +234,7 @@ final class PlaybackController: ObservableObject {
         } catch {
             pause()
             playbackErrorMessage = "\(track.title) could not be played: \(error.localizedDescription)"
+            resetParadeSignal(reason: .loadFailure, isPlaying: false)
         }
     }
 
@@ -240,6 +245,7 @@ final class PlaybackController: ObservableObject {
     func play() {
         guard let audioPlayer else {
             playbackErrorMessage = "No track is loaded yet."
+            resetParadeSignal(reason: .playFailure, isPlaying: false)
             return
         }
         guard audioPlayer.play() else {
@@ -247,6 +253,7 @@ final class PlaybackController: ObservableObject {
             isPlaying = false
             stopTimer()
             stopMetering()
+            resetParadeSignal(reason: .playFailure, isPlaying: false)
             updateNowPlaying()
             return
         }
@@ -262,12 +269,14 @@ final class PlaybackController: ObservableObject {
         isPlaying = false
         stopTimer()
         stopMetering()
+        resetParadeSignal(reason: .pause, isPlaying: false)
         syncProgress()
         updateNowPlaying()
     }
 
     func seek(to time: TimeInterval) {
         guard let audioPlayer else { return }
+        resetParadeSignal(reason: .seek, isPlaying: isPlaying)
         audioPlayer.currentTime = min(max(time, 0), audioPlayer.duration)
         syncProgress()
         updateNowPlaying()
@@ -301,6 +310,7 @@ final class PlaybackController: ObservableObject {
         interruptionDepth = 0
         stopTimer()
         stopMetering()
+        resetParadeSignal(reason: .stop, isPlaying: false)
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 
@@ -348,24 +358,39 @@ final class PlaybackController: ObservableObject {
     private func stopMetering() {
         meterTimer?.invalidate()
         meterTimer = nil
-        audioLevel = 0
     }
 
     private func updateMeter() {
-        guard let audioPlayer, isPlaying, audioPlayer.numberOfChannels > 0 else { return }
+        guard isPlaying else { return }
+        let sampledAt = ProcessInfo.processInfo.systemUptime
+        guard let audioPlayer, audioPlayer.numberOfChannels > 0 else {
+            paradeSignals.ingest(level: nil, isPlaying: isPlaying, sampledAt: sampledAt)
+            return
+        }
         audioPlayer.updateMeters()
         // 片チャンネルが無音のステレオ音源でも反応するよう、全チャンネルの最大値を取る
         var decibels = -160.0
         for channel in 0..<audioPlayer.numberOfChannels {
-            decibels = max(decibels, Double(audioPlayer.averagePower(forChannel: channel)))
+            let channelPower = Double(audioPlayer.averagePower(forChannel: channel))
+            guard channelPower.isFinite else {
+                paradeSignals.ingest(level: nil, isPlaying: isPlaying, sampledAt: sampledAt)
+                return
+            }
+            decibels = max(decibels, channelPower)
         }
         let normalized = min(max((decibels + 48) / 48, 0), 1)
         // 立ち上がりは速く、引きはゆっくり — 提灯の火のように
-        if normalized > audioLevel {
-            audioLevel = audioLevel * 0.35 + normalized * 0.65
+        if normalized > smoothedAudioLevel {
+            smoothedAudioLevel = smoothedAudioLevel * 0.35 + normalized * 0.65
         } else {
-            audioLevel = audioLevel * 0.82 + normalized * 0.18
+            smoothedAudioLevel = smoothedAudioLevel * 0.82 + normalized * 0.18
         }
+        paradeSignals.ingest(level: smoothedAudioLevel, isPlaying: isPlaying, sampledAt: sampledAt)
+    }
+
+    private func resetParadeSignal(reason: ParadeSignalResetReason, isPlaying: Bool) {
+        smoothedAudioLevel = 0
+        paradeSignals.reset(reason: reason, isPlaying: isPlaying)
     }
 
     private func tick() {

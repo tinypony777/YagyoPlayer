@@ -59,12 +59,79 @@ struct YagyoBackdrop: View {
     }
 }
 
+enum CircularWaveformPresentation: Equatable, Sendable {
+    case stopped
+    case unavailable
+    case low
+    case medium
+    case high
+
+    init(
+        activity: ParadeSignalSnapshot.Activity,
+        levelBand: ParadeSignalSnapshot.LevelBand
+    ) {
+        switch activity {
+        case .stopped:
+            self = .stopped
+        case .unavailable:
+            self = .unavailable
+        case .quietProxy, .normal:
+            switch levelBand {
+            case .unavailable:
+                self = .unavailable
+            case .low:
+                self = .low
+            case .medium:
+                self = .medium
+            case .high:
+                self = .high
+            }
+        }
+    }
+
+    var usesProgressPhase: Bool {
+        switch self {
+        case .stopped, .unavailable:
+            false
+        case .low, .medium, .high:
+            true
+        }
+    }
+
+    var staticLength: Double {
+        switch self {
+        case .stopped: 12
+        case .unavailable: 20
+        case .low: 14
+        case .medium: 23
+        case .high: 32
+        }
+    }
+
+    var usesAccentColor: Bool {
+        switch self {
+        case .stopped, .unavailable:
+            false
+        case .low, .medium, .high:
+            true
+        }
+    }
+}
+
 struct CircularWaveform: View {
     var progress: Double
-    var isPlaying: Bool
     var level: Double = 0
+    var activity: ParadeSignalSnapshot.Activity
+    var levelBand: ParadeSignalSnapshot.LevelBand
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        let presentation = CircularWaveformPresentation(
+            activity: activity,
+            levelBand: levelBand
+        )
+
         Canvas { context, size in
             let center = CGPoint(x: size.width / 2, y: size.height / 2)
             let radius = min(size.width, size.height) * 0.35
@@ -73,9 +140,14 @@ struct CircularWaveform: View {
             for index in 0..<count {
                 let normalized = Double(index) / Double(count)
                 let angle = normalized * .pi * 2 - .pi / 2
-                let pulse = sin((normalized * 8 + progress * 3.5) * .pi * 2)
-                let sway = isPlaying ? 6 + level * 16 : 5
-                let length = CGFloat(12 + (pulse + 1) * sway)
+                let length: CGFloat
+                if reduceMotion || !presentation.usesProgressPhase {
+                    length = CGFloat(presentation.staticLength)
+                } else {
+                    let pulse = sin((normalized * 8 + progress * 3.5) * .pi * 2)
+                    let sway = 6 + level * 16
+                    length = CGFloat(12 + (pulse + 1) * sway)
+                }
                 let inner = radius - length * 0.35
                 let outer = radius + length
 
@@ -83,15 +155,47 @@ struct CircularWaveform: View {
                 path.move(to: point(center: center, radius: inner, angle: angle))
                 path.addLine(to: point(center: center, radius: outer, angle: angle))
 
-                let color = index % 11 == 0 ? YagyoColor.kitsunebi : YagyoColor.geppaku
-                context.stroke(path, with: .color(color.opacity(isPlaying ? 0.86 : 0.42)), lineWidth: index % 11 == 0 ? 2.2 : 1.4)
+                let color: Color
+                if presentation.usesAccentColor {
+                    color = index % 11 == 0 ? YagyoColor.kitsunebi : YagyoColor.geppaku
+                } else {
+                    color = YagyoColor.dim
+                }
+                let lineWidth: CGFloat = presentation == .unavailable ? 1.2 : (index % 11 == 0 ? 2.2 : 1.4)
+                let dash: [CGFloat] = presentation == .unavailable ? [2, 2] : []
+                context.stroke(
+                    path,
+                    with: .color(color.opacity(lineOpacity(for: presentation))),
+                    style: StrokeStyle(lineWidth: lineWidth, dash: dash)
+                )
             }
 
             let ring = Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
-            context.stroke(ring, with: .color(YagyoColor.chochin.opacity(0.52)), lineWidth: 1)
+            let ringColor = presentation.usesAccentColor ? YagyoColor.chochin : YagyoColor.dim
+            let ringDash: [CGFloat] = presentation == .unavailable ? [3, 3] : []
+            context.stroke(
+                ring,
+                with: .color(ringColor.opacity(presentation == .stopped ? 0.32 : 0.52)),
+                style: StrokeStyle(lineWidth: 1, dash: ringDash)
+            )
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+
+    private func lineOpacity(for presentation: CircularWaveformPresentation) -> Double {
+        switch presentation {
+        case .stopped:
+            0.32
+        case .unavailable:
+            0.52
+        case .low:
+            reduceMotion ? 0.42 : 0.86
+        case .medium:
+            reduceMotion ? 0.64 : 0.86
+        case .high:
+            0.86
+        }
     }
 
     private func point(center: CGPoint, radius: CGFloat, angle: Double) -> CGPoint {
