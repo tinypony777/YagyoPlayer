@@ -35,10 +35,15 @@ Swift実装と同一の係数式・ゲーティング・FIR設計を [`mirror.py
 - 採用した主な指摘: 非有限値の遮断(DSP/統合の両レビューが独立に検出)、44.1kHz係数式の規格不適合(テストレビューが数値導出込みで検出)、hash backfillのメインスレッド実行(Copilot/Codex)、チャンネル重みの決め打ち(Codex)、閉じるボタンのVoiceOver独立性、重複トラックのキャッシュ共有、保存失敗時のロールバック。
 - Swift 6 strict concurrencyの実コンパイルエラー1件(`[weak self]`のmutable束縛を@Sendableクロージャが参照)はMac上のXcodeビルドで検出し、強参照キャプチャへ変更(帳を閉じても解析を完走させる設計と整合)。
 
-## 未完了(Mac側)
+## Mac側検証(Desktop Commander経由・2026-07-12)
 
-- Xcode build / `KitsunebiAnalyzerTests` を含むfull suiteの実行。
-- Simulatorでの帳の表示確認(進捗→目盛→提案、VoiceOver、絵巻が退く共存規則)。
+- **full suite 96 / 96 成功**(Xcode 27.0 / iPhone 17 Pro Simulator、commit `02bf89a`)。`KitsunebiAnalyzerTests` 12 / 12 を含み、ミラー導出の期待値(EBU -20 LUFS、True Peakオーバーシュート、44.1kHz適合、チャンク不変性、クリップラン境界)が実際のAccelerate / AVFoundation上で成立した。
+- Xcode Cloud「Build - iOS」は最新head(`85545a3`)で**成功**。初回コミット(`8ccfeda`)のCI失敗はMac上のビルドで「`[weak self]`のmutable束縛を@Sendableクロージャが参照」というSwift 6エラーと特定し、強参照キャプチャで解消した。
+
+## 未完了
+
+- `85545a3` で追加した2テスト(ファイル経由E2E / 帳のQA artifact)のMac上での実行と、xcresultからの `tobari-screen.png` 抽出。
+- Simulatorでの帳の対話的確認(進捗→目盛→提案、VoiceOver、絵巻が退く共存規則)。
 - 実音源での動作確認とユーザー本人の確認。
 
 上記が済むまでPhase A完了とは扱いません。
