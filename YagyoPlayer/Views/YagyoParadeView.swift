@@ -351,13 +351,25 @@ struct YagyoParadeView: View {
 
             let isResident = index == 0 && residentSpriteID == sprite.id
             if isResident {
-                drawResidentMarker(in: &context, above: rect)
+                // 契約上の透明上余白ぶん浮かないよう、安定した idle の本体bboxへ合わせる。
+                let anchor = sprite.idleFrame ?? frame
+                drawResidentMarker(in: &context, above: contentRect(of: anchor, drawnIn: rect))
             }
 
             if reduceMotion, isStrongActive, !sprite.strongFrames.isEmpty {
-                drawStaticStrongOutline(in: &context, around: rect)
+                drawStaticStrongOutline(in: &context, around: contentRect(of: frame, drawnIn: rect))
             }
         }
+    }
+
+    /// キャンバス全体の描画rectから、フレームの不透明bboxが占める画面上のrectを得る。
+    private func contentRect(of frame: SpriteFrame, drawnIn rect: CGRect) -> CGRect {
+        CGRect(
+            x: rect.minX + frame.contentRect.minX * Self.spriteScale,
+            y: rect.minY + frame.contentRect.minY * Self.spriteScale,
+            width: frame.contentRect.width * Self.spriteScale,
+            height: frame.contentRect.height * Self.spriteScale
+        )
     }
 
     private var processionSpeed: Double {
@@ -394,15 +406,15 @@ struct YagyoParadeView: View {
 
         if isStrongActive, !sprite.strongFrames.isEmpty {
             if reduceMotion {
-                return sprite.strongFrames.dropFirst().first ?? sprite.strongFrames.first ?? idle
+                return sprite.strongReactionFrame ?? idle
             }
             switch signal.strongPhase {
             case .inactive:
                 break
             case .anticipate:
-                return sprite.strongFrames.first ?? idle
+                return sprite.strongAnticipateFrame ?? idle
             case .open:
-                return sprite.strongFrames.dropFirst().first ?? sprite.strongFrames.first ?? idle
+                return sprite.strongReactionFrame ?? idle
             case .recover:
                 return idle
             }

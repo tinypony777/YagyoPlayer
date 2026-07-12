@@ -10,6 +10,9 @@ struct SpriteFrame: @unchecked Sendable {
     let image: Image
     let pixelWidth: CGFloat
     let pixelHeight: CGFloat
+    /// キャンバス内の不透明画素のbbox(ピクセル座標)。契約上の透明余白を除いた
+    /// 見えている本体で、先導灯やstrong輪郭の位置合わせに使う。
+    let contentRect: CGRect
 
     var pixelSize: CGSize { CGSize(width: pixelWidth, height: pixelHeight) }
 }
@@ -52,11 +55,14 @@ struct YokaiSprite: @unchecked Sendable {
     let idleFrame: SpriteFrame?
     /// 静音近似の専用姿勢。契約上は唐傘だけが持ち、他は idle へ fallback する。
     let hushFrame: SpriteFrame?
-    /// 強反応の anticipate / reaction。空の妖怪は強反応しない。
+    /// 強反応の anticipate / reaction の一組。空の妖怪は強反応しない。
     let strongFrames: [SpriteFrame]
+    /// ライブラリ行などのタイル表示用。40×48キャンバスの透明余白ごと縮小されないよう、
+    /// idle を不透明bboxへトリムした画像を使う。
+    let thumbnail: SpriteFrame
 
-    var resolvedIdleFrame: SpriteFrame { idleFrame ?? frames[0] }
-    var resolvedHushFrame: SpriteFrame { hushFrame ?? resolvedIdleFrame }
+    var strongAnticipateFrame: SpriteFrame? { strongFrames.first }
+    var strongReactionFrame: SpriteFrame? { strongFrames.dropFirst().first ?? strongFrames.first }
 
     init(
         id: String,
@@ -65,7 +71,8 @@ struct YokaiSprite: @unchecked Sendable {
         frames: [SpriteFrame],
         idleFrame: SpriteFrame? = nil,
         hushFrame: SpriteFrame? = nil,
-        strongFrames: [SpriteFrame] = []
+        strongFrames: [SpriteFrame] = [],
+        thumbnail: SpriteFrame
     ) {
         self.id = id
         self.name = name
@@ -74,6 +81,7 @@ struct YokaiSprite: @unchecked Sendable {
         self.idleFrame = idleFrame
         self.hushFrame = hushFrame
         self.strongFrames = strongFrames
+        self.thumbnail = thumbnail
     }
 }
 
@@ -95,10 +103,18 @@ enum PixelArt {
         let height = rows.count
         let width = rows.map(\.count).max() ?? 1
 
+        var minX = Int.max
+        var maxX = -1
+        var minY = Int.max
+        var maxY = -1
         var data = [UInt8](repeating: 0, count: width * height * 4)
         for (y, row) in rows.enumerated() {
             for (x, character) in row.enumerated() {
                 guard let hex = palette[character] else { continue }
+                minX = min(minX, x)
+                maxX = max(maxX, x)
+                minY = min(minY, y)
+                maxY = max(maxY, y)
                 let offset = (y * width + x) * 4
                 data[offset] = UInt8((hex >> 16) & 0xff)
                 data[offset + 1] = UInt8((hex >> 8) & 0xff)
@@ -106,6 +122,14 @@ enum PixelArt {
                 data[offset + 3] = 0xff
             }
         }
+        let contentRect = maxX >= minX
+            ? CGRect(
+                x: CGFloat(minX),
+                y: CGFloat(minY),
+                width: CGFloat(maxX - minX + 1),
+                height: CGFloat(maxY - minY + 1)
+            )
+            : CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height))
 
         guard
             let provider = CGDataProvider(data: Data(data) as CFData),
@@ -123,12 +147,45 @@ enum PixelArt {
                 intent: .defaultIntent
             )
         else {
-            return SpriteFrame(image: Image(systemName: "questionmark"), pixelWidth: 1, pixelHeight: 1)
+            return SpriteFrame(
+                image: Image(systemName: "questionmark"),
+                pixelWidth: 1,
+                pixelHeight: 1,
+                contentRect: CGRect(x: 0, y: 0, width: 1, height: 1)
+            )
         }
 
         let image = Image(decorative: cgImage, scale: 1)
             .interpolation(.none)
-        return SpriteFrame(image: image, pixelWidth: CGFloat(width), pixelHeight: CGFloat(height))
+        return SpriteFrame(
+            image: image,
+            pixelWidth: CGFloat(width),
+            pixelHeight: CGFloat(height),
+            contentRect: contentRect
+        )
+    }
+
+    /// 不透明画素のbboxへトリムしたフレーム。タイル内でscaledToFitしたときに
+    /// 契約上の透明余白で妖怪が小さくならないようにする(タイル表示専用)。
+    static func trimmedFrame(_ definition: PixelSpriteDefinition) -> SpriteFrame {
+        var minX = Int.max
+        var maxX = -1
+        var minY = Int.max
+        var maxY = -1
+        for (y, row) in definition.rows.enumerated() {
+            for (x, character) in row.enumerated() where character != "." {
+                minX = min(minX, x)
+                maxX = max(maxX, x)
+                minY = min(minY, y)
+                maxY = max(maxY, y)
+            }
+        }
+        guard maxX >= minX, maxY >= minY else { return frame(definition) }
+
+        let cropped = definition.rows[minY...maxY].map { row in
+            String(Array(row)[minX...maxX])
+        }
+        return frame(rows: cropped, palette: definition.palette)
     }
 }
 
@@ -140,54 +197,67 @@ enum YokaiGallery {
             id: "oni", name: "鬼太鼓", role: "Taiko Oni",
             frames: OniSpriteArt.walk.map { PixelArt.frame($0) },
             idleFrame: PixelArt.frame(OniSpriteArt.idle[0]),
-            strongFrames: OniSpriteArt.strong.map { PixelArt.frame($0) }
+            strongFrames: OniSpriteArt.strong.map { PixelArt.frame($0) },
+            thumbnail: PixelArt.trimmedFrame(OniSpriteArt.idle[0])
         ),
         YokaiSprite(
             id: "mokugyo", name: "木魚", role: "Mokugyo",
             frames: MokugyoSpriteArt.walk.map { PixelArt.frame($0) },
             idleFrame: PixelArt.frame(MokugyoSpriteArt.idle[0]),
-            strongFrames: MokugyoSpriteArt.strong.map { PixelArt.frame($0) }
+            strongFrames: MokugyoSpriteArt.strong.map { PixelArt.frame($0) },
+            thumbnail: PixelArt.trimmedFrame(MokugyoSpriteArt.idle[0])
         ),
         YokaiSprite(
             id: "kasa", name: "唐傘", role: "Kasa-obake",
             frames: KarakasaSpriteArt.walk.map { PixelArt.frame($0) },
             idleFrame: PixelArt.frame(KarakasaSpriteArt.idle[0]),
             hushFrame: PixelArt.frame(KarakasaSpriteArt.hush[0]),
-            strongFrames: KarakasaSpriteArt.strong.map { PixelArt.frame($0) }
+            strongFrames: KarakasaSpriteArt.strong.map { PixelArt.frame($0) },
+            thumbnail: PixelArt.trimmedFrame(KarakasaSpriteArt.idle[0])
         ),
         YokaiSprite(
             id: "kappa", name: "河童", role: "Kappa",
             frames: KappaSpriteArt.walk.map { PixelArt.frame($0) },
-            idleFrame: PixelArt.frame(KappaSpriteArt.idle[0])
+            idleFrame: PixelArt.frame(KappaSpriteArt.idle[0]),
+            strongFrames: KappaSpriteArt.strong.map { PixelArt.frame($0) },
+            thumbnail: PixelArt.trimmedFrame(KappaSpriteArt.idle[0])
         ),
         YokaiSprite(
             id: "kitsune", name: "狐火", role: "Kitsunebi",
             frames: KitsunebiSpriteArt.walk.map { PixelArt.frame($0) },
             idleFrame: PixelArt.frame(KitsunebiSpriteArt.idle[0]),
-            strongFrames: KitsunebiSpriteArt.strong.map { PixelArt.frame($0) }
+            strongFrames: KitsunebiSpriteArt.strong.map { PixelArt.frame($0) },
+            thumbnail: PixelArt.trimmedFrame(KitsunebiSpriteArt.idle[0])
         ),
         YokaiSprite(
             id: "tengu", name: "天狗", role: "Tengu",
             frames: TenguSpriteArt.walk.map { PixelArt.frame($0) },
             idleFrame: PixelArt.frame(TenguSpriteArt.idle[0]),
-            strongFrames: TenguSpriteArt.strong.map { PixelArt.frame($0) }
+            strongFrames: TenguSpriteArt.strong.map { PixelArt.frame($0) },
+            thumbnail: PixelArt.trimmedFrame(TenguSpriteArt.idle[0])
         ),
         YokaiSprite(
             id: "yuki", name: "雪女", role: "Yuki-onna",
             frames: YukiOnnaSpriteArt.walk.map { PixelArt.frame($0) },
-            idleFrame: PixelArt.frame(YukiOnnaSpriteArt.idle[0])
+            idleFrame: PixelArt.frame(YukiOnnaSpriteArt.idle[0]),
+            strongFrames: YukiOnnaSpriteArt.strong.map { PixelArt.frame($0) },
+            thumbnail: PixelArt.trimmedFrame(YukiOnnaSpriteArt.idle[0])
         ),
         YokaiSprite(
             id: "biwa", name: "琵琶牧々", role: "Biwa-bokuboku",
             frames: BiwaBokubokuSpriteArt.walk.map { PixelArt.frame($0) },
-            idleFrame: PixelArt.frame(BiwaBokubokuSpriteArt.idle[0])
+            idleFrame: PixelArt.frame(BiwaBokubokuSpriteArt.idle[0]),
+            strongFrames: BiwaBokubokuSpriteArt.strong.map { PixelArt.frame($0) },
+            thumbnail: PixelArt.trimmedFrame(BiwaBokubokuSpriteArt.idle[0])
         ),
     ]
 
     static let hitotsume = YokaiSprite(
         id: "hitotsume", name: "一つ目小僧", role: "Hitotsume-kozō",
         frames: HitotsumeSpriteArt.walk.map { PixelArt.frame($0) },
-        idleFrame: PixelArt.frame(HitotsumeSpriteArt.idle[0])
+        idleFrame: PixelArt.frame(HitotsumeSpriteArt.idle[0]),
+        strongFrames: HitotsumeSpriteArt.strong.map { PixelArt.frame($0) },
+        thumbnail: PixelArt.trimmedFrame(HitotsumeSpriteArt.idle[0])
     )
 
     static func sprite(withID id: String) -> YokaiSprite? {
