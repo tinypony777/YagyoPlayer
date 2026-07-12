@@ -7,53 +7,54 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		787CA023E4FE5452C8B3D0DE /* KitsunebiAnalyzerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E98970C2DAAD137DC389549 /* KitsunebiAnalyzerTests.swift */; };
-		B58563AF89B5894026F925E4 /* TobariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF097A0028CDA64CFBA7F8A /* TobariView.swift */; };
-		C3CC71C37266A61AFD475C2A /* KitsunebiAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0887E1A6BCF5C19B5BAE1389 /* KitsunebiAnalyzer.swift */; };
-		2564B48BDB301D4C221EEB6F /* TobariMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = D743EA7D320EF3CBF2BBD50B /* TobariMetrics.swift */; };
-		D8A61D8E1FE17B857877CFFF /* ParadeQAArtifactTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA1130E67D07919EBEE5AAED /* ParadeQAArtifactTests.swift */; };
-		E6F704DF7E1C372CA1160B0B /* ParadeSpriteContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEEADC11A0C18958A260CD7B /* ParadeSpriteContractTests.swift */; };
-		787995BB5FEE366F1D7C656B /* HitotsumeSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15D99DCD921C049DFC677FE5 /* HitotsumeSprite.swift */; };
-		27B7676A4BC184B58323EC4C /* BiwaBokubokuSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87F18DC2FF2B375DB5F1E022 /* BiwaBokubokuSprite.swift */; };
-		C86D685061115CF9A3E31F80 /* YukiOnnaSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7FDCFB3DF8EC0D26DBCCBC5 /* YukiOnnaSprite.swift */; };
-		0D2A4DC80B22D1A521672A80 /* TenguSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 792D7351BD947E833CB3B749 /* TenguSprite.swift */; };
-		CBF4CB17F3B5F98ED5A57E75 /* KitsunebiSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33DF7EFB6E6F7E0F67ABE4CA /* KitsunebiSprite.swift */; };
-		FBEBEDA9583923AC09842C32 /* KappaSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B86B3A5E597A7CA708C62AD /* KappaSprite.swift */; };
-		1191402B0D6D806C47D5B57E /* MokugyoSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FEACD8457782914E9D9EA12 /* MokugyoSprite.swift */; };
-		3ED3AB97C7F40C08CF2D87D0 /* OniSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = F43DFE8382B8AB664C412C0A /* OniSprite.swift */; };
-		136A42DFE6E979D39D727986 /* PixelSprites.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4044CF17D5AC4B92CC0F3C3B /* PixelSprites.swift */; };
-		6ACB2C6C0895CF954E44BC10 /* KarakasaSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6389ED07ADB58D318A07CB3C /* KarakasaSprite.swift */; };
+		08565A8E00FC14E57CFDE559 /* YokaiResidency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 211E911CF2068CBD0C91ED41 /* YokaiResidency.swift */; };
+		0F6FBE0EB4856809EED5B22E /* YukiOnnaSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E5D333C49AE2E227C1355C /* YukiOnnaSprite.swift */; };
+		174EE8DDA534F3C9230CD81D /* PixelSpriteContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6804412D06635CAC50D76D6B /* PixelSpriteContractTests.swift */; };
+		1FE70D7A7E46D7B27565B9E7 /* MokugyoSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6B14AD5D4ECFD7612C2114 /* MokugyoSprite.swift */; };
+		2132FE71B2915F38C48988C4 /* TobariMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA6A15F30AA2FF50F2E30F37 /* TobariMetrics.swift */; };
 		250E9A7346FB7374DD1960B8 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = D79B2B99B83398BAB69DC334 /* DesignTokens.swift */; };
-		5BD6A15264C17984A0B07F0B /* ParadeSignal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E26516089682AF3581DD42 /* ParadeSignal.swift */; };
-		50723FFDABDE8219969C9C02 /* UshimitsuWatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66DE83FC0E7196105934F455 /* UshimitsuWatch.swift */; };
-		A473E640BC086F2589647E53 /* YagyoParadeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D9E5953E0F9E6CC85DBCA3 /* YagyoParadeView.swift */; };
-		E6B9F104D2C3587AB5F92345 /* ParadePreviewHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A8E0F3C1B24769A4E81234 /* ParadePreviewHarness.swift */; };
+		31E839318B25BEE3D93AD344 /* ParadeSignalCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DB6D8B19BCAF942F13B4166 /* ParadeSignalCoordinatorTests.swift */; };
+		38B7F549F94B4CFF5149FFA3 /* KitsunebiSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9732B51F1B3925E0D4761DD /* KitsunebiSprite.swift */; };
+		3A2A8EAA663E2ADB181E7205 /* PlaybackControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E06CD6FA3AD454DCD485EF3 /* PlaybackControllerTests.swift */; };
+		3CB032384D69A7037A7559DA /* TomoshibiSliderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65FBF30807B275C35C41EBEA /* TomoshibiSliderTests.swift */; };
+		3E00AE61C5997249328D5DB6 /* UshimitsuWatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 009132A905A8FFC8AA18D877 /* UshimitsuWatch.swift */; };
+		428783E63D2D0AE684903631 /* ParadeSpriteContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001413CF9A7A8FDF377473F1 /* ParadeSpriteContractTests.swift */; };
+		546B53B8117CC4C83804A589 /* TobariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAFF4117045C3BDB1268CDB /* TobariView.swift */; };
+		5759F5907B82DE951D4188A7 /* ParadeSignalReducerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CFBF588CF1E31687794A0D9 /* ParadeSignalReducerTests.swift */; };
+		5A52863C6DB5F98ECA8D660C /* KarakasaSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77E15846350731B2AD7F340D /* KarakasaSprite.swift */; };
+		5FD9162030ABDABD79B384FD /* KitsunebiAnalyzerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84F9AC78171A2B8433ED3B5C /* KitsunebiAnalyzerTests.swift */; };
+		61BAD1FE4C2E56B48EDA17E6 /* PlaylistSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8260ACDAEA6A60FE15F832E1 /* PlaylistSection.swift */; };
+		62B57FB29513773755F9DC31 /* HitotsumeSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D79A2E77CB916AA19944DD4 /* HitotsumeSprite.swift */; };
 		6AB494FB98028D7497DCC50C /* MusicKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 301E9CBCD2076B4C94F2C87F /* MusicKit.framework */; };
+		6C4CC5C120FDC8B7C00999AD /* ParadePreviewHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2146EF91A8C1E23B7ECA1744 /* ParadePreviewHarness.swift */; };
 		6CF615A930DE9D845F3F57C3 /* PlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81C4BE9E308A1B398FCC749 /* PlaybackController.swift */; };
-		61C8D2E4F5A697B8031D4E6F /* ParadeSignalCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6F3C1D8E5B74029C4A791DE /* ParadeSignalCoordinator.swift */; };
+		87EEDAAE3677EE2CDC73D937 /* ParadeQAArtifactTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFA4C657F8AD09963CB44EDB /* ParadeQAArtifactTests.swift */; };
+		8B4DE6F10F3505EBE456237A /* ParadeSignalCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8754CE881480922F8BA507B6 /* ParadeSignalCoordinator.swift */; };
+		8C0AD7765907DC32D5C43034 /* ParadeSignal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AACE23E11C8265F3EF22D39 /* ParadeSignal.swift */; };
 		8D11AB6599E537AB3E159AEF /* AudioTrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25089FD8B7B3584C1950CD9B /* AudioTrackTests.swift */; };
-		9A1B2C3D4E5F60718293A4B5 /* AudioLibraryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F2E3D4C5B6A798081920A3B /* AudioLibraryStoreTests.swift */; };
-		3F8A2C1D9B4E5678AFC01234 /* PlaybackControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F8A2C1D9B4E5678AFC05678 /* PlaybackControllerTests.swift */; };
-		4D0B17E8F1C6423B9A51D02C /* LibraryConfidenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B63C5A4D8E142719F0A6B32 /* LibraryConfidenceTests.swift */; };
-		D3E8F1A5C7B24069E4D2A8F6 /* KarakasaQAArtifactTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A4B2C9D1E6F8035A8B7C4D2 /* KarakasaQAArtifactTests.swift */; };
-		B4CD88C51960CB356BFE9C19 /* ParadeSignalReducerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9EF0E58BD669BF9DC7082D3 /* ParadeSignalReducerTests.swift */; };
-		29FD40AE7C156B83D904E2F1 /* ParadeSignalCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7E4A1B8923D4F56A709BCDE /* ParadeSignalCoordinatorTests.swift */; };
-		5CDD9938B803D6247E94C371 /* PixelSpriteContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8C546B469F4E3D3228C418D /* PixelSpriteContractTests.swift */; };
+		96F4A4741E10379E249365C3 /* BiwaBokubokuSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CD4AD4874067B45F463A885 /* BiwaBokubokuSprite.swift */; };
 		A703B0828489B95B8B9FB869 /* YagyoPlayerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25C215A13FBD2FF5FA19ECFB /* YagyoPlayerApp.swift */; };
+		A9BE8B0491943FD5F76C952C /* PlaylistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43BAB562AE3CA0460CA4B562 /* PlaylistTests.swift */; };
 		B19BADCB0624C48620272C1D /* VisualComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B13D8A65B01B04F9BD642237 /* VisualComponents.swift */; };
+		B3F5B378204D7103FD8928A7 /* AudioLibraryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B3E9103C21666DF09B5B1F8 /* AudioLibraryStoreTests.swift */; };
 		B4C130EA40CACEAF7872EDED /* YagyoPlayerIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 025BE94FAA9D790E8896BF44 /* YagyoPlayerIntents.swift */; };
+		B89BF864B9C26F21D2722D93 /* Playlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AE27C22EE5C6B775EF69776 /* Playlist.swift */; };
+		C30AFF1D77D6C0C74B7ECFAB /* LibraryConfidenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C65840D328AB5AC39599FEBE /* LibraryConfidenceTests.swift */; };
+		C687972DD9B5BA09D861976D /* KarakasaQAArtifactTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E123FD672A49450B4214834C /* KarakasaQAArtifactTests.swift */; };
+		D257D988D8E7900D0F493B22 /* OniSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68DBF6895ABEFA01CE00C00D /* OniSprite.swift */; };
+		D47882C1E920122B25AFAC67 /* KitsunebiAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 728F7D81A7B4F5146A4DE9DA /* KitsunebiAnalyzer.swift */; };
+		D83865F160C3623300CFE864 /* YokaiResidencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1067EC58308362E47C91EF8 /* YokaiResidencyTests.swift */; };
+		D8BDCB51518C4D326E8126FD /* PixelSprites.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82313649B4E00E83BE7B7E39 /* PixelSprites.swift */; };
 		E1F12D8AB5237C46EB410996 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7FEEC5F390CD3E9B6E288C6F /* AVFoundation.framework */; };
 		E208F7A31178FF01D3AF158D /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDC21A8FC3FC543E1CAE93C0 /* AppRouter.swift */; };
 		E94E4371E099F8F5F912DF8E /* AudioLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33D8F8BED25A829B3E5EF537 /* AudioLibraryStore.swift */; };
 		ED30E11EDA4E3545119F08D0 /* AudioTrack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76389A5952E76C7CE5A22B96 /* AudioTrack.swift */; };
-		5C4B3A2918070F6E5D4C3B2A /* Playlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* Playlist.swift */; };
-		6D5C4B3A2918070F6E5D4C3B /* PlaylistSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6D /* PlaylistSection.swift */; };
-		7E6D5C4B3A2918070F6E5D4C /* PlaylistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F60718293A4B5C6D7E /* PlaylistTests.swift */; };
-		A8949AA41A1CB98A1CDA2BA2 /* YokaiResidency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5517F1D3862B56B64A6F36B6 /* YokaiResidency.swift */; };
-		4A49F2C2AE9465A59D0019F9 /* YokaiResidencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF7DA41CFBDA8507D6137D9B /* YokaiResidencyTests.swift */; };
+		F277B9BD9D60634F9BDF94A4 /* YagyoParadeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99DFADEFD1438C21D0A4F055 /* YagyoParadeView.swift */; };
 		F553274643EE8B8A838C9B97 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A3693A3D5090FDEC93959BD /* ContentView.swift */; };
 		F9991556DDF047A16C7EABDD /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66B26F6B600C8B8FB1995EFA /* MediaPlayer.framework */; };
 		FAF6648B6E5D6DFA7E4E2B98 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7C108546297C058BDF30B16F /* AppIntents.framework */; };
+		FC05AA913DF02F6DCEA9BC9F /* TenguSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83946364362D7407E3A367B7 /* TenguSprite.swift */; };
+		FF98ED5802826FFDADD44189 /* KappaSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63FE3280631A2862C69B1D04 /* KappaSprite.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -67,57 +68,58 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		7E98970C2DAAD137DC389549 /* KitsunebiAnalyzerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KitsunebiAnalyzerTests.swift; sourceTree = "<group>"; };
-		FDF097A0028CDA64CFBA7F8A /* TobariView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TobariView.swift; sourceTree = "<group>"; };
-		0887E1A6BCF5C19B5BAE1389 /* KitsunebiAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KitsunebiAnalyzer.swift; sourceTree = "<group>"; };
-		D743EA7D320EF3CBF2BBD50B /* TobariMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TobariMetrics.swift; sourceTree = "<group>"; };
-		FA1130E67D07919EBEE5AAED /* ParadeQAArtifactTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeQAArtifactTests.swift; sourceTree = "<group>"; };
-		AEEADC11A0C18958A260CD7B /* ParadeSpriteContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeSpriteContractTests.swift; sourceTree = "<group>"; };
-		15D99DCD921C049DFC677FE5 /* HitotsumeSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HitotsumeSprite.swift; sourceTree = "<group>"; };
-		87F18DC2FF2B375DB5F1E022 /* BiwaBokubokuSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiwaBokubokuSprite.swift; sourceTree = "<group>"; };
-		B7FDCFB3DF8EC0D26DBCCBC5 /* YukiOnnaSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YukiOnnaSprite.swift; sourceTree = "<group>"; };
-		792D7351BD947E833CB3B749 /* TenguSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TenguSprite.swift; sourceTree = "<group>"; };
-		33DF7EFB6E6F7E0F67ABE4CA /* KitsunebiSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KitsunebiSprite.swift; sourceTree = "<group>"; };
-		2B86B3A5E597A7CA708C62AD /* KappaSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KappaSprite.swift; sourceTree = "<group>"; };
-		0FEACD8457782914E9D9EA12 /* MokugyoSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MokugyoSprite.swift; sourceTree = "<group>"; };
-		F43DFE8382B8AB664C412C0A /* OniSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OniSprite.swift; sourceTree = "<group>"; };
+		001413CF9A7A8FDF377473F1 /* ParadeSpriteContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeSpriteContractTests.swift; sourceTree = "<group>"; };
+		009132A905A8FFC8AA18D877 /* UshimitsuWatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UshimitsuWatch.swift; sourceTree = "<group>"; };
 		025BE94FAA9D790E8896BF44 /* YagyoPlayerIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YagyoPlayerIntents.swift; sourceTree = "<group>"; };
+		0E6B14AD5D4ECFD7612C2114 /* MokugyoSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MokugyoSprite.swift; sourceTree = "<group>"; };
+		1CFBF588CF1E31687794A0D9 /* ParadeSignalReducerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeSignalReducerTests.swift; sourceTree = "<group>"; };
+		1D79A2E77CB916AA19944DD4 /* HitotsumeSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HitotsumeSprite.swift; sourceTree = "<group>"; };
+		211E911CF2068CBD0C91ED41 /* YokaiResidency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YokaiResidency.swift; sourceTree = "<group>"; };
+		2146EF91A8C1E23B7ECA1744 /* ParadePreviewHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadePreviewHarness.swift; sourceTree = "<group>"; };
 		25089FD8B7B3584C1950CD9B /* AudioTrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTrackTests.swift; sourceTree = "<group>"; };
-		1F2E3D4C5B6A798081920A3B /* AudioLibraryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLibraryStoreTests.swift; sourceTree = "<group>"; };
-		3F8A2C1D9B4E5678AFC05678 /* PlaybackControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackControllerTests.swift; sourceTree = "<group>"; };
-		9B63C5A4D8E142719F0A6B32 /* LibraryConfidenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryConfidenceTests.swift; sourceTree = "<group>"; };
-		7A4B2C9D1E6F8035A8B7C4D2 /* KarakasaQAArtifactTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KarakasaQAArtifactTests.swift; sourceTree = "<group>"; };
 		25C215A13FBD2FF5FA19ECFB /* YagyoPlayerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YagyoPlayerApp.swift; sourceTree = "<group>"; };
 		2A3693A3D5090FDEC93959BD /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		58E26516089682AF3581DD42 /* ParadeSignal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeSignal.swift; sourceTree = "<group>"; };
 		301E9CBCD2076B4C94F2C87F /* MusicKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MusicKit.framework; path = System/Library/Frameworks/MusicKit.framework; sourceTree = SDKROOT; };
 		33D8F8BED25A829B3E5EF537 /* AudioLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLibraryStore.swift; sourceTree = "<group>"; };
-		4044CF17D5AC4B92CC0F3C3B /* PixelSprites.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelSprites.swift; sourceTree = "<group>"; };
-		6389ED07ADB58D318A07CB3C /* KarakasaSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KarakasaSprite.swift; sourceTree = "<group>"; };
-		66DE83FC0E7196105934F455 /* UshimitsuWatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UshimitsuWatch.swift; sourceTree = "<group>"; };
-		B7D9E5953E0F9E6CC85DBCA3 /* YagyoParadeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YagyoParadeView.swift; sourceTree = "<group>"; };
-		D5A8E0F3C1B24769A4E81234 /* ParadePreviewHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadePreviewHarness.swift; sourceTree = "<group>"; };
+		43BAB562AE3CA0460CA4B562 /* PlaylistTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistTests.swift; sourceTree = "<group>"; };
 		52B6474115C670A861E1F6EC /* YagyoPlayer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = YagyoPlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		63FE3280631A2862C69B1D04 /* KappaSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KappaSprite.swift; sourceTree = "<group>"; };
+		65FBF30807B275C35C41EBEA /* TomoshibiSliderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TomoshibiSliderTests.swift; sourceTree = "<group>"; };
 		66B26F6B600C8B8FB1995EFA /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
+		6804412D06635CAC50D76D6B /* PixelSpriteContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelSpriteContractTests.swift; sourceTree = "<group>"; };
+		68DBF6895ABEFA01CE00C00D /* OniSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OniSprite.swift; sourceTree = "<group>"; };
+		6AACE23E11C8265F3EF22D39 /* ParadeSignal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeSignal.swift; sourceTree = "<group>"; };
+		6DB6D8B19BCAF942F13B4166 /* ParadeSignalCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeSignalCoordinatorTests.swift; sourceTree = "<group>"; };
+		728F7D81A7B4F5146A4DE9DA /* KitsunebiAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KitsunebiAnalyzer.swift; sourceTree = "<group>"; };
 		76389A5952E76C7CE5A22B96 /* AudioTrack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTrack.swift; sourceTree = "<group>"; };
-		A1B2C3D4E5F60718293A4B5C /* Playlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Playlist.swift; sourceTree = "<group>"; };
-		B2C3D4E5F60718293A4B5C6D /* PlaylistSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistSection.swift; sourceTree = "<group>"; };
-		C3D4E5F60718293A4B5C6D7E /* PlaylistTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistTests.swift; sourceTree = "<group>"; };
+		77E15846350731B2AD7F340D /* KarakasaSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KarakasaSprite.swift; sourceTree = "<group>"; };
+		7B3E9103C21666DF09B5B1F8 /* AudioLibraryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLibraryStoreTests.swift; sourceTree = "<group>"; };
 		7C108546297C058BDF30B16F /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
+		7E06CD6FA3AD454DCD485EF3 /* PlaybackControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackControllerTests.swift; sourceTree = "<group>"; };
 		7FEEC5F390CD3E9B6E288C6F /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		817E3E6F64CD12B7179418DF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		E9EF0E58BD669BF9DC7082D3 /* ParadeSignalReducerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeSignalReducerTests.swift; sourceTree = "<group>"; };
-		C7E4A1B8923D4F56A709BCDE /* ParadeSignalCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeSignalCoordinatorTests.swift; sourceTree = "<group>"; };
+		82313649B4E00E83BE7B7E39 /* PixelSprites.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelSprites.swift; sourceTree = "<group>"; };
+		8260ACDAEA6A60FE15F832E1 /* PlaylistSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistSection.swift; sourceTree = "<group>"; };
+		83946364362D7407E3A367B7 /* TenguSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TenguSprite.swift; sourceTree = "<group>"; };
+		84F9AC78171A2B8433ED3B5C /* KitsunebiAnalyzerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KitsunebiAnalyzerTests.swift; sourceTree = "<group>"; };
+		8754CE881480922F8BA507B6 /* ParadeSignalCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeSignalCoordinator.swift; sourceTree = "<group>"; };
+		8AE27C22EE5C6B775EF69776 /* Playlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Playlist.swift; sourceTree = "<group>"; };
+		99DFADEFD1438C21D0A4F055 /* YagyoParadeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YagyoParadeView.swift; sourceTree = "<group>"; };
+		9CD4AD4874067B45F463A885 /* BiwaBokubokuSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiwaBokubokuSprite.swift; sourceTree = "<group>"; };
+		9EAFF4117045C3BDB1268CDB /* TobariView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TobariView.swift; sourceTree = "<group>"; };
+		B1067EC58308362E47C91EF8 /* YokaiResidencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YokaiResidencyTests.swift; sourceTree = "<group>"; };
 		B13D8A65B01B04F9BD642237 /* VisualComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualComponents.swift; sourceTree = "<group>"; };
+		B4E5D333C49AE2E227C1355C /* YukiOnnaSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YukiOnnaSprite.swift; sourceTree = "<group>"; };
 		B81C4BE9E308A1B398FCC749 /* PlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackController.swift; sourceTree = "<group>"; };
-		A6F3C1D8E5B74029C4A791DE /* ParadeSignalCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeSignalCoordinator.swift; sourceTree = "<group>"; };
+		BFA4C657F8AD09963CB44EDB /* ParadeQAArtifactTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeQAArtifactTests.swift; sourceTree = "<group>"; };
+		C65840D328AB5AC39599FEBE /* LibraryConfidenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryConfidenceTests.swift; sourceTree = "<group>"; };
+		C9732B51F1B3925E0D4761DD /* KitsunebiSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KitsunebiSprite.swift; sourceTree = "<group>"; };
+		CA6A15F30AA2FF50F2E30F37 /* TobariMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TobariMetrics.swift; sourceTree = "<group>"; };
 		D79B2B99B83398BAB69DC334 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		DDC21A8FC3FC543E1CAE93C0 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
+		E123FD672A49450B4214834C /* KarakasaQAArtifactTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KarakasaQAArtifactTests.swift; sourceTree = "<group>"; };
 		E3041BBBEE3EE97F35C80624 /* YagyoPlayerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = YagyoPlayerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EA706A94AFF32D4A08A9A32F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		5517F1D3862B56B64A6F36B6 /* YokaiResidency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YokaiResidency.swift; sourceTree = "<group>"; };
-		FF7DA41CFBDA8507D6137D9B /* YokaiResidencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YokaiResidencyTests.swift; sourceTree = "<group>"; };
-		F8C546B469F4E3D3228C418D /* PixelSpriteContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelSpriteContractTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -151,7 +153,7 @@
 			children = (
 				DDC21A8FC3FC543E1CAE93C0 /* AppRouter.swift */,
 				D79B2B99B83398BAB69DC334 /* DesignTokens.swift */,
-				66DE83FC0E7196105934F455 /* UshimitsuWatch.swift */,
+				009132A905A8FFC8AA18D877 /* UshimitsuWatch.swift */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -169,22 +171,22 @@
 		93A657406EDC74EC63CF6A6E /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				9CD4AD4874067B45F463A885 /* BiwaBokubokuSprite.swift */,
 				2A3693A3D5090FDEC93959BD /* ContentView.swift */,
-				6389ED07ADB58D318A07CB3C /* KarakasaSprite.swift */,
-				FDF097A0028CDA64CFBA7F8A /* TobariView.swift */,
-				15D99DCD921C049DFC677FE5 /* HitotsumeSprite.swift */,
-				87F18DC2FF2B375DB5F1E022 /* BiwaBokubokuSprite.swift */,
-				B7FDCFB3DF8EC0D26DBCCBC5 /* YukiOnnaSprite.swift */,
-				792D7351BD947E833CB3B749 /* TenguSprite.swift */,
-				33DF7EFB6E6F7E0F67ABE4CA /* KitsunebiSprite.swift */,
-				2B86B3A5E597A7CA708C62AD /* KappaSprite.swift */,
-				0FEACD8457782914E9D9EA12 /* MokugyoSprite.swift */,
-				F43DFE8382B8AB664C412C0A /* OniSprite.swift */,
-				D5A8E0F3C1B24769A4E81234 /* ParadePreviewHarness.swift */,
-				4044CF17D5AC4B92CC0F3C3B /* PixelSprites.swift */,
-				B2C3D4E5F60718293A4B5C6D /* PlaylistSection.swift */,
+				1D79A2E77CB916AA19944DD4 /* HitotsumeSprite.swift */,
+				63FE3280631A2862C69B1D04 /* KappaSprite.swift */,
+				77E15846350731B2AD7F340D /* KarakasaSprite.swift */,
+				C9732B51F1B3925E0D4761DD /* KitsunebiSprite.swift */,
+				0E6B14AD5D4ECFD7612C2114 /* MokugyoSprite.swift */,
+				68DBF6895ABEFA01CE00C00D /* OniSprite.swift */,
+				2146EF91A8C1E23B7ECA1744 /* ParadePreviewHarness.swift */,
+				82313649B4E00E83BE7B7E39 /* PixelSprites.swift */,
+				8260ACDAEA6A60FE15F832E1 /* PlaylistSection.swift */,
+				83946364362D7407E3A367B7 /* TenguSprite.swift */,
+				9EAFF4117045C3BDB1268CDB /* TobariView.swift */,
 				B13D8A65B01B04F9BD642237 /* VisualComponents.swift */,
-				B7D9E5953E0F9E6CC85DBCA3 /* YagyoParadeView.swift */,
+				99DFADEFD1438C21D0A4F055 /* YagyoParadeView.swift */,
+				B4E5D333C49AE2E227C1355C /* YukiOnnaSprite.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -215,9 +217,9 @@
 			isa = PBXGroup;
 			children = (
 				33D8F8BED25A829B3E5EF537 /* AudioLibraryStore.swift */,
-				A6F3C1D8E5B74029C4A791DE /* ParadeSignalCoordinator.swift */,
+				728F7D81A7B4F5146A4DE9DA /* KitsunebiAnalyzer.swift */,
+				8754CE881480922F8BA507B6 /* ParadeSignalCoordinator.swift */,
 				B81C4BE9E308A1B398FCC749 /* PlaybackController.swift */,
-				0887E1A6BCF5C19B5BAE1389 /* KitsunebiAnalyzer.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -225,20 +227,21 @@
 		E513368DB58CA9D28D6F55F9 /* YagyoPlayerTests */ = {
 			isa = PBXGroup;
 			children = (
+				7B3E9103C21666DF09B5B1F8 /* AudioLibraryStoreTests.swift */,
 				25089FD8B7B3584C1950CD9B /* AudioTrackTests.swift */,
-				1F2E3D4C5B6A798081920A3B /* AudioLibraryStoreTests.swift */,
-				9B63C5A4D8E142719F0A6B32 /* LibraryConfidenceTests.swift */,
-				7A4B2C9D1E6F8035A8B7C4D2 /* KarakasaQAArtifactTests.swift */,
-				C7E4A1B8923D4F56A709BCDE /* ParadeSignalCoordinatorTests.swift */,
-				E9EF0E58BD669BF9DC7082D3 /* ParadeSignalReducerTests.swift */,
-				F8C546B469F4E3D3228C418D /* PixelSpriteContractTests.swift */,
-				7E98970C2DAAD137DC389549 /* KitsunebiAnalyzerTests.swift */,
-				FA1130E67D07919EBEE5AAED /* ParadeQAArtifactTests.swift */,
-				AEEADC11A0C18958A260CD7B /* ParadeSpriteContractTests.swift */,
-				3F8A2C1D9B4E5678AFC05678 /* PlaybackControllerTests.swift */,
 				817E3E6F64CD12B7179418DF /* Info.plist */,
-				C3D4E5F60718293A4B5C6D7E /* PlaylistTests.swift */,
-				FF7DA41CFBDA8507D6137D9B /* YokaiResidencyTests.swift */,
+				E123FD672A49450B4214834C /* KarakasaQAArtifactTests.swift */,
+				84F9AC78171A2B8433ED3B5C /* KitsunebiAnalyzerTests.swift */,
+				C65840D328AB5AC39599FEBE /* LibraryConfidenceTests.swift */,
+				BFA4C657F8AD09963CB44EDB /* ParadeQAArtifactTests.swift */,
+				6DB6D8B19BCAF942F13B4166 /* ParadeSignalCoordinatorTests.swift */,
+				1CFBF588CF1E31687794A0D9 /* ParadeSignalReducerTests.swift */,
+				001413CF9A7A8FDF377473F1 /* ParadeSpriteContractTests.swift */,
+				6804412D06635CAC50D76D6B /* PixelSpriteContractTests.swift */,
+				7E06CD6FA3AD454DCD485EF3 /* PlaybackControllerTests.swift */,
+				43BAB562AE3CA0460CA4B562 /* PlaylistTests.swift */,
+				65FBF30807B275C35C41EBEA /* TomoshibiSliderTests.swift */,
+				B1067EC58308362E47C91EF8 /* YokaiResidencyTests.swift */,
 			);
 			path = YagyoPlayerTests;
 			sourceTree = "<group>";
@@ -256,10 +259,10 @@
 			isa = PBXGroup;
 			children = (
 				76389A5952E76C7CE5A22B96 /* AudioTrack.swift */,
-				58E26516089682AF3581DD42 /* ParadeSignal.swift */,
-				A1B2C3D4E5F60718293A4B5C /* Playlist.swift */,
-				5517F1D3862B56B64A6F36B6 /* YokaiResidency.swift */,
-				D743EA7D320EF3CBF2BBD50B /* TobariMetrics.swift */,
+				6AACE23E11C8265F3EF22D39 /* ParadeSignal.swift */,
+				8AE27C22EE5C6B775EF69776 /* Playlist.swift */,
+				CA6A15F30AA2FF50F2E30F37 /* TobariMetrics.swift */,
+				211E911CF2068CBD0C91ED41 /* YokaiResidency.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -346,19 +349,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B3F5B378204D7103FD8928A7 /* AudioLibraryStoreTests.swift in Sources */,
 				8D11AB6599E537AB3E159AEF /* AudioTrackTests.swift in Sources */,
-				9A1B2C3D4E5F60718293A4B5 /* AudioLibraryStoreTests.swift in Sources */,
-				4D0B17E8F1C6423B9A51D02C /* LibraryConfidenceTests.swift in Sources */,
-				D3E8F1A5C7B24069E4D2A8F6 /* KarakasaQAArtifactTests.swift in Sources */,
-				29FD40AE7C156B83D904E2F1 /* ParadeSignalCoordinatorTests.swift in Sources */,
-				B4CD88C51960CB356BFE9C19 /* ParadeSignalReducerTests.swift in Sources */,
-				5CDD9938B803D6247E94C371 /* PixelSpriteContractTests.swift in Sources */,
-				787CA023E4FE5452C8B3D0DE /* KitsunebiAnalyzerTests.swift in Sources */,
-				D8A61D8E1FE17B857877CFFF /* ParadeQAArtifactTests.swift in Sources */,
-				E6F704DF7E1C372CA1160B0B /* ParadeSpriteContractTests.swift in Sources */,
-				3F8A2C1D9B4E5678AFC01234 /* PlaybackControllerTests.swift in Sources */,
-				7E6D5C4B3A2918070F6E5D4C /* PlaylistTests.swift in Sources */,
-				4A49F2C2AE9465A59D0019F9 /* YokaiResidencyTests.swift in Sources */,
+				C687972DD9B5BA09D861976D /* KarakasaQAArtifactTests.swift in Sources */,
+				5FD9162030ABDABD79B384FD /* KitsunebiAnalyzerTests.swift in Sources */,
+				C30AFF1D77D6C0C74B7ECFAB /* LibraryConfidenceTests.swift in Sources */,
+				87EEDAAE3677EE2CDC73D937 /* ParadeQAArtifactTests.swift in Sources */,
+				31E839318B25BEE3D93AD344 /* ParadeSignalCoordinatorTests.swift in Sources */,
+				5759F5907B82DE951D4188A7 /* ParadeSignalReducerTests.swift in Sources */,
+				428783E63D2D0AE684903631 /* ParadeSpriteContractTests.swift in Sources */,
+				174EE8DDA534F3C9230CD81D /* PixelSpriteContractTests.swift in Sources */,
+				3A2A8EAA663E2ADB181E7205 /* PlaybackControllerTests.swift in Sources */,
+				A9BE8B0491943FD5F76C952C /* PlaylistTests.swift in Sources */,
+				3CB032384D69A7037A7559DA /* TomoshibiSliderTests.swift in Sources */,
+				D83865F160C3623300CFE864 /* YokaiResidencyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -369,33 +373,33 @@
 				E208F7A31178FF01D3AF158D /* AppRouter.swift in Sources */,
 				E94E4371E099F8F5F912DF8E /* AudioLibraryStore.swift in Sources */,
 				ED30E11EDA4E3545119F08D0 /* AudioTrack.swift in Sources */,
+				96F4A4741E10379E249365C3 /* BiwaBokubokuSprite.swift in Sources */,
 				F553274643EE8B8A838C9B97 /* ContentView.swift in Sources */,
 				250E9A7346FB7374DD1960B8 /* DesignTokens.swift in Sources */,
-				5BD6A15264C17984A0B07F0B /* ParadeSignal.swift in Sources */,
-				6ACB2C6C0895CF954E44BC10 /* KarakasaSprite.swift in Sources */,
-				B58563AF89B5894026F925E4 /* TobariView.swift in Sources */,
-				787995BB5FEE366F1D7C656B /* HitotsumeSprite.swift in Sources */,
-				27B7676A4BC184B58323EC4C /* BiwaBokubokuSprite.swift in Sources */,
-				C86D685061115CF9A3E31F80 /* YukiOnnaSprite.swift in Sources */,
-				0D2A4DC80B22D1A521672A80 /* TenguSprite.swift in Sources */,
-				CBF4CB17F3B5F98ED5A57E75 /* KitsunebiSprite.swift in Sources */,
-				FBEBEDA9583923AC09842C32 /* KappaSprite.swift in Sources */,
-				1191402B0D6D806C47D5B57E /* MokugyoSprite.swift in Sources */,
-				3ED3AB97C7F40C08CF2D87D0 /* OniSprite.swift in Sources */,
-				136A42DFE6E979D39D727986 /* PixelSprites.swift in Sources */,
-				61C8D2E4F5A697B8031D4E6F /* ParadeSignalCoordinator.swift in Sources */,
+				62B57FB29513773755F9DC31 /* HitotsumeSprite.swift in Sources */,
+				FF98ED5802826FFDADD44189 /* KappaSprite.swift in Sources */,
+				5A52863C6DB5F98ECA8D660C /* KarakasaSprite.swift in Sources */,
+				D47882C1E920122B25AFAC67 /* KitsunebiAnalyzer.swift in Sources */,
+				38B7F549F94B4CFF5149FFA3 /* KitsunebiSprite.swift in Sources */,
+				1FE70D7A7E46D7B27565B9E7 /* MokugyoSprite.swift in Sources */,
+				D257D988D8E7900D0F493B22 /* OniSprite.swift in Sources */,
+				6C4CC5C120FDC8B7C00999AD /* ParadePreviewHarness.swift in Sources */,
+				8C0AD7765907DC32D5C43034 /* ParadeSignal.swift in Sources */,
+				8B4DE6F10F3505EBE456237A /* ParadeSignalCoordinator.swift in Sources */,
+				D8BDCB51518C4D326E8126FD /* PixelSprites.swift in Sources */,
 				6CF615A930DE9D845F3F57C3 /* PlaybackController.swift in Sources */,
-				C3CC71C37266A61AFD475C2A /* KitsunebiAnalyzer.swift in Sources */,
-				5C4B3A2918070F6E5D4C3B2A /* Playlist.swift in Sources */,
-				6D5C4B3A2918070F6E5D4C3B /* PlaylistSection.swift in Sources */,
-				50723FFDABDE8219969C9C02 /* UshimitsuWatch.swift in Sources */,
+				B89BF864B9C26F21D2722D93 /* Playlist.swift in Sources */,
+				61BAD1FE4C2E56B48EDA17E6 /* PlaylistSection.swift in Sources */,
+				FC05AA913DF02F6DCEA9BC9F /* TenguSprite.swift in Sources */,
+				2132FE71B2915F38C48988C4 /* TobariMetrics.swift in Sources */,
+				546B53B8117CC4C83804A589 /* TobariView.swift in Sources */,
+				3E00AE61C5997249328D5DB6 /* UshimitsuWatch.swift in Sources */,
 				B19BADCB0624C48620272C1D /* VisualComponents.swift in Sources */,
-				A473E640BC086F2589647E53 /* YagyoParadeView.swift in Sources */,
-				E6B9F104D2C3587AB5F92345 /* ParadePreviewHarness.swift in Sources */,
-				A8949AA41A1CB98A1CDA2BA2 /* YokaiResidency.swift in Sources */,
-				2564B48BDB301D4C221EEB6F /* TobariMetrics.swift in Sources */,
+				F277B9BD9D60634F9BDF94A4 /* YagyoParadeView.swift in Sources */,
 				A703B0828489B95B8B9FB869 /* YagyoPlayerApp.swift in Sources */,
 				B4C130EA40CACEAF7872EDED /* YagyoPlayerIntents.swift in Sources */,
+				08565A8E00FC14E57CFDE559 /* YokaiResidency.swift in Sources */,
+				0F6FBE0EB4856809EED5B22E /* YukiOnnaSprite.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -356,8 +356,7 @@ private struct TransportView: View {
             HStack(spacing: 10) {
                 Image(systemName: "speaker.wave.1.fill")
                     .foregroundStyle(YagyoColor.dim)
-                Slider(value: volumeBinding, in: 0...1)
-                    .tint(YagyoColor.kitsunebi)
+                TomoshibiSlider(value: volumeBinding)
                 Image(systemName: "speaker.wave.3.fill")
                     .foregroundStyle(YagyoColor.dim)
             }
