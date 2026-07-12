@@ -6,7 +6,7 @@
 
 Step 4 feature branch では、15 Hz の `AVAudioPlayer.averagePower` から得る単一の `ParadeSignalSnapshot` を、小さな `ReactiveVisualStage` だけが coordinator から購読する。この wrapper が snapshot を夜行絵巻へ、snapshot の `level / activity / levelBand` を円形波形へ渡し、root `ContentView` やライブラリ全体を 15 Hz 更新へ巻き込まない。snapshot は `level / activity / strongPhase / strongSequence` を持ち、停止、meter 利用不可、`quietProxy`、通常状態を区別する。現在トラックの resident は固定 roster による互換割当を保ったまま先導へ移る。
 
-これはまだ製品版の完成表示ではない。現在の唐傘候補は、赤〜珊瑚色の正面円錐形、茶色の頭頂と金帯、中央の一つ目、笑い口と桃色の舌、淡色の一本足、一足の下駄を全8枚で共有する。`.open` は互換性のための内部phase名で、見た目は横へ開いた傘ではなく正面reactionである。Xcode 27.0のgeneric iOS buildに成功し、checked projectをiOS 27のiPhone 17 Pro destinationでfocused QA **11 / 11**、full suite **65 / 65**（いずれもskip 0）まで完了した。座標tapを使わないsemantic AX validationは、iPhone 17 Proのstate matrix **4 / 4**とReduce Motion stability **1 / 1**、最小幅iPhone 17eのdefault Normal + Karakasa **1 / 1**をskip 0で通過した。Reduce Motionの`t0`／`t+2 s` full PNGは同一で、canvas cropのdiffering bytesも0である。最初の17e menu試行失敗とauto diagnostics終了は除外し、follow-up GREENを正本とする。[現在の証跡ledger](evidence/step4-karakasa/README.md)に画像とhashを集約し、2名の独立native reviewerがcontact sheet／GIFとSimulator画像7枚をすべてAPPROVEDした（BLOCKER／MAJOR／MINOR 0）。Pro Strongの右端寄りは切断なしのINFOだけである。binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`で9 binary hash、旧5画像削除、画像link、Draft PR本文も確認した。ユーザー本人の見た目承認は残っている。旧32件／57件と、紫色・横向き／長い柄・横に開いた唐傘の旧画像はsupersededで、現在候補の視覚証拠には使わない。残り7体と一つ目小僧は follow-up branch で同じ40×48契約へ描き直し済みで混在画風は解消したが、ユーザー承認まではDraft PR系列に留め、`main`へ統合しない。
+これはまだ製品版の完成表示ではない。現在の唐傘候補は、赤〜珊瑚色の正面円錐形、茶色の頭頂と金帯、中央の一つ目、笑い口と桃色の舌、淡色の一本足、一足の下駄を全8枚で共有する。`.open` は互換性のための内部phase名で、見た目は横へ開いた傘ではなく正面reactionである。Xcode 27.0のgeneric iOS buildに成功し、checked projectをiOS 27のiPhone 17 Pro destinationでfocused QA **11 / 11**、full suite **65 / 65**（いずれもskip 0）まで完了した。座標tapを使わないsemantic AX validationは、iPhone 17 Proのstate matrix **4 / 4**とReduce Motion stability **1 / 1**、最小幅iPhone 17eのdefault Normal + Karakasa **1 / 1**をskip 0で通過した。Reduce Motionの`t0`／`t+2 s` full PNGは同一で、canvas cropのdiffering bytesも0である。最初の17e menu試行失敗とauto diagnostics終了は除外し、follow-up GREENを正本とする。[現在の証跡ledger](evidence/step4-karakasa/README.md)に画像とhashを集約し、2名の独立native reviewerがcontact sheet／GIFとSimulator画像7枚をすべてAPPROVEDした（BLOCKER／MAJOR／MINOR 0）。Pro Strongの右端寄りは切断なしのINFOだけである。binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`で9 binary hash、旧5画像削除、画像link、Draft PR本文も確認した。2026-07-12にユーザー本人が唐傘(PR #13)と残り8体(PR #14)の見た目を承認し、Step 4は`main`へ統合済み。旧32件／57件と、紫色・横向き／長い柄・横に開いた唐傘の旧画像はsupersededで、現行の視覚証拠には使わない。行列9体はすべて同じ40×48契約で、混在画風は解消済み。
 
 | 入力・状態 | snapshot と表示 | 現在地 |
 |---|---|---|
@@ -62,7 +62,7 @@ Step 4 feature branch では、15 Hz の `AVAudioPlayer.averagePower` から得�
 3. 残り7体と一つ目小僧について、各状態と必要フレームの matrix を[別仕様](superpowers/specs/2026-07-12-remaining-yokai-frame-matrix.md)として提示する（完了）。
 4. その matrix に基づく残り8体の制作・構造検証・独立視覚QA・Simulator検収(iOS 26.5)は完了し、2026-07-12にPR #14でユーザー本人が見た目を承認した。[証跡ledger](evidence/step4-remaining-yokai/README.md)を正本とする。
 
-残るゲートは唐傘本体(Draft PR #13)の承認と `main` 統合のみ。背景用の大判妖怪（例: 125×105 のがしゃどくろ案）の規格を、40×48 の行列規格へ流用しない。
+唐傘本体も2026-07-12にPR #13で承認され、Step 4は`main`統合まで完了した。背景用の大判妖怪（例: 125×105 のがしゃどくろ案）の規格を、40×48 の行列規格へ流用しない。
 
 ## デザイントークン
 
@@ -107,6 +107,7 @@ Step 4 feature branch では、15 Hz の `AVAudioPlayer.averagePower` から得�
 
 ## 更新履歴
 
+- 2026-07-12: ユーザー本人が唐傘(PR #13)と残り8体(PR #14)の見た目を承認し、Step 4「夜行絵巻 2.0」を`main`へ統合。行列9体の40×48統一・視覚reducer・resident先導・Reduce Motion/VoiceOver代替が正式にmainの現在地となる。
 - 2026-07-12: 残り7体+一つ目小僧の frame matrix 仕様と40×48描き直しを follow-up branch へ追加。旧8bitアート・3倍表示・view側のrect変形反応（持ち上げ／squash／flare／バチ別描画）を撤去し、strong を frame-based の anticipate → reaction へ統一。構造検証と独立視覚QAまで完了、Mac側検証とユーザー見た目承認は未完了。
 - 2026-07-12: 参照忠実な赤い正面唐傘のcurrent evidence ledgerへ更新。Xcode 27.0 generic build、iOS 27 focused 11 / 11、full 65 / 65、Pro semantic AX 4 + 1、17e 1 / 1（すべてskip 0）と、Reduce Motionの完全同一PNG／crop差分0を反映。2名の独立native visual QAは全9 artifactをAPPROVED、BLOCKER／MAJOR／MINOR 0。GitHub binary evidence commit／9 blob／旧5画像削除／Draft PRを確認済み。ユーザー本人の見た目承認だけが未完了。初期の紫色・横向き／開いた唐傘、旧32件／57件、旧Simulator画像はsuperseded。
 - 2026-07-12（初期記録・superseded）: Step 4 唐傘縦切りの snapshot 振付、正式翻訳帳、resident / 統計の現在地、40×48 基準体と承認ゲートへ同期。当時のiPhone 17 Pro・最小幅iPhone 17eのSimulator画像は、後に不採用となった初期唐傘を写した履歴であり、現在候補の証拠には使用しない。

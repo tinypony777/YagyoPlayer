@@ -1,7 +1,7 @@
 # 夜行絵巻 2.0 — 唐傘基準体と正直な音量振付 設計仕様
 
 **日付:** 2026-07-11
-**状態:** 方針・記述仕様承認済み・feature branch実装済み。初期の紫色・横向き唐傘とそのSimulator証跡は不採用。参照忠実度再設計のbuild／tests／semantic AX／2名の独立native visual QA／GitHub証跡同期まで完了し、ユーザー本人の見た目承認待ち
+**状態:** 完了。初期の紫色・横向き唐傘とそのSimulator証跡は不採用。参照忠実度再設計の検証・独立QAを経て、2026-07-12にユーザー本人が唐傘(PR #13)と残り8体(PR #14)の見た目を承認し、Step 4は`main`へ統合済み
 **対象:** Step 4「夜行絵巻 2.0」の最初の唐傘縦切り。残りの妖怪へ展開する前提となる共通契約
 
 > **2026-07-12 追補・優先関係:** 唐傘の色、姿勢、輪郭、部位、`strong` の見た目は [`2026-07-12-karakasa-reference-fidelity-redesign.md`](./2026-07-12-karakasa-reference-fidelity-redesign.md) と、その [`implementation plan`](../plans/2026-07-12-karakasa-reference-fidelity-implementation.md) を正本とする。本書に残る初期の紫パレット、横向き／長い柄、横に開いた傘の記述と、それを写した検証結果は履歴としてのみ保存され、現行アート仕様・視覚承認証跡には使用しない。reducer の互換フェーズ名 `.open`、`strongOpen`、旧ファイル名に含まれる `open` は残してよいが、見た目は「傘を横に開く」ではなく正面姿勢の reaction を意味する。
