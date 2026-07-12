@@ -382,7 +382,7 @@ final class KitsunebiAnalyzerTests: XCTestCase {
             integratedLUFS: -12.4,
             maxShortTermLUFS: -9.8,
             samplePeakDBFS: -0.31,
-            truePeakDBTP: -0.12,
+            truePeakDBTP: 0.12,
             clipRunCount: 2,
             clipRunSeconds: [63.2, 148.7],
             stereoCorrelation: 0.14
@@ -563,12 +563,19 @@ final class KitsunebiAnalyzerTests: XCTestCase {
         XCTAssertTrue(clean.suggestions.isEmpty)
 
         var hot = clean
-        hot.truePeakDBTP = -0.2
+        hot.truePeakDBTP = 0.4
         hot.clipRunCount = 3
         hot.clipRunSeconds = [1.0, 2.0, 3.0]
         hot.stereoCorrelation = -0.4
         let suggestions = hot.suggestions
         XCTAssertEqual(suggestions.count, 3)
         XCTAssertEqual(Set(suggestions.map(\.id)), ["truePeak", "clip", "monoCompat"])
+
+        // -1.0〜0 dBTPの帯はマスター段階で気にしない(作者判断 2026-07-13):
+        // ロスレス再生は0 dBTPまで問題なく、配信プラットフォームは
+        // ノーマライズ時にTrue Peak側も面倒を見る。提案は0 dBTP超のみ。
+        var streamingLoud = clean
+        streamingLoud.truePeakDBTP = -0.2
+        XCTAssertTrue(streamingLoud.suggestions.isEmpty)
     }
 }

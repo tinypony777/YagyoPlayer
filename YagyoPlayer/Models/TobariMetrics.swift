@@ -53,11 +53,15 @@ extension TobariMetrics {
     var suggestions: [TobariSuggestion] {
         var results: [TobariSuggestion] = []
 
-        if let truePeakDBTP, truePeakDBTP > -1.0 {
+        // True Peakの提案は0 dBTP超のみ(作者判断 2026-07-13)。ロスレス再生は
+        // 0 dBTPまで問題なく、配信プラットフォームはノーマライズ時にTrue Peak側も
+        // 補正するため、-1.0 dBTPの余裕はマスター段階で気にする必要がない。
+        // 0 dBTP超はデコードや再生機器でクリップし得る実害があるときだけ知らせる。
+        if let truePeakDBTP, truePeakDBTP > 0.0 {
             results.append(
                 TobariSuggestion(
                     id: "truePeak",
-                    text: "書き出し時のリミッタ余裕(-1.0 dBTP以下)の確認を提案します。",
+                    text: "0 dBTPを超えるインターサンプルピークがあります。再生環境によってはクリップし得るため、気になる場合のみ書き出しを見直してください。",
                     basis: String(format: "True Peak %.2f dBTP", truePeakDBTP)
                 )
             )
