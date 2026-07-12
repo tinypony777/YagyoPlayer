@@ -311,13 +311,14 @@ struct TomoshibiSlider: View {
     /// VoiceOver `.adjustable` の一歩(5%)。
     static let nudgeStep = 0.05
 
-    private let knobDiameter: CGFloat = 14
+    /// 提灯玉ノブの直径。ノブ中心の可動域 [r, width - r] が値域0〜1に対応する。
+    static let knobDiameter: CGFloat = 14
 
     var body: some View {
         GeometryReader { geometry in
             let width = geometry.size.width
-            let knobRadius = knobDiameter / 2
-            let knobCenterX = knobRadius + CGFloat(value) * max(0, width - knobDiameter)
+            let knobRadius = Self.knobDiameter / 2
+            let knobCenterX = knobRadius + CGFloat(value) * max(0, width - Self.knobDiameter)
             let glowsStronger = isDragging && !reduceMotion
 
             ZStack(alignment: .leading) {
@@ -338,7 +339,7 @@ struct TomoshibiSlider: View {
 
                 Circle()
                     .fill(YagyoColor.chochin)
-                    .frame(width: knobDiameter, height: knobDiameter)
+                    .frame(width: Self.knobDiameter, height: Self.knobDiameter)
                     .shadow(
                         color: YagyoColor.chochin.opacity(glowsStronger ? 0.75 : 0.45),
                         radius: glowsStronger ? 8 : 5
@@ -367,10 +368,13 @@ struct TomoshibiSlider: View {
         }
     }
 
-    /// タップ/ドラッグ位置を0〜1の値へ写す。幅が無いときは0。
+    /// タップ/ドラッグ位置を0〜1の値へ写す。ノブ中心の可動域 [r, width - r] を
+    /// 値域に対応させ、表示側(knobCenterX)の逆写像にする — ノブ上から
+    /// ドラッグを始めても値が跳ばない。可動域が無いときは0。
     static func fraction(at x: CGFloat, width: CGFloat) -> Double {
-        guard width > 0 else { return 0 }
-        return min(max(Double(x / width), 0), 1)
+        let travel = width - knobDiameter
+        guard travel > 0 else { return 0 }
+        return min(max(Double((x - knobDiameter / 2) / travel), 0), 1)
     }
 
     /// VoiceOverの増減一歩。0〜1で留める。

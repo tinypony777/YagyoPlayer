@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 import XCTest
 @testable import YagyoPlayer
@@ -20,6 +21,19 @@ final class TomoshibiSliderTests: XCTestCase {
 
     func testFractionGuardsAgainstZeroWidth() {
         XCTAssertEqual(TomoshibiSlider.fraction(at: 10, width: 0), 0)
+    }
+
+    // ノブ中心の可動域は [r, width - r]。表示(knobCenterX)と操作(fraction)が
+    // 同じ写像でないと、ノブ上からのドラッグ開始で値が跳ぶ(Copilot指摘)。
+
+    func testFractionMapsKnobCenterAtLeftEdgeToZero() {
+        let radius = TomoshibiSlider.knobDiameter / 2
+        XCTAssertEqual(TomoshibiSlider.fraction(at: radius, width: 100), 0)
+    }
+
+    func testFractionMapsKnobCenterAtRightEdgeToOne() {
+        let radius = TomoshibiSlider.knobDiameter / 2
+        XCTAssertEqual(TomoshibiSlider.fraction(at: 100 - radius, width: 100), 1)
     }
 
     // MARK: - VoiceOver adjustable の増減
