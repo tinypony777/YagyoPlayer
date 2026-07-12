@@ -17,6 +17,14 @@ final class TobariAnalysisController: ObservableObject {
 
     private var started = false
 
+    /// QA artifact / プレビュー用: 解析せず結果を直接表示する。
+    init(presenting metrics: TobariMetrics? = nil) {
+        if let metrics {
+            started = true
+            state = .finished(metrics)
+        }
+    }
+
     func start(track: AudioTrack, library: AudioLibraryStore) {
         guard !started else { return }
         started = true
@@ -109,8 +117,16 @@ struct TobariView: View {
     let track: AudioTrack
 
     @EnvironmentObject private var library: AudioLibraryStore
-    @StateObject private var controller = TobariAnalysisController()
+    @StateObject private var controller: TobariAnalysisController
     @Environment(\.dismiss) private var dismiss
+
+    /// `presetMetrics` はQA artifact / プレビュー用(解析を走らせず結果を描く)。
+    init(track: AudioTrack, presetMetrics: TobariMetrics? = nil) {
+        self.track = track
+        _controller = StateObject(
+            wrappedValue: TobariAnalysisController(presenting: presetMetrics)
+        )
+    }
 
     var body: some View {
         ZStack {
