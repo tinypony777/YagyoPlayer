@@ -96,7 +96,7 @@ residency は各トラックに安定して住み着く妖怪を割り当てる�
 - 共有シート/「このAppで開く」/AirDrop からの直接取込(バウンスした音源を一手順で開けること)。
 - すべて非破壊。すべての提案に根拠(「80Hz 周辺のエネルギーが参照曲より +3dB」)。
 - 共存規則(§3)に従い、数値が主役のときは絵巻が退く。
-- **現在地(正直に)**: すべて未実装。
+- **現在地(正直に)**: Phase A(一画面検聴)のコードとユニットテストを実装済み。ITU-R BS.1770-4のIntegrated/Max Short-term、Sample Peak、True Peak(4x)、クリップ疑いラン、モノ互換相関を、[Mastering-App](https://github.com/tinypony777/Mastering-App)のDSPコアを補修して移植した([証跡](evidence/step5-tobari/README.md))。Mac側のビルド・full suite・Simulator確認・ユーザー本人の確認は未完了。A/B参照(Phase B)、チェックポイント(C)、共有シート取込(D)は未実装。
 
 ## 5. 建設順序
 

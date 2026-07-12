@@ -27,6 +27,9 @@ struct AudioTrack: Identifiable, Codable, Hashable, Sendable {
     /// ユーザーのメモ。
     var notes: String?
 
+    /// 狐火の帳(Step 5)の検聴キャッシュ。optional で library.json 後方互換。
+    var tobariMetrics: TobariMetrics?
+
     init(
         id: UUID = UUID(),
         title: String,
@@ -40,7 +43,8 @@ struct AudioTrack: Identifiable, Codable, Hashable, Sendable {
         playCount: Int? = nil,
         lastPlayedAt: Date? = nil,
         playHourCounts: [String: Int]? = nil,
-        notes: String? = nil
+        notes: String? = nil,
+        tobariMetrics: TobariMetrics? = nil
     ) {
         self.id = id
         self.title = title
@@ -55,6 +59,7 @@ struct AudioTrack: Identifiable, Codable, Hashable, Sendable {
         self.lastPlayedAt = lastPlayedAt
         self.playHourCounts = playHourCounts
         self.notes = notes
+        self.tobariMetrics = tobariMetrics
     }
 
     /// 再生イベントを 1 回分記録する。

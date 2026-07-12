@@ -213,6 +213,48 @@ final class AudioLibraryStore: ObservableObject {
         }
     }
 
+    /// Step 5 — 狐火の帳: contentHash のbackfill用計算。ファイル全読みのSHA-256になる
+    /// ため、メインスレッドでは呼ばずバックグラウンドから使う(失敗時は nil)。
+    nonisolated static func computeContentHash(of url: URL) -> String? {
+        try? sha256Hex(of: url)
+    }
+
+    /// バックグラウンドで計算した contentHash を旧トラックへ反映・永続化する。
+    /// すでに値を持つトラックは変更しない。保存失敗時はメモリ上もロールバックする。
+    func applyBackfilledContentHash(_ hash: String, for trackID: AudioTrack.ID) {
+        guard let index = tracks.firstIndex(where: { $0.id == trackID }),
+              tracks[index].contentHash == nil else { return }
+        tracks[index].contentHash = hash
+        do {
+            try save()
+            persistenceErrorMessage = nil
+        } catch {
+            tracks[index].contentHash = nil
+            persistenceErrorMessage = "Content hash could not be saved: \(error.localizedDescription)"
+        }
+    }
+
+    /// Step 5 — 狐火の帳: 検聴結果を library.json へキャッシュする。
+    /// 保存失敗時はメモリ上もロールバックする(他の編集系と同じ不変条件)。
+    func storeTobariMetrics(_ metrics: TobariMetrics, for trackID: AudioTrack.ID) {
+        guard let index = tracks.firstIndex(where: { $0.id == trackID }) else { return }
+        let previous = tracks[index].tobariMetrics
+        tracks[index].tobariMetrics = metrics
+        do {
+            try save()
+            persistenceErrorMessage = nil
+        } catch {
+            tracks[index].tobariMetrics = previous
+            persistenceErrorMessage = "Tobari metrics could not be saved: \(error.localizedDescription)"
+        }
+    }
+
+    /// Step 5 — 狐火の帳: 同一 contentHash を持つ別トラックの有効なキャッシュを返す。
+    /// 重複取込された同一音源の再解析を省く(§6)。
+    func sharedTobariMetrics(matching contentHash: String) -> TobariMetrics? {
+        tracks.compactMap(\.tobariMetrics).first { $0.isValidCache(for: contentHash) }
+    }
+
     /// Step 2 — Library Confidence: title / artist / artwork / notes を編集して永続化する。
     @discardableResult
     func updateMetadata(
@@ -533,9 +575,10 @@ final class AudioLibraryStore: ObservableObject {
     }
 
     /// ファイル全体の SHA-256 をチャンク読みで計算する(大きな音源でもメモリを圧迫しない)。
-    private static let hashChunkSize = 1_048_576
+    /// actor状態に触れない純関数のため nonisolated(バックグラウンドのbackfillからも使う)。
+    private nonisolated static let hashChunkSize = 1_048_576
 
-    private static func sha256Hex(of url: URL) throws -> String {
+    private nonisolated static func sha256Hex(of url: URL) throws -> String {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
 

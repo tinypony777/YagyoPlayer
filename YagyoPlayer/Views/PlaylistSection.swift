@@ -236,7 +236,19 @@ private struct PlaylistTrackRow: View {
 
     var body: some View {
         Button {
-            player.load(track, from: library, autoplay: true, context: .playlist(playlist.id))
+            if player.currentTrack?.id == track.id {
+                // いま流れている曲は頭出しし直さない。この行がpause表示なら止め、
+                // 文脈違い(行列や別の巻物で再生中)ならこの巻物へ文脈だけ移す。
+                let wasShowingPause = isCurrent && player.isPlaying
+                player.adoptContext(.playlist(playlist.id), from: library)
+                if wasShowingPause {
+                    player.pause()
+                } else if !player.isPlaying {
+                    player.play()
+                }
+            } else {
+                player.load(track, from: library, autoplay: true, context: .playlist(playlist.id))
+            }
         } label: {
             HStack(spacing: 10) {
                 Text("\(position + 1)")
