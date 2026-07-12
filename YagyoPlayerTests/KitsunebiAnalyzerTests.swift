@@ -402,8 +402,16 @@ final class KitsunebiAnalyzerTests: XCTestCase {
 
         // ImageRendererはScrollView内のコンテンツを描画しないため、
         // 実ウィンドウにホストしてレイアウトさせてから drawHierarchy で写す。
+        // シーンベースアプリではwindowSceneへ載せないと描画されない。
+        let scene = try XCTUnwrap(
+            UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first,
+            "テストホストのUIWindowSceneが見つかりません"
+        )
         let host = UIHostingController(rootView: view)
-        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 393, height: 852))
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 393, height: 852)
         window.overrideUserInterfaceStyle = .dark
         window.rootViewController = host
         window.makeKeyAndVisible()
@@ -418,6 +426,12 @@ final class KitsunebiAnalyzerTests: XCTestCase {
             window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
         }
         window.isHidden = true
+
+        // ほぼ単色(真っ白/真っ黒)なら描画に失敗している — artifactを黙って残さない。
+        XCTAssertGreaterThan(
+            pixelSpread(of: image), 60,
+            "帳のスクリーンショットがほぼ単色 — 描画に失敗しています"
+        )
         let data = try XCTUnwrap(image.pngData(), "PNGへ変換できません")
         XCTAssertFalse(data.isEmpty)
 
@@ -428,6 +442,26 @@ final class KitsunebiAnalyzerTests: XCTestCase {
         attachment.name = "tobari-screen.png"
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    /// 16x16へ縮小したときの画素値の広がり。単色画像は0に近い。
+    private func pixelSpread(of image: UIImage) -> Int {
+        guard let cgImage = image.cgImage else { return 0 }
+        let side = 16
+        var buffer = [UInt8](repeating: 0, count: side * side * 4)
+        guard let context = CGContext(
+            data: &buffer,
+            width: side,
+            height: side,
+            bitsPerComponent: 8,
+            bytesPerRow: side * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return 0 }
+        context.interpolationQuality = .medium
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: side, height: side))
+        guard let minimum = buffer.min(), let maximum = buffer.max() else { return 0 }
+        return Int(maximum) - Int(minimum)
     }
 
     // MARK: - キャッシュ契約
