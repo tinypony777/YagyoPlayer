@@ -108,7 +108,7 @@ Step 4 では、毎秒15回(15 Hz周期)で読む `AVAudioPlayer.averagePower` �
 ## 更新履歴
 
 - 2026-07-12: **Step 5「狐火の帳」Phase A完了**。ユーザー本人がiPhone実機で確認しPR #16を承認、`main`へ統合。full suite 100/100(Xcode 27.0)、EBU基準系-20 LUFS・44.1kHz適合・True Peakオーバーシュート等をテストで固定。独立レビュー4体+Copilot/Codexの指摘(44.1kHz係数の規格不適合、非有限値のJSON汚染、チャンネルレイアウト解決ほか)をすべて検証・反映。実機フィードバック2件(行ボタンの頭出し、フィルタ行の重なり)も修正済み。
-- 2026-07-12: Step 5「狐火の帳」Phase A(一画面検聴)のDSP解析エンジン・検聴キャッシュ・帳UI・既知信号ユニットテストを実装([証跡](evidence/step5-tobari/README.md))。Mastering-AppのDSPコアを仕様の補修2点(Short-termのstreaming化、クリップ疑いの連続ラン化)込みで移植し、期待値はPython参照ミラーで導出。Mac側ビルド・Simulator確認・ユーザー本人の確認は未完了。
+- 2026-07-12(初期記録・superseded): Step 5「狐火の帳」Phase A(一画面検聴)のDSP解析エンジン・検聴キャッシュ・帳UI・既知信号ユニットテストを実装([証跡](evidence/step5-tobari/README.md))。Mastering-AppのDSPコアを仕様の補修2点(Short-termのstreaming化、クリップ疑いの連続ラン化)込みで移植し、期待値はPython参照ミラーで導出。当時未完了だったMac側ビルド・Simulator確認・ユーザー本人の確認は、上の完了エントリのとおりすべて完了済み。
 - 2026-07-12: ユーザー本人が唐傘(PR #13)と残り8体(PR #14)の見た目を承認し、Step 4「夜行絵巻 2.0」を`main`へ統合。行列9体の40×48統一・視覚reducer・resident先導・Reduce Motion/VoiceOver代替が正式にmainの現在地となる。
 - 2026-07-12: 残り7体+一つ目小僧の frame matrix 仕様と40×48描き直しを follow-up branch へ追加。旧8bitアート・3倍表示・view側のrect変形反応（持ち上げ／squash／flare／バチ別描画）を撤去し、strong を frame-based の anticipate → reaction へ統一。構造検証と独立視覚QAまで完了、Mac側検証とユーザー見た目承認は未完了。
 - 2026-07-12: 参照忠実な赤い正面唐傘のcurrent evidence ledgerへ更新。Xcode 27.0 generic build、iOS 27 focused 11 / 11、full 65 / 65、Pro semantic AX 4 + 1、17e 1 / 1（すべてskip 0）と、Reduce Motionの完全同一PNG／crop差分0を反映。2名の独立native visual QAは全9 artifactをAPPROVED、BLOCKER／MAJOR／MINOR 0。GitHub binary evidence commit／9 blob／旧5画像削除／Draft PRを確認済み。ユーザー本人の見た目承認だけが未完了。初期の紫色・横向き／開いた唐傘、旧32件／57件、旧Simulator画像はsuperseded。
