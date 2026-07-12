@@ -40,10 +40,8 @@ struct YagyoParadeView: View {
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
     private static let launch = Date()
-    private static let legacySpriteScale: Double = 3
-    private static let karakasaSpriteScale: Double = 2
+    private static let spriteScale: Double = 2
     private static let moonRadius: Double = 19
-    private static let strongReactiveIDs: Set<String> = ["oni", "mokugyo", "kasa", "kitsune", "tengu"]
 
     private var reduceMotion: Bool {
         ParadeMotionPreference.resolve(
@@ -332,7 +330,6 @@ struct YagyoParadeView: View {
         let ground = height - 20
 
         for (index, sprite) in walkers.enumerated() {
-            let isExtra = sprite.id == "hitotsume"
             let x = ParadeProcessionLayout.xPosition(
                 index: index,
                 walkerCount: walkers.count,
@@ -344,46 +341,35 @@ struct YagyoParadeView: View {
             guard let frame = frame(for: sprite, time: time) else { continue }
 
             let bob = bobOffset(index: index, time: time)
-            let strongAmount = strongReactionAmount
-            let reactsToStrong = !isExtra && Self.strongReactiveIDs.contains(sprite.id)
-            let lift = !reduceMotion && sprite.id == "oni" && reactsToStrong ? 4 * strongAmount : 0
-            let scale = sprite.id == "kasa" ? Self.karakasaSpriteScale : Self.legacySpriteScale
-            let baseWidth = Double(frame.pixelWidth) * scale
-            let baseHeight = Double(frame.pixelHeight) * scale
-            var drawWidth = baseWidth
-            var drawHeight = baseHeight
-
-            if !reduceMotion, reactsToStrong {
-                if sprite.id == "kitsune", sprite.flare {
-                    drawWidth *= 1 + 0.22 * strongAmount
-                    drawHeight *= 1 + 0.22 * strongAmount
-                }
-                if sprite.id == "mokugyo", sprite.squash {
-                    drawHeight *= 1 - 0.16 * strongAmount
-                }
-            }
-
             let rect = CGRect(
-                x: x - (drawWidth - baseWidth) / 2,
-                y: ground - drawHeight - bob - lift,
-                width: drawWidth,
-                height: drawHeight
+                x: x,
+                y: ground - Double(frame.pixelHeight) * Self.spriteScale - bob,
+                width: Double(frame.pixelWidth) * Self.spriteScale,
+                height: Double(frame.pixelHeight) * Self.spriteScale
             )
             context.draw(frame.image, in: rect)
 
-            if sprite.id == "mokugyo", reactsToStrong {
-                drawMokugyoStick(in: &context, beside: rect, strongAmount: strongAmount)
-            }
-
             let isResident = index == 0 && residentSpriteID == sprite.id
             if isResident {
-                drawResidentMarker(in: &context, above: rect)
+                // 契約上の透明上余白ぶん浮かないよう、安定した idle の本体bboxへ合わせる。
+                let anchor = sprite.idleFrame ?? frame
+                drawResidentMarker(in: &context, above: contentRect(of: anchor, drawnIn: rect))
             }
 
-            if reduceMotion, isStrongActive, reactsToStrong {
-                drawStaticStrongOutline(in: &context, around: rect)
+            if reduceMotion, isStrongActive, !sprite.strongFrames.isEmpty {
+                drawStaticStrongOutline(in: &context, around: contentRect(of: frame, drawnIn: rect))
             }
         }
+    }
+
+    /// キャンバス全体の描画rectから、フレームの不透明bboxが占める画面上のrectを得る。
+    private func contentRect(of frame: SpriteFrame, drawnIn rect: CGRect) -> CGRect {
+        CGRect(
+            x: rect.minX + frame.contentRect.minX * Self.spriteScale,
+            y: rect.minY + frame.contentRect.minY * Self.spriteScale,
+            width: frame.contentRect.width * Self.spriteScale,
+            height: frame.contentRect.height * Self.spriteScale
+        )
     }
 
     private var processionSpeed: Double {
@@ -414,43 +400,24 @@ struct YagyoParadeView: View {
         return sin(time * 4 + Double(index) * 1.7) * amplitude
     }
 
-    private var strongReactionAmount: Double {
-        guard isStrongActive else { return 0 }
-        if reduceMotion { return 1 }
-        switch signal.strongPhase {
-        case .inactive:
-            return 0
-        case .anticipate:
-            return 0.55
-        case .open:
-            return 1
-        case .recover:
-            return 0.35
-        }
-    }
-
     private func frame(for sprite: YokaiSprite, time: TimeInterval) -> SpriteFrame? {
         let idle = sprite.idleFrame ?? sprite.frames.first
         let hush = sprite.hushFrame ?? idle
 
-        if sprite.id == "kasa", isStrongActive {
+        if isStrongActive, !sprite.strongFrames.isEmpty {
             if reduceMotion {
-                return sprite.strongFrames.dropFirst().first ?? sprite.strongFrames.first ?? idle
+                return sprite.strongReactionFrame ?? idle
             }
             switch signal.strongPhase {
             case .inactive:
                 break
             case .anticipate:
-                return sprite.strongFrames.first ?? idle
+                return sprite.strongAnticipateFrame ?? idle
             case .open:
-                return sprite.strongFrames.dropFirst().first ?? sprite.strongFrames.first ?? idle
+                return sprite.strongReactionFrame ?? idle
             case .recover:
                 return idle
             }
-        }
-
-        if sprite.id == "tengu", isStrongActive {
-            return sprite.hitFrame ?? idle
         }
 
         switch signal.activity {
@@ -463,20 +430,6 @@ struct YagyoParadeView: View {
             let frameIndex = Int(max(0, time) * 4).quotientAndRemainder(dividingBy: sprite.frames.count).remainder
             return sprite.frames.dropFirst(frameIndex).first ?? idle
         }
-    }
-
-    private func drawMokugyoStick(
-        in context: inout GraphicsContext,
-        beside rect: CGRect,
-        strongAmount: Double
-    ) {
-        var stick = context
-        stick.translateBy(x: rect.maxX + 2, y: rect.minY + 4)
-        stick.rotate(by: .radians(-0.6 + strongAmount * 1.1))
-        stick.fill(
-            Path(CGRect(x: 0, y: 0, width: 3, height: 16)),
-            with: .color(Color(yagyoHex: 0xf0e2c0))
-        )
     }
 
     private func drawResidentMarker(in context: inout GraphicsContext, above rect: CGRect) {

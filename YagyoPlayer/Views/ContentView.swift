@@ -634,7 +634,7 @@ private struct TrackRow: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(YagyoColor.yoiyami2.opacity(isCurrent ? 1 : 0.7))
-                    sprite.frames[0].image
+                    sprite.thumbnail.image
                         .resizable()
                         .scaledToFit()
                         .padding(5)
@@ -821,7 +821,7 @@ private struct EmptyLibraryView: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            YokaiGallery.parade[4].frames[0].image
+            (YokaiGallery.sprite(withID: "kitsune") ?? YokaiGallery.parade[0]).thumbnail.image
                 .resizable()
                 .scaledToFit()
                 .frame(width: 54, height: 54)

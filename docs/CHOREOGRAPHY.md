@@ -10,7 +10,7 @@
 | unavailable | 再生中だが meter 値がない、または値が有限でない状態 | 再生は継続するが音量に根拠のない反応は出さない。提灯 halo を破線にし、CircularWaveform を中立色の破線・位相固定にして low / stopped と区別する | 移動を止めても、同じ破線の提灯 halo と、中立色・破線・位相固定の CircularWaveform を残す。VoiceOver 値は「音量表示を利用できません」 | 実装済み・現行full suite合格。今回のsemantic image setには含めない |
 | level | 利用可能な有限値を `0...1` に clamp し、低・中・高の音量帯へ分ける | 通常時は固定 4 fps で歩行フレームを切り替え、level は bob の振幅と提灯 halo の大きさ・濃さへ反映する。歩行周期は BPM ではない | 横移動・bob・連続 scale・フレーム循環を止め、提灯 halo と円形波形の離散形状で音量帯を残す | Normal + KarakasaをPro／17eのsemantic AX testと独立native visual QAで確認済み |
 | quietProxy | `level <= 0.08` が `0.70 s` 継続すると進入し、`level >= 0.14` で離脱する | 行進を遅くして bob を抑え、唐傘だけを専用 `hush` 姿勢、他の妖怪を `idle` fallback にする | 唐傘の `hush` と他妖怪の `idle` を静止表示し、低音量帯の提灯 halo・円形波形の離散形状・VoiceOver 値を残す | Quiet + KarakasaをProのsemantic AX testと独立native visual QAで確認済み |
-| strongRiseProxy | `level >= 0.55` かつ、更新前の低速基準包絡との差が `>= 0.18` のとき、一度だけ強反応を始める | `anticipate` → `.open` → `recover`。`.open` は互換性のための内部名で、唐傘は赤い正面円錐形を保ったreactionを表示する。木魚・天狗・鬼・狐火の既存の強姿勢を使い、根拠のない妖怪へ新しい反応は足さない | 位置と scale を変えず、strong が active の間は唐傘の正面reactionと静的な輪郭線を保つ | Strong／Strong + Ushimitsu／Strong + Reduce MotionをProのsemantic AX testと独立native visual QAで確認済み |
+| strongRiseProxy | `level >= 0.55` かつ、更新前の低速基準包絡との差が `>= 0.18` のとき、一度だけ強反応を始める | `anticipate` → `.open` → `recover`。`.open` は互換性のための内部名で、視覚は各妖怪の正面reaction。strong フレームを持つのは唐傘・鬼太鼓・木魚・狐火・天狗だけで、いずれも anticipate → reaction の専用2フレームをフレーム内の二次動作で表示する（鬼太鼓と木魚はバチの打ち込み、狐火は flare、天狗は羽団扇の hit）。旧アートを補っていた rect 変形（持ち上げ・squash 縮小・flare 拡大）と view 側のバチ別描画は撤去し、根拠のない妖怪へ新しい反応は足さない | 位置と scale を変えず、strong が active の間は各妖怪の reaction 静止姿勢と静的な輪郭線を保つ | Karakasa は Strong／Strong + Ushimitsu／Strong + Reduce Motion をProのsemantic AX testと独立native visual QAで確認済み。残り4体の frame-based reaction は feature branch 実装済みで、Mac 側 Simulator 検証待ち |
 | resident | 現在トラックの UUID から互換性を保つ固定 roster で一体を割り当てる。聴取回数による選出ではない | resident を重複なく先頭へ移し、先導灯で示す | 同じ先頭位置、先導灯、VoiceOver の「先導は…」で示す | Karakasa選択を座標tapなしのsemantic AX testで確認。履歴による演出は未接続 |
 | Ushimitsu | 丑三つ時モードが有効な状態。音量解析の結果ではない | 一つ目小僧を最後尾へ追加する。一つ目小僧も共通の通常・`quietProxy` の速度と bob に参加するが、strong 固有反応は持たない | 同じ最後尾の静止追加と VoiceOver の「丑三つ時」で示し、strong 固有の輪郭線は出さない | Strong + UshimitsuをProのsemantic AX testと独立native visual QAで確認済み |
 
@@ -39,6 +39,8 @@
 
 ## アートと公開のゲート
 
-現在の SNES 相当の基準体は唐傘だけです。唐傘は 40×48 px、2倍整数表示（80×96 pt）、透明を除き最大12色、`idle 1 + walk 4 + hush 1 + strong 2` の8フレームを持ちます。全8枚は、赤〜珊瑚色の正面円錐形、茶色の頭頂と金帯、中央の一つ目、笑い口と桃色の舌、淡色の一本足、一足の下駄を共有するcoherent familyです。紫、横顔、長い柄、横へ開いた傘や裏面は不採用です。他の行列妖怪は従来アートのままなので、この混在状態は feature branch と Draft PR に留め、`main` へ統合しません。
+SNES 相当の基準体は唐傘（40×48 px、2倍整数表示 80×96 pt、透明を除き最大12色、`idle 1 + walk 4 + hush 1 + strong 2`）です。唐傘の8枚は、赤〜珊瑚色の正面円錐形、茶色の頭頂と金帯、中央の一つ目、笑い口と桃色の舌、淡色の一本足、一足の下駄を共有するcoherent familyです。紫、横顔、長い柄、横へ開いた傘や裏面は不採用です。
 
-唐傘のsemantic Simulator state、Reduce Motion静止、保存済みSimulator画像の独立native目視QAは完了しています。ユーザー本人が見た目を承認した後に、残りの妖怪ごとの状態と必要フレームを別の matrix として提示します。その matrix が別途承認されるまで、全妖怪への展開や SNES 刷新完了とは扱いません。
+残り7体と一つ目小僧は、[残り行列妖怪・frame matrix 仕様](superpowers/specs/2026-07-12-remaining-yokai-frame-matrix.md)に基づき同じ行列用契約（40×48 px、最大12色、共通の墨 `k = 0x24160f`、`anchorX = 20`、`baselineY = 45`）で feature branch に描き直し済みです。`hush` 専用姿勢は唐傘だけが持ち、他は `idle` へ fallback します。strong 2 フレームを持つのは鬼太鼓・木魚・狐火・天狗（と唐傘）だけです。旧8bitアートと3倍表示は撤去し、行列は全体で2倍整数表示になりました。証跡は[残り妖怪の証跡ledger](evidence/step4-remaining-yokai/README.md)を正本とします。
+
+唐傘のsemantic Simulator state、Reduce Motion静止、保存済みSimulator画像の独立native目視QAは完了しています。残り8体は構造検証・独立視覚QA・ユーザーMac(iOS 26.5)でのSimulator 7状態の取得と検収を経て、2026-07-12にPR #14のレビューでユーザー本人が見た目を承認しました。`main` 統合は引き続き唐傘(Draft PR #13)の承認とセットで行います。
