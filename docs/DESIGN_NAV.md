@@ -97,9 +97,9 @@ Step 4 では、毎秒15回(15 Hz周期)で読む `AVAudioPlayer.averagePower` �
 
 ![gashadokuro](design/gashadokuro-proposal.png)
 
-## 狐火の帳コンセプト（未実装）
+## 狐火の帳コンセプト（Phase A実装中）
 
-数値が主役の検聴画面として作成した過去のコンセプト。Step 3 は iOS 27 正式 SDK の再検証まで保留中であり、Core AI / Music Understanding / DSP の実装を示す画像ではない。
+数値が主役の検聴画面として作成した過去のコンセプト。Step 5 Phase A(一画面検聴)は[設計仕様](superpowers/specs/2026-07-12-kitsunebi-no-tobari-design.md)に基づき実装へ進んだが、この画像は当時の構想イメージであり現在のUIそのものではない。Step 3(Core AI / Music Understanding)は iOS 27 正式 SDK の再検証まで引き続き保留中。
 
 ![kitsunebi concept](design/kitsunebi-concept.png)
 
@@ -107,6 +107,7 @@ Step 4 では、毎秒15回(15 Hz周期)で読む `AVAudioPlayer.averagePower` �
 
 ## 更新履歴
 
+- 2026-07-12: Step 5「狐火の帳」Phase A(一画面検聴)のDSP解析エンジン・検聴キャッシュ・帳UI・既知信号ユニットテストを実装([証跡](evidence/step5-tobari/README.md))。Mastering-AppのDSPコアを仕様の補修2点(Short-termのstreaming化、クリップ疑いの連続ラン化)込みで移植し、期待値はPython参照ミラーで導出。Mac側ビルド・Simulator確認・ユーザー本人の確認は未完了。
 - 2026-07-12: ユーザー本人が唐傘(PR #13)と残り8体(PR #14)の見た目を承認し、Step 4「夜行絵巻 2.0」を`main`へ統合。行列9体の40×48統一・視覚reducer・resident先導・Reduce Motion/VoiceOver代替が正式にmainの現在地となる。
 - 2026-07-12: 残り7体+一つ目小僧の frame matrix 仕様と40×48描き直しを follow-up branch へ追加。旧8bitアート・3倍表示・view側のrect変形反応（持ち上げ／squash／flare／バチ別描画）を撤去し、strong を frame-based の anticipate → reaction へ統一。構造検証と独立視覚QAまで完了、Mac側検証とユーザー見た目承認は未完了。
 - 2026-07-12: 参照忠実な赤い正面唐傘のcurrent evidence ledgerへ更新。Xcode 27.0 generic build、iOS 27 focused 11 / 11、full 65 / 65、Pro semantic AX 4 + 1、17e 1 / 1（すべてskip 0）と、Reduce Motionの完全同一PNG／crop差分0を反映。2名の独立native visual QAは全9 artifactをAPPROVED、BLOCKER／MAJOR／MINOR 0。GitHub binary evidence commit／9 blob／旧5画像削除／Draft PRを確認済み。ユーザー本人の見た目承認だけが未完了。初期の紫色・横向き／開いた唐傘、旧32件／57件、旧Simulator画像はsuperseded。

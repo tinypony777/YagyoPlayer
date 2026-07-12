@@ -385,6 +385,7 @@ private struct LibrarySection: View {
     @State private var sort = LibrarySort.newest
     @State private var selectedPlaylistID: Playlist.ID?
     @State private var editingTrack: AudioTrack?
+    @State private var tobariTrack: AudioTrack?
 
     var body: some View {
         let visibleTracks = library.filteredTracks(searchText: searchText, sort: sort, playlistID: selectedPlaylistID)
@@ -425,7 +426,8 @@ private struct LibrarySection: View {
                         TrackRow(
                             track: track,
                             playbackContext: playbackContext,
-                            editAction: { editingTrack = track }
+                            editAction: { editingTrack = track },
+                            tobariAction: { tobariTrack = track }
                         )
                     }
                 }
@@ -434,6 +436,9 @@ private struct LibrarySection: View {
         .ritualPanel(radius: 24, padding: 16, tint: YagyoColor.shu.opacity(0.08))
         .sheet(item: $editingTrack) { track in
             TrackMetadataEditor(track: track)
+        }
+        .sheet(item: $tobariTrack) { track in
+            TobariView(track: track)
         }
         .onChange(of: selectedPlaylistID) { _, playlistID in
             if playlistID == nil, sort == .playlistOrder {
@@ -617,6 +622,7 @@ private struct TrackRow: View {
     var track: AudioTrack
     var playbackContext: PlaybackContext = .library
     var editAction: () -> Void
+    var tobariAction: () -> Void
 
     @State private var isDeleteConfirmationPresented = false
 
@@ -697,6 +703,10 @@ private struct TrackRow: View {
         .contextMenu {
             Button(action: editAction) {
                 Label("Edit metadata", systemImage: "pencil")
+            }
+
+            Button(action: tobariAction) {
+                Label("狐火の帳で検聴", systemImage: "flame")
             }
 
             if !library.playlists.isEmpty {

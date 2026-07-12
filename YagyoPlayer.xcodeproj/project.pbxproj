@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		787CA023E4FE5452C8B3D0DE /* KitsunebiAnalyzerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E98970C2DAAD137DC389549 /* KitsunebiAnalyzerTests.swift */; };
+		B58563AF89B5894026F925E4 /* TobariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF097A0028CDA64CFBA7F8A /* TobariView.swift */; };
+		C3CC71C37266A61AFD475C2A /* KitsunebiAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0887E1A6BCF5C19B5BAE1389 /* KitsunebiAnalyzer.swift */; };
+		2564B48BDB301D4C221EEB6F /* TobariMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = D743EA7D320EF3CBF2BBD50B /* TobariMetrics.swift */; };
 		D8A61D8E1FE17B857877CFFF /* ParadeQAArtifactTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA1130E67D07919EBEE5AAED /* ParadeQAArtifactTests.swift */; };
 		E6F704DF7E1C372CA1160B0B /* ParadeSpriteContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEEADC11A0C18958A260CD7B /* ParadeSpriteContractTests.swift */; };
 		787995BB5FEE366F1D7C656B /* HitotsumeSprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15D99DCD921C049DFC677FE5 /* HitotsumeSprite.swift */; };
@@ -63,6 +67,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		7E98970C2DAAD137DC389549 /* KitsunebiAnalyzerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KitsunebiAnalyzerTests.swift; sourceTree = "<group>"; };
+		FDF097A0028CDA64CFBA7F8A /* TobariView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TobariView.swift; sourceTree = "<group>"; };
+		0887E1A6BCF5C19B5BAE1389 /* KitsunebiAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KitsunebiAnalyzer.swift; sourceTree = "<group>"; };
+		D743EA7D320EF3CBF2BBD50B /* TobariMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TobariMetrics.swift; sourceTree = "<group>"; };
 		FA1130E67D07919EBEE5AAED /* ParadeQAArtifactTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeQAArtifactTests.swift; sourceTree = "<group>"; };
 		AEEADC11A0C18958A260CD7B /* ParadeSpriteContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParadeSpriteContractTests.swift; sourceTree = "<group>"; };
 		15D99DCD921C049DFC677FE5 /* HitotsumeSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HitotsumeSprite.swift; sourceTree = "<group>"; };
@@ -163,6 +171,7 @@
 			children = (
 				2A3693A3D5090FDEC93959BD /* ContentView.swift */,
 				6389ED07ADB58D318A07CB3C /* KarakasaSprite.swift */,
+				FDF097A0028CDA64CFBA7F8A /* TobariView.swift */,
 				15D99DCD921C049DFC677FE5 /* HitotsumeSprite.swift */,
 				87F18DC2FF2B375DB5F1E022 /* BiwaBokubokuSprite.swift */,
 				B7FDCFB3DF8EC0D26DBCCBC5 /* YukiOnnaSprite.swift */,
@@ -208,6 +217,7 @@
 				33D8F8BED25A829B3E5EF537 /* AudioLibraryStore.swift */,
 				A6F3C1D8E5B74029C4A791DE /* ParadeSignalCoordinator.swift */,
 				B81C4BE9E308A1B398FCC749 /* PlaybackController.swift */,
+				0887E1A6BCF5C19B5BAE1389 /* KitsunebiAnalyzer.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -222,6 +232,7 @@
 				C7E4A1B8923D4F56A709BCDE /* ParadeSignalCoordinatorTests.swift */,
 				E9EF0E58BD669BF9DC7082D3 /* ParadeSignalReducerTests.swift */,
 				F8C546B469F4E3D3228C418D /* PixelSpriteContractTests.swift */,
+				7E98970C2DAAD137DC389549 /* KitsunebiAnalyzerTests.swift */,
 				FA1130E67D07919EBEE5AAED /* ParadeQAArtifactTests.swift */,
 				AEEADC11A0C18958A260CD7B /* ParadeSpriteContractTests.swift */,
 				3F8A2C1D9B4E5678AFC05678 /* PlaybackControllerTests.swift */,
@@ -248,6 +259,7 @@
 				58E26516089682AF3581DD42 /* ParadeSignal.swift */,
 				A1B2C3D4E5F60718293A4B5C /* Playlist.swift */,
 				5517F1D3862B56B64A6F36B6 /* YokaiResidency.swift */,
+				D743EA7D320EF3CBF2BBD50B /* TobariMetrics.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -341,6 +353,7 @@
 				29FD40AE7C156B83D904E2F1 /* ParadeSignalCoordinatorTests.swift in Sources */,
 				B4CD88C51960CB356BFE9C19 /* ParadeSignalReducerTests.swift in Sources */,
 				5CDD9938B803D6247E94C371 /* PixelSpriteContractTests.swift in Sources */,
+				787CA023E4FE5452C8B3D0DE /* KitsunebiAnalyzerTests.swift in Sources */,
 				D8A61D8E1FE17B857877CFFF /* ParadeQAArtifactTests.swift in Sources */,
 				E6F704DF7E1C372CA1160B0B /* ParadeSpriteContractTests.swift in Sources */,
 				3F8A2C1D9B4E5678AFC01234 /* PlaybackControllerTests.swift in Sources */,
@@ -360,6 +373,7 @@
 				250E9A7346FB7374DD1960B8 /* DesignTokens.swift in Sources */,
 				5BD6A15264C17984A0B07F0B /* ParadeSignal.swift in Sources */,
 				6ACB2C6C0895CF954E44BC10 /* KarakasaSprite.swift in Sources */,
+				B58563AF89B5894026F925E4 /* TobariView.swift in Sources */,
 				787995BB5FEE366F1D7C656B /* HitotsumeSprite.swift in Sources */,
 				27B7676A4BC184B58323EC4C /* BiwaBokubokuSprite.swift in Sources */,
 				C86D685061115CF9A3E31F80 /* YukiOnnaSprite.swift in Sources */,
@@ -371,6 +385,7 @@
 				136A42DFE6E979D39D727986 /* PixelSprites.swift in Sources */,
 				61C8D2E4F5A697B8031D4E6F /* ParadeSignalCoordinator.swift in Sources */,
 				6CF615A930DE9D845F3F57C3 /* PlaybackController.swift in Sources */,
+				C3CC71C37266A61AFD475C2A /* KitsunebiAnalyzer.swift in Sources */,
 				5C4B3A2918070F6E5D4C3B2A /* Playlist.swift in Sources */,
 				6D5C4B3A2918070F6E5D4C3B /* PlaylistSection.swift in Sources */,
 				50723FFDABDE8219969C9C02 /* UshimitsuWatch.swift in Sources */,
@@ -378,6 +393,7 @@
 				A473E640BC086F2589647E53 /* YagyoParadeView.swift in Sources */,
 				E6B9F104D2C3587AB5F92345 /* ParadePreviewHarness.swift in Sources */,
 				A8949AA41A1CB98A1CDA2BA2 /* YokaiResidency.swift in Sources */,
+				2564B48BDB301D4C221EEB6F /* TobariMetrics.swift in Sources */,
 				A703B0828489B95B8B9FB869 /* YagyoPlayerApp.swift in Sources */,
 				B4C130EA40CACEAF7872EDED /* YagyoPlayerIntents.swift in Sources */,
 			);

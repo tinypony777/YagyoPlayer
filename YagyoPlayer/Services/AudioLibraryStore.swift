@@ -213,6 +213,36 @@ final class AudioLibraryStore: ObservableObject {
         }
     }
 
+    /// Step 5 — 狐火の帳: contentHash が未計算の旧トラックへ backfill して返す。
+    /// 計算に失敗した場合は nil(呼び出し側はキャッシュせず今回表示のみに使う)。
+    func ensureContentHash(for trackID: AudioTrack.ID) -> String? {
+        guard let index = tracks.firstIndex(where: { $0.id == trackID }) else { return nil }
+        if let hash = tracks[index].contentHash { return hash }
+        let url = fileURL(for: tracks[index])
+        guard fileManager.fileExists(atPath: url.path),
+              let hash = try? Self.sha256Hex(of: url) else { return nil }
+        tracks[index].contentHash = hash
+        do {
+            try save()
+            persistenceErrorMessage = nil
+        } catch {
+            persistenceErrorMessage = "Content hash could not be saved: \(error.localizedDescription)"
+        }
+        return hash
+    }
+
+    /// Step 5 — 狐火の帳: 検聴結果を library.json へキャッシュする。
+    func storeTobariMetrics(_ metrics: TobariMetrics, for trackID: AudioTrack.ID) {
+        guard let index = tracks.firstIndex(where: { $0.id == trackID }) else { return }
+        tracks[index].tobariMetrics = metrics
+        do {
+            try save()
+            persistenceErrorMessage = nil
+        } catch {
+            persistenceErrorMessage = "Tobari metrics could not be saved: \(error.localizedDescription)"
+        }
+    }
+
     /// Step 2 — Library Confidence: title / artist / artwork / notes を編集して永続化する。
     @discardableResult
     func updateMetadata(
