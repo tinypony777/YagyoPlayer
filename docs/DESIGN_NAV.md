@@ -4,14 +4,14 @@
 
 ## Step 4 唐傘縦切りの現在地
 
-Step 4 feature branch では、15 Hz の `AVAudioPlayer.averagePower` から得る単一の `ParadeSignalSnapshot` を、小さな `ReactiveVisualStage` だけが coordinator から購読する。この wrapper が snapshot を夜行絵巻へ、snapshot の `level / activity / levelBand` を円形波形へ渡し、root `ContentView` やライブラリ全体を 15 Hz 更新へ巻き込まない。snapshot は `level / activity / strongPhase / strongSequence` を持ち、停止、meter 利用不可、`quietProxy`、通常状態を区別する。現在トラックの resident は固定 roster による互換割当を保ったまま先導へ移る。
+Step 4 では、毎秒15回(15 Hz周期)で読む `AVAudioPlayer.averagePower` から得る単一の `ParadeSignalSnapshot` を、小さな `ReactiveVisualStage` だけが coordinator から購読する。この wrapper が snapshot を夜行絵巻へ、snapshot の `level / activity / levelBand` を円形波形へ渡し、root `ContentView` やライブラリ全体を 15 Hz 更新へ巻き込まない。snapshot は `level / activity / strongPhase / strongSequence` を持ち、停止、meter 利用不可、`quietProxy`、通常状態を区別する。現在トラックの resident は固定 roster による互換割当を保ったまま先導へ移る。
 
-これはまだ製品版の完成表示ではない。現在の唐傘候補は、赤〜珊瑚色の正面円錐形、茶色の頭頂と金帯、中央の一つ目、笑い口と桃色の舌、淡色の一本足、一足の下駄を全8枚で共有する。`.open` は互換性のための内部phase名で、見た目は横へ開いた傘ではなく正面reactionである。Xcode 27.0のgeneric iOS buildに成功し、checked projectをiOS 27のiPhone 17 Pro destinationでfocused QA **11 / 11**、full suite **65 / 65**（いずれもskip 0）まで完了した。座標tapを使わないsemantic AX validationは、iPhone 17 Proのstate matrix **4 / 4**とReduce Motion stability **1 / 1**、最小幅iPhone 17eのdefault Normal + Karakasa **1 / 1**をskip 0で通過した。Reduce Motionの`t0`／`t+2 s` full PNGは同一で、canvas cropのdiffering bytesも0である。最初の17e menu試行失敗とauto diagnostics終了は除外し、follow-up GREENを正本とする。[現在の証跡ledger](evidence/step4-karakasa/README.md)に画像とhashを集約し、2名の独立native reviewerがcontact sheet／GIFとSimulator画像7枚をすべてAPPROVEDした（BLOCKER／MAJOR／MINOR 0）。Pro Strongの右端寄りは切断なしのINFOだけである。binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`で9 binary hash、旧5画像削除、画像link、Draft PR本文も確認した。ユーザー本人の見た目承認は残っている。旧32件／57件と、紫色・横向き／長い柄・横に開いた唐傘の旧画像はsupersededで、現在候補の視覚証拠には使わない。残り7体と一つ目小僧は follow-up branch で同じ40×48契約へ描き直し済みで混在画風は解消したが、ユーザー承認まではDraft PR系列に留め、`main`へ統合しない。
+現在の唐傘は、赤〜珊瑚色の正面円錐形、茶色の頭頂と金帯、中央の一つ目、笑い口と桃色の舌、淡色の一本足、一足の下駄を全8枚で共有する。`.open` は互換性のための内部phase名で、見た目は横へ開いた傘ではなく正面reactionである。Xcode 27.0のgeneric iOS buildに成功し、checked projectをiOS 27のiPhone 17 Pro destinationでfocused QA **11 / 11**、full suite **65 / 65**（いずれもskip 0）まで完了した。座標tapを使わないsemantic AX validationは、iPhone 17 Proのstate matrix **4 / 4**とReduce Motion stability **1 / 1**、最小幅iPhone 17eのdefault Normal + Karakasa **1 / 1**をskip 0で通過した。Reduce Motionの`t0`／`t+2 s` full PNGは同一で、canvas cropのdiffering bytesも0である。最初の17e menu試行失敗とauto diagnostics終了は除外し、follow-up GREENを正本とする。[現在の証跡ledger](evidence/step4-karakasa/README.md)に画像とhashを集約し、2名の独立native reviewerがcontact sheet／GIFとSimulator画像7枚をすべてAPPROVEDした（BLOCKER／MAJOR／MINOR 0）。Pro Strongの右端寄りは切断なしのINFOだけである。binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`で9 binary hash、旧5画像削除、画像link、PR本文も確認した。2026-07-12にユーザー本人が唐傘(PR #13)と残り8体(PR #14)の見た目を承認し、Step 4は`main`へ統合済み。旧32件／57件と、紫色・横向き／長い柄・横に開いた唐傘の旧画像はsupersededで、現行の視覚証拠には使わない。行列9体はすべて同じ40×48契約で、混在画風は解消済み。
 
 | 入力・状態 | snapshot と表示 | 現在地 |
 |---|---|---|
-| stopped | 中立姿勢で移動、揺れ、歩行フレームを停止 | feature branch実装・現行full suite合格。今回のsemantic image set外 |
-| unavailable | 再生は継続するが音量反応は出さず、位相固定・中立色・破線の CircularWaveform と破線の提灯 halo で low / stopped と区別する | feature branch実装・現行full suite合格。今回のsemantic image set外 |
+| stopped | 中立姿勢で移動、揺れ、歩行フレームを停止 | `main`統合済み・現行full suite合格。今回のsemantic image set外 |
+| unavailable | 再生は継続するが音量反応は出さず、位相固定・中立色・破線の CircularWaveform と破線の提灯 halo で low / stopped と区別する | `main`統合済み・現行full suite合格。今回のsemantic image set外 |
 | level | 通常時は固定 4 fps で歩行し、level を bob の振幅、提灯 halo、Reduce Motion の円形波形の離散形状へ翻訳 | Normal + KarakasaをPro／17eのsemantic AX testと独立native visual QAで確認済み |
 | `quietProxy` | 低レベル継続を遅い行進と小さな bob へ翻訳。専用 `hush` は唐傘だけで、他の妖怪は `idle` fallback | Quiet + KarakasaをProのsemantic AX testと独立native visual QAで確認済み |
 | `strongRiseProxy` | `anticipate / .open / recover` の一回の反応へ翻訳。`.open` の唐傘は赤い正面reaction | Strong／Strong + Ushimitsu／Strong + Reduce MotionをProのsemantic AX testと独立native visual QAで確認済み |
@@ -35,12 +35,12 @@ Step 4 feature branch では、15 Hz の `AVAudioPlayer.averagePower` から得�
 | 項目 | 正直な現在地 |
 |---|---|
 | 音量入力 | `averagePower` のみ。正規化・非対称平滑化後の level と、その時間変化から `quietProxy` / `strongRiseProxy` を作る。拍、デジタル無音、BPM、セクション、音楽的意味は判定しない |
-| 視覚信号 | 純粋 reducer と表示専用 coordinator を feature branch に実装。再生経路と Audio Session は変更しない |
+| 視覚信号 | 純粋 reducer と表示専用 coordinator を実装し`main`へ統合済み。再生経路と Audio Session は変更しない |
 | 行列 | 固定8体 + 丑三つ時だけ一つ目小僧。未使用のぬりかべを完成数に含めない |
 | アート | 唐傘基準体（40×48 px・8フレーム）に加え、残り7体と一つ目小僧も[frame matrix 仕様](superpowers/specs/2026-07-12-remaining-yokai-frame-matrix.md)で同じ40×48契約へ描き直し、2026-07-12にPR #14でユーザー本人が見た目を承認。旧8bitアートと3倍表示は撤去。strong 2フレームは唐傘・鬼太鼓・木魚・狐火・天狗のみ、`hush` 専用姿勢は唐傘のみ |
-| residency | UUID 由来の安定した割当を維持。feature branch では現在曲の resident が先導する |
+| residency | UUID 由来の安定した割当を維持。現在曲の resident が行列を先導する |
 | 再生統計 | `playCount / lastPlayedAt / playHourCounts` は記録・永続化済み。歴史による行列振付には未接続 |
-| Accessibility | 夜行絵巻のVoiceOver値と、夜行絵巻・円形波形のReduce Motion代替をfeature branchに実装し、現行full suite合格。semantic AX 1 / 1、`t0`／`t+2 s` full PNG同一、canvas crop差分0、独立native visual QA APPROVED |
+| Accessibility | 夜行絵巻のVoiceOver値と、夜行絵巻・円形波形のReduce Motion代替を実装し`main`へ統合済み。現行full suite合格。semantic AX 1 / 1、`t0`／`t+2 s` full PNG同一、canvas crop差分0、独立native visual QA APPROVED |
 | Step 3 | iOS 27 の正式 SDK で Music Understanding / Core AI を再検証できるまで保留。Core AI / DSP は未実装 |
 
 ## 唐傘の SNES 相当アート契約
@@ -58,11 +58,11 @@ Step 4 feature branch では、15 Hz の `AVAudioPlayer.averagePower` から得�
 確認順序は次で固定する。
 
 1. 唐傘を通常時・丑三つ時、resident 先導、Reduce Motion、狭い iPhone 幅でsemantic AX検証する（Pro 4 + 1、17e 1、すべてGREEN／skip 0で完了）。
-2. 保存済みSimulator画像を2名の独立native reviewerがAPPROVED済み。ユーザー本人が正面の赤い輪郭、頭頂と帯、目・笑い口・舌、一本足と下駄、reaction、補間、基準線を承認する（未完了）。
+2. 保存済みSimulator画像を2名の独立native reviewerがAPPROVED済み。ユーザー本人による見た目の承認も2026-07-12にPR #13で完了。
 3. 残り7体と一つ目小僧について、各状態と必要フレームの matrix を[別仕様](superpowers/specs/2026-07-12-remaining-yokai-frame-matrix.md)として提示する（完了）。
 4. その matrix に基づく残り8体の制作・構造検証・独立視覚QA・Simulator検収(iOS 26.5)は完了し、2026-07-12にPR #14でユーザー本人が見た目を承認した。[証跡ledger](evidence/step4-remaining-yokai/README.md)を正本とする。
 
-残るゲートは唐傘本体(Draft PR #13)の承認と `main` 統合のみ。背景用の大判妖怪（例: 125×105 のがしゃどくろ案）の規格を、40×48 の行列規格へ流用しない。
+唐傘本体も2026-07-12にPR #13で承認され、Step 4は`main`統合まで完了した。背景用の大判妖怪（例: 125×105 のがしゃどくろ案）の規格を、40×48 の行列規格へ流用しない。
 
 ## デザイントークン
 
@@ -107,6 +107,7 @@ Step 4 feature branch では、15 Hz の `AVAudioPlayer.averagePower` から得�
 
 ## 更新履歴
 
+- 2026-07-12: ユーザー本人が唐傘(PR #13)と残り8体(PR #14)の見た目を承認し、Step 4「夜行絵巻 2.0」を`main`へ統合。行列9体の40×48統一・視覚reducer・resident先導・Reduce Motion/VoiceOver代替が正式にmainの現在地となる。
 - 2026-07-12: 残り7体+一つ目小僧の frame matrix 仕様と40×48描き直しを follow-up branch へ追加。旧8bitアート・3倍表示・view側のrect変形反応（持ち上げ／squash／flare／バチ別描画）を撤去し、strong を frame-based の anticipate → reaction へ統一。構造検証と独立視覚QAまで完了、Mac側検証とユーザー見た目承認は未完了。
 - 2026-07-12: 参照忠実な赤い正面唐傘のcurrent evidence ledgerへ更新。Xcode 27.0 generic build、iOS 27 focused 11 / 11、full 65 / 65、Pro semantic AX 4 + 1、17e 1 / 1（すべてskip 0）と、Reduce Motionの完全同一PNG／crop差分0を反映。2名の独立native visual QAは全9 artifactをAPPROVED、BLOCKER／MAJOR／MINOR 0。GitHub binary evidence commit／9 blob／旧5画像削除／Draft PRを確認済み。ユーザー本人の見た目承認だけが未完了。初期の紫色・横向き／開いた唐傘、旧32件／57件、旧Simulator画像はsuperseded。
 - 2026-07-12（初期記録・superseded）: Step 4 唐傘縦切りの snapshot 振付、正式翻訳帳、resident / 統計の現在地、40×48 基準体と承認ゲートへ同期。当時のiPhone 17 Pro・最小幅iPhone 17eのSimulator画像は、後に不採用となった初期唐傘を写した履歴であり、現在候補の証拠には使用しない。

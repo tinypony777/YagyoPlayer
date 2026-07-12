@@ -48,7 +48,7 @@ North Star は次の 3 条件。確認の物差しは市場指標ではなく、
 2. **Music Made Visible** — 妖怪・提灯・月は、取得できる音量帯、低レベル継続近似、強い音量上昇近似、再生状態を伝える存在。意味のない常時アニメーションより、根拠を説明できる入力と操作に結びついた反応を優先する。すべての反応は翻訳帳(§4.1)で説明できること。
 3. **Folklore as Interaction Model** — 行列=ライブラリ、巻物=プレイリスト、提灯=再生位置と音の反応、狐火=分析・提案、丑三つ時=時刻と特別状態。語彙は雰囲気語ではなく操作体系。新機能はまずこの語彙表のどれで呼ばれるかを問う(§7 Q1)。
 4. **音への敬意** — 音を勝手に加工しない。分析は根拠・比較・取り消しとセットで、用語は「補正」ではなく**「提案」**(自動で直さない、根拠を示して提案し、ユーザーが判断する)。
-5. **iOS-native Ritual** — MediaPlayer / App Intents / Shortcuts の作法に従う。VoiceOver・Reduce Motion・コントラストは最初から設計対象。Reduce Motion でも情報が失われない(静止状態でも音量・再生状態の代替表現を持つ)。現在地: Step 4 feature branch で夜行絵巻と波形リングの静止代替、VoiceOver 値を縦切り実装した。Xcode 27.0のgeneric iOS buildに成功し、checked projectをiOS 27のiPhone 17 Pro destinationでfocused QA 11 / 11、full suite 65 / 65（いずれもskip 0）まで完了している。座標tapなしのsemantic AX validationはProのstate matrix 4 / 4、Reduce Motion stability 1 / 1、17e default 1 / 1をskip 0で通過した。Reduce Motionの`t0`／`t+2 s` full PNGは同一でcanvas crop差分も0である。[証跡ledger](evidence/step4-karakasa/README.md)は2名の独立native reviewerがSimulator画像を含む全artifactをAPPROVEDし、BLOCKER／MAJOR／MINORは0。ユーザー本人の見た目承認だけが残っている。旧紫・横向き唐傘の画像はsupersededで、現候補の証拠には使わない。
+5. **iOS-native Ritual** — MediaPlayer / App Intents / Shortcuts の作法に従う。VoiceOver・Reduce Motion・コントラストは最初から設計対象。Reduce Motion でも情報が失われない(静止状態でも音量・再生状態の代替表現を持つ)。現在地: Step 4 で夜行絵巻と波形リングの静止代替、VoiceOver 値を実装し、`main`へ統合済み。Xcode 27.0のgeneric iOS buildに成功し、checked projectをiOS 27のiPhone 17 Pro destinationでfocused QA 11 / 11、full suite 65 / 65（いずれもskip 0）まで完了している。座標tapなしのsemantic AX validationはProのstate matrix 4 / 4、Reduce Motion stability 1 / 1、17e default 1 / 1をskip 0で通過した。Reduce Motionの`t0`／`t+2 s` full PNGは同一でcanvas crop差分も0である。[証跡ledger](evidence/step4-karakasa/README.md)は2名の独立native reviewerがSimulator画像を含む全artifactをAPPROVEDし、BLOCKER／MAJOR／MINORは0。2026-07-12にユーザー本人が見た目を承認し、Step 4は`main`へ統合済み。旧紫・横向き唐傘の画像はsupersededで、現行の証拠には使わない。
 
 **Producer Check と世界観の共存規則**: 狐火の帳(§4.4)の使用中、夜行絵巻は静的な背景に退き、数値が主役になる。ただし助言の語彙は狐火で統一する。世界観は検聴(ミックス/マスターの確認試聴)の邪魔をせず、検聴は世界観の外に出ない。
 
@@ -58,11 +58,11 @@ North Star は次の 3 条件。確認の物差しは市場指標ではなく、
 
 ### 4.1 翻訳帳 — 音を妖怪の振付に訳す
 
-「どの入力を、どの妖怪の、どの挙動に訳すか」という小さな判断を、一貫した taste で書き溜めていく。現段階の入力は、15 Hz の `AVAudioPlayer.averagePower` を正規化・平滑化した level だけである。そこから `quietProxy`（低レベル継続近似）と `strongRiseProxy`（強い音量上昇近似）を決定論的に作り、停止や meter 利用不可と混同せず振付へ渡す。曲の BPM やセクション、音楽的な意味を読んでいるとは表現しない。
+「どの入力を、どの妖怪の、どの挙動に訳すか」という小さな判断を、一貫した taste で書き溜めていく。現段階の入力は、毎秒15回(15 Hz周期)で読む `AVAudioPlayer.averagePower` を正規化・平滑化した level だけである(15 Hzは読み取り頻度であり、音声の周波数帯ではない)。そこから `quietProxy`（低レベル継続近似）と `strongRiseProxy`（強い音量上昇近似）を決定論的に作り、停止や meter 利用不可と混同せず振付へ渡す。曲の BPM やセクション、音楽的な意味を読んでいるとは表現しない。
 
 - 正式な対応表は [振付翻訳帳](CHOREOGRAPHY.md) として公開し、入力、閾値、通常振付、Reduce Motion の静止代替、近似の限界を同じ場所で管理する。反応の意味を説明すること自体が、この世界への招待状である。
 - 妖怪の頭数を増やすことより、一体あたりの挙動深度を上げることに投資する。
-- **現在地(正直に)**: Step 4 feature branch では、従来の音量連動の跳ねを単一の `ParadeSignalSnapshot` に基づく振付へ置き換え、resident 先導、Reduce Motion、VoiceOver を接続している。現在の唐傘は、赤〜珊瑚色の正面円錐形、茶色の頭頂と金帯、一つ目、笑い口と桃色の舌、淡色の一本足、一足の下駄を全8枚で共有する。内部phase名`.open`は互換性のため残るが、表示は正面reactionであり、初期の紫色・横向き／長い柄・横に開いた造形はsupersededである。Xcode 27.0のgeneric iOS buildに成功し、iOS 27のiPhone 17 Pro destinationでfocused QA **11 / 11**、full suite **65 / 65**、いずれもskip 0を確認した。Pro semantic AX **4 + 1**、17e **1 / 1**もskip 0で通過し、Reduce Motionの2枚はfull PNG同一／canvas crop差分0である。2名の独立native reviewerはcontact sheet／GIFとSimulator画像7枚をすべてAPPROVEDし、BLOCKER／MAJOR／MINOR 0。GitHub binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`の9 binary hash／link、旧5画像削除、Draft PR本文も確認済みである。ユーザー本人の見た目承認は未完了。SNES相当の新規アートは唐傘1体だけで、他の行列妖怪は従来アートのまま。この混在状態はDraft PRに留め、`main`へ統合しない。残りの妖怪は別途frame matrixの承認を得るまで展開しない。
+- **現在地(正直に)**: Step 4 では、従来の音量連動の跳ねを単一の `ParadeSignalSnapshot` に基づく振付へ置き換え、resident 先導、Reduce Motion、VoiceOver を接続した。現在の唐傘は、赤〜珊瑚色の正面円錐形、茶色の頭頂と金帯、一つ目、笑い口と桃色の舌、淡色の一本足、一足の下駄を全8枚で共有する。内部phase名`.open`は互換性のため残るが、表示は正面reactionであり、初期の紫色・横向き／長い柄・横に開いた造形はsupersededである。Xcode 27.0のgeneric iOS buildに成功し、iOS 27のiPhone 17 Pro destinationでfocused QA **11 / 11**、full suite **65 / 65**、いずれもskip 0を確認した。Pro semantic AX **4 + 1**、17e **1 / 1**もskip 0で通過し、Reduce Motionの2枚はfull PNG同一／canvas crop差分0である。2名の独立native reviewerはcontact sheet／GIFとSimulator画像7枚をすべてAPPROVEDし、BLOCKER／MAJOR／MINOR 0。GitHub binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`の9 binary hash／link、旧5画像削除、PR本文も確認済みである。その後、残り7体と一つ目小僧も[frame matrix仕様](superpowers/specs/2026-07-12-remaining-yokai-frame-matrix.md)に基づき同じ40×48契約へ描き直し、2026-07-12にユーザー本人が唐傘(PR #13)と残り8体(PR #14)の見た目を承認した。行列9体すべてが統一され、混在画風は解消のうえ`main`へ統合済み。証跡は[唐傘ledger](evidence/step4-karakasa/README.md)と[残り妖怪ledger](evidence/step4-remaining-yokai/README.md)を正本とする。
 
 ### 4.2 狐火の調律 — 好みの聴き方を、自分で選ぶ（保留中の構想）
 
@@ -80,11 +80,11 @@ North Star は次の 3 条件。確認の物差しは市場指標ではなく、
 residency は各トラックに安定して住み着く妖怪を割り当てる仕組みである。再生統計(`playCount / lastPlayedAt / playHourCounts`)は記録・永続化されているが、現時点では統計を行列の色、強度、段階、解除条件へ使わない。将来、聴取史を世界の変化へ翻訳する場合は、resident の基本接続とは分けて設計する。
 
 - **記録は実装済み、履歴演出は後から。** 現行の再生イベント規則で統計が更新・永続化される。Step 4 ではイベント定義を変更しない。
-- resident の候補順は互換性契約として固定し、現在トラックの UUID 由来の一体をライブラリ行に表示する。Step 4 feature branch では同じ一体を行列の先頭へ移し、先導灯と VoiceOver で示す。
+- resident の候補順は互換性契約として固定し、現在トラックの UUID 由来の一体をライブラリ行に表示する。Step 4 では同じ一体を行列の先頭へ移し、先導灯と VoiceOver で示す。
 - この先導は安定したトラック割当であり、聴取回数による成長や listening-history progression ではない。playCount 等による見た目の変化は未接続である。
 - 蓄積が端末喪失を生き延びることは別途検証する。消える蓄積は愛着の裏切りになる。
 - 収集ゲームにはしない(§6 の線引き)。
-- **現在地(正直に)**: 統計の記録・永続化は実装済み。resident先導はfeature branchに実装し、現行full suite、座標tapなしのsemantic AX state validation、独立native visual QAで確認済み。ユーザー本人の見た目承認と歴史的な行列振付は未完了である。
+- **現在地(正直に)**: 統計の記録・永続化は実装済み。resident先導は`main`へ統合済みで、full suite、座標tapなしのsemantic AX state validation、独立native visual QA、ユーザー本人の視覚承認(2026-07-12)まで確認した。歴史的な行列振付(聴取史による演出)は未着手の別設計である。
 
 ### 4.4 狐火の帳(Producer Check)— 自分のデモを確かめる道具
 
@@ -144,6 +144,8 @@ Release criteria:
 ### Step 4 — 夜行絵巻 2.0(§4.1・§4.3)
 
 目的: **音の大小と変化が、説明可能な振付として伝わる。**
+
+状態: **2026-07-12完了・`main`統合済み。** 唐傘基準体(PR #13)と残り7体+一つ目小僧(PR #14)の両方でユーザー本人の視覚承認を得た。以下のRelease criteriaは達成記録として残す。
 
 Release criteria:
 - `averagePower` 由来の level、`quietProxy`、`strongRiseProxy` を停止・利用不可と区別し、同じ入力列に決定論的な snapshot を返す。
@@ -206,4 +208,4 @@ Release criteria:
 |---|---|
 | v2 | 機能とロードマップの宣言([archive/PRODUCT_DIRECTION_v2.md](archive/PRODUCT_DIRECTION_v2.md)) |
 | v3 競合分析ドラフト | 市場調査と「永続的優位の台帳」を軸にした差別化戦略として起草。作者の判断で見送り — この製品は市場から逆算しないため(PR #5 の履歴に全文が残っている) |
-| v3 作者の憲章(この文書) | 競合の文脈を外し、「作者が楽しめること」「好きな要素への忠実さ」「再生の信頼」を軸に再構成。当時確認した重複取込と取込結果未表示は、その後 Step 0 で解消済み。本文の現在地は、統計、Step 3 保留、Step 4 feature branch を含む実装事実へ随時同期する |
+| v3 作者の憲章(この文書) | 競合の文脈を外し、「作者が楽しめること」「好きな要素への忠実さ」「再生の信頼」を軸に再構成。当時確認した重複取込と取込結果未表示は、その後 Step 0 で解消済み。本文の現在地は、統計、Step 3 保留、Step 4 完了を含む実装事実へ随時同期する |

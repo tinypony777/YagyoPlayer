@@ -2,7 +2,7 @@
 
 このフォルダは、参照忠実度再設計後の赤い正面向き唐傘だけを収める証跡ledgerです。生成対象commitは `d1eca866`。初期の紫色・横向き／長い柄・横に開いた唐傘と、その旧Simulator画像はsupersededであり、ここには置きません。
 
-現在候補は40×48 px、`idle 1 + walk 4 + hush 1 + strong 2`の8フレームです。`.open`は互換性のための内部phase名で、画像上は横へ開いた傘ではなく正面reactionを表します。contact sheet／GIFとSimulator画像7枚は、2名の独立native reviewerがすべて**APPROVED**しました（BLOCKER／MAJOR／MINOR 0）。Pro Strongの右端寄りは切断なしのINFOだけです。ユーザー本人の見た目承認は**pending**です。
+現在候補は40×48 px、`idle 1 + walk 4 + hush 1 + strong 2`の8フレームです。`.open`は互換性のための内部phase名で、画像上は横へ開いた傘ではなく正面reactionを表します。contact sheet／GIFとSimulator画像7枚は、2名の独立native reviewerがすべて**APPROVED**しました（BLOCKER／MAJOR／MINOR 0）。Pro Strongの右端寄りは切断なしのINFOだけです。ユーザー本人の見た目承認は**2026-07-12にPR #13のレビューで完了**しました。
 
 参照仕様は[唐傘・参照忠実度再設計](../../superpowers/specs/2026-07-12-karakasa-reference-fidelity-redesign.md)、実行記録は[implementation plan](../../superpowers/plans/2026-07-12-karakasa-reference-fidelity-implementation.md)、振付の意味は[夜行絵巻 振付翻訳帳](../../CHOREOGRAPHY.md)を正本とします。
 
@@ -82,8 +82,8 @@ GIFは `idle, walk0...3, walk0...3, hush, hush, strong0, strong1, strong1, idle`
 
 - contact sheet／GIF: 元参照と比較した独立native visual QA **APPROVED**。
 - Simulator screenshots: semantic AX／XCUITestとhash検証はGREEN。2名の独立native visual QAは全7枚を**APPROVED**（BLOCKER／MAJOR／MINOR 0）。Pro Strongの右端寄りは切断なしのINFOのみ。
-- ユーザー見た目承認: **pending**。
+- ユーザー見た目承認: **2026-07-12、PR #13レビューで承認済み**（「唐傘のビジュアル承認します」）。
 - GitHub binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`で9 binary blobのSHA-256と画像linkを確認済み。旧5画像は削除済み。
-- [Draft PR #13](https://github.com/tinypony777/YagyoPlayer/pull/13)は本文更新済み、`draft = true`、`merged = false`、base `main`。
-- `main` SHA `256a45a8c9d9efb8db09970f3e40e6d1f5ef28fc`は不変。
-- 現在は唐傘だけが新画風のmixed-art状態。残り7体と一つ目小僧は、唐傘のユーザー承認後に別frame matrixを提示し、別途承認されるまで展開しません。
+- [PR #13](https://github.com/tinypony777/YagyoPlayer/pull/13)は2026-07-12にDraft解除のうえ`main`へマージ済み(merge commit `9106e04a`)。当時の`draft = true`／`merged = false`の記録はsuperseded。
+- `main` SHA `256a45a8c9d9efb8db09970f3e40e6d1f5ef28fc`は本PR統合前の基点としての記録。
+- （superseded）当時は唐傘だけが新画風のmixed-art状態でした。残り7体と一つ目小僧は[frame matrix仕様](../../superpowers/specs/2026-07-12-remaining-yokai-frame-matrix.md)に基づきPR #14で制作・承認・統合され、混在画風は解消済みです。証跡は[残り妖怪ledger](../step4-remaining-yokai/README.md)を参照。
