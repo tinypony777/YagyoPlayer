@@ -515,31 +515,59 @@ private struct LibrarySection: View {
                     .stroke(YagyoColor.line.opacity(0.6), lineWidth: 1)
             }
 
-            HStack(spacing: 10) {
-                Picker("Scope", selection: $selectedPlaylistID) {
-                    Text("行列すべて").tag(Playlist.ID?.none)
-                    ForEach(library.playlists) { playlist in
-                        Text(playlist.name).tag(Optional(playlist.id))
-                    }
+            // menuスタイルのPickerはラベルが折り返すと枠外へあふれて下の行に重なる
+            // (実機で確認)。fixedSizeで1行の固有幅を確保し、収まらない幅では2段組へ。
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    scopePicker
+                    sortPicker
+                    Spacer(minLength: 8)
+                    trackCountText(visibleCount: visibleCount)
                 }
-                .pickerStyle(.menu)
 
-                Picker("Sort", selection: $sort) {
-                    ForEach(availableSorts) { sort in
-                        Text(sort.rawValue).tag(sort)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 10) {
+                        scopePicker
+                        sortPicker
+                        Spacer(minLength: 0)
                     }
+                    trackCountText(visibleCount: visibleCount)
                 }
-                .pickerStyle(.menu)
-
-                Spacer()
-
-                Text("\(visibleCount) / \(library.tracks.count) 曲")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(YagyoColor.dim)
             }
             .font(.caption.weight(.semibold))
             .foregroundStyle(YagyoColor.chochin)
         }
+    }
+
+    private var scopePicker: some View {
+        Picker("Scope", selection: $selectedPlaylistID) {
+            Text("行列すべて").tag(Playlist.ID?.none)
+            ForEach(library.playlists) { playlist in
+                Text(playlist.name).tag(Optional(playlist.id))
+            }
+        }
+        .pickerStyle(.menu)
+        .lineLimit(1)
+        .fixedSize()
+    }
+
+    private var sortPicker: some View {
+        Picker("Sort", selection: $sort) {
+            ForEach(availableSorts) { sort in
+                Text(sort.rawValue).tag(sort)
+            }
+        }
+        .pickerStyle(.menu)
+        .lineLimit(1)
+        .fixedSize()
+    }
+
+    private func trackCountText(visibleCount: Int) -> some View {
+        Text("\(visibleCount) / \(library.tracks.count) 曲")
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(YagyoColor.dim)
+            .lineLimit(1)
+            .fixedSize()
     }
 
     private var availableSorts: [LibrarySort] {
@@ -634,7 +662,13 @@ private struct TrackRow: View {
         let sprite = YokaiGallery.sprite(for: track.id)
 
         Button {
-            player.load(track, from: library, autoplay: true, context: playbackContext)
+            if isCurrent {
+                // いま流れている曲は頭出しし直さず、再生/一時停止を切り替える
+                // (行のアイコンがpause表示のときの期待どおりの挙動)。
+                player.togglePlayPause()
+            } else {
+                player.load(track, from: library, autoplay: true, context: playbackContext)
+            }
         } label: {
             HStack(spacing: 12) {
                 ZStack {
