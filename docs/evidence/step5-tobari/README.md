@@ -37,13 +37,18 @@ Swift実装と同一の係数式・ゲーティング・FIR設計を [`mirror.py
 
 ## Mac側検証(Desktop Commander経由・2026-07-12)
 
-- **full suite 96 / 96 成功**(Xcode 27.0 / iPhone 17 Pro Simulator、commit `02bf89a`)。`KitsunebiAnalyzerTests` 12 / 12 を含み、ミラー導出の期待値(EBU -20 LUFS、True Peakオーバーシュート、44.1kHz適合、チャンク不変性、クリップラン境界)が実際のAccelerate / AVFoundation上で成立した。
-- Xcode Cloud「Build - iOS」は最新head(`85545a3`)で**成功**。初回コミット(`8ccfeda`)のCI失敗はMac上のビルドで「`[weak self]`のmutable束縛を@Sendableクロージャが参照」というSwift 6エラーと特定し、強参照キャプチャで解消した。
+- **full suite 100 / 100 成功**(Xcode 27.0 / iPhone 17 Pro Simulator)。`KitsunebiAnalyzerTests` 16 / 16 を含み、ミラー導出の期待値(EBU -20 LUFS、True Peakオーバーシュート、44.1kHz適合、チャンク不変性、クリップラン境界)、チャンネルレイアウト解決(5.1タグ/ビットマップ)、ファイル経由E2E(Float32 CAF書き→`analyze(url:)`→EBU値一致+進捗単調増加)が実際のAccelerate / AVFoundation / AudioToolbox上で成立した。
+- Xcode Cloud「Build - iOS」はgreen。初回コミット(`8ccfeda`)のCI失敗はMac上のビルドで「`[weak self]`のmutable束縛を@Sendableクロージャが参照」というSwift 6エラーと特定し、強参照キャプチャで解消した。
+
+## 帳の画面(Simulator実描画)
+
+`testExportsTobariScreenArtifact` がSimulatorの実ウィンドウで描画・撮影した一画面(提案3種がすべて出る代表値)。ImageRendererはScrollView内容を描かず、素のUIWindowはシーン未接続で真っ白になるため、windowScene接続+drawHierarchy方式で撮り、「ほぼ単色なら失敗」の機械検証をテストに組み込んだ。
+
+![tobari-screen](tobari-screen.png)
 
 ## 未完了
 
-- `85545a3` で追加した2テスト(ファイル経由E2E / 帳のQA artifact)のMac上での実行と、xcresultからの `tobari-screen.png` 抽出。
-- Simulatorでの帳の対話的確認(進捗→目盛→提案、VoiceOver、絵巻が退く共存規則)。
-- 実音源での動作確認とユーザー本人の確認。
+- Simulator/実機での帳の対話的確認(長押し→検聴の導線、進捗表示、VoiceOverの実聴、絵巻が退く共存規則)。
+- ユーザー自身の音源での動作確認と、ユーザー本人の見た目承認。
 
 上記が済むまでPhase A完了とは扱いません。
