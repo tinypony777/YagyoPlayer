@@ -10,7 +10,7 @@
 
 現在候補は、全8フレームで**正面向きの赤〜珊瑚色の円錐形**を守り、**茶色の頭頂、金色の帯、中央の一つ目、曲線の笑い口、桃色の舌、淡色の一本足、一足の茶／金色の下駄**を共有する coherent frame family とする。構成は `idle 1 + walk 4 + hush 1 + strong 2` のまま、`strong` は正面形を保った anticipate／reaction の二次動作で表す。
 
-参照忠実度テストは旧アートに対するTask 1の意味的REDをXcode 27／iOS 27で確認済みである。現在候補は、Xcode 27.0のgeneric iOS build、checked projectの **11 / 11 focused QA GREEN** と **65 / 65 full suite GREEN**（ともにskip 0）を完了した。座標tapなしのsemantic AX validationも、iPhone 17 Proのstate matrix **4 / 4**、Reduce Motion stability **1 / 1**、最小幅iPhone 17eのdefault Normal + Karakasa **1 / 1**をskip 0で通過した。Reduce Motionの`t0`／`t+2 s` full PNGは同一SHA-256で、canvas cropのdiffering bytesは0である。2名の独立native reviewerは同じASCIIソースからのPNG contact sheet／GIFとSimulator画像7枚をすべてAPPROVEDし、BLOCKER／MAJOR／MINORは0。Pro Strongの右端寄りは切断なしのINFOだけである。現在の画像とhashは[証跡ledger](../../evidence/step4-karakasa/README.md)を正本とし、binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`で9 binary blob／旧5画像削除／Draft PR本文を確認済み。ユーザー本人の見た目承認は未完了であり、視覚完了とは扱わない。
+参照忠実度テストは旧アートに対するTask 1の意味的REDをXcode 27／iOS 27で確認済みである。現在候補は、Xcode 27.0のgeneric iOS build、checked projectの **11 / 11 focused QA GREEN** と **65 / 65 full suite GREEN**（ともにskip 0）を完了した。座標tapなしのsemantic AX validationも、iPhone 17 Proのstate matrix **4 / 4**、Reduce Motion stability **1 / 1**、最小幅iPhone 17eのdefault Normal + Karakasa **1 / 1**をskip 0で通過した。Reduce Motionの`t0`／`t+2 s` full PNGは同一SHA-256で、canvas cropのdiffering bytesは0である。2名の独立native reviewerは同じASCIIソースからのPNG contact sheet／GIFとSimulator画像7枚をすべてAPPROVEDし、BLOCKER／MAJOR／MINORは0。Pro Strongの右端寄りは切断なしのINFOだけである。現在の画像とhashは[証跡ledger](../../evidence/step4-karakasa/README.md)を正本とし、binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`で9 binary blob／旧5画像削除／PR本文を確認済み。ユーザー本人の見た目承認は2026-07-12にPR #13のレビューで完了した。
 
 ## 1. 目的
 

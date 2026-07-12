@@ -84,6 +84,6 @@ GIFは `idle, walk0...3, walk0...3, hush, hush, strong0, strong1, strong1, idle`
 - Simulator screenshots: semantic AX／XCUITestとhash検証はGREEN。2名の独立native visual QAは全7枚を**APPROVED**（BLOCKER／MAJOR／MINOR 0）。Pro Strongの右端寄りは切断なしのINFOのみ。
 - ユーザー見た目承認: **2026-07-12、PR #13レビューで承認済み**（「唐傘のビジュアル承認します」）。
 - GitHub binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`で9 binary blobのSHA-256と画像linkを確認済み。旧5画像は削除済み。
-- [Draft PR #13](https://github.com/tinypony777/YagyoPlayer/pull/13)は本文更新済み、`draft = true`、`merged = false`、base `main`。
-- `main` SHA `256a45a8c9d9efb8db09970f3e40e6d1f5ef28fc`は不変。
+- [PR #13](https://github.com/tinypony777/YagyoPlayer/pull/13)は2026-07-12にDraft解除のうえ`main`へマージ済み(merge commit `9106e04a`)。当時の`draft = true`／`merged = false`の記録はsuperseded。
+- `main` SHA `256a45a8c9d9efb8db09970f3e40e6d1f5ef28fc`は本PR統合前の基点としての記録。
 - （superseded）当時は唐傘だけが新画風のmixed-art状態でした。残り7体と一つ目小僧は[frame matrix仕様](../../superpowers/specs/2026-07-12-remaining-yokai-frame-matrix.md)に基づきPR #14で制作・承認・統合され、混在画風は解消済みです。証跡は[残り妖怪ledger](../step4-remaining-yokai/README.md)を参照。
