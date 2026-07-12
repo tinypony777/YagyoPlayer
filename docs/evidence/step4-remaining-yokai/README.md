@@ -60,9 +60,52 @@ GIFは `idle → walk×2周 →（strongがある妖怪は anticipate → reacti
 
 semantic order は各シートとも `idle, walk.contact, walk.rise, walk.cross, walk.settle` に、strong を持つ妖怪は `strong.anticipate, strong.<strike|flare|hit>` が続きます。
 
+## Simulator evidence
+
+ユーザー環境のMacで、決定論的な `ParadePreviewHarness` により状態を固定して取得したSimulator画像です。ローカルXcodeのbooted runtimeがiOS 26.5のため、PR本文の記述にあるiOS 27.0ではなくiOS 26.5での撮影です。
+
+| ファイル | 状態 | Simulator | 寸法 | SHA-256 |
+|---|---|---|---:|---|
+| [`pr14-simulator-iphone-17-pro-max-normal.png`](pr14-simulator-iphone-17-pro-max-normal.png) | Normal | iPhone 17 Pro Max, iOS 26.5 | 1320×2868 | `893887eea9dc7ee93dbce25e35350afba6be611fe3ca376297883578fd7fdf13` |
+| [`pr14-simulator-iphone-17-pro-max-quiet-proxy.png`](pr14-simulator-iphone-17-pro-max-quiet-proxy.png) | Quiet proxy(全妖怪 `idle` fallback) | iPhone 17 Pro Max, iOS 26.5 | 1320×2868 | `0dfc6cfd5c06d4e6dad4329bee2ab446ac0670bbce83eb1cd5325e16f2332cd8` |
+| [`pr14-simulator-iphone-17-pro-max-strong-open.png`](pr14-simulator-iphone-17-pro-max-strong-open.png) | Strong open | iPhone 17 Pro Max, iOS 26.5 | 1320×2868 | `d0cc6ecc6a4b55335793ef9ec0195b79ba99c5b90372e4b45b2f9d35a5106ae7` |
+| [`pr14-simulator-iphone-17-pro-max-strong-ushimitsu.png`](pr14-simulator-iphone-17-pro-max-strong-ushimitsu.png) | Strong + Ushimitsu | iPhone 17 Pro Max, iOS 26.5 | 1320×2868 | `e1da0ca2c1ab7bf4a7cb1354eb4f8073fa30d04e93f87c0758a2fe60ea140256` |
+| [`pr14-simulator-iphone-17-pro-max-strong-reduce-motion.png`](pr14-simulator-iphone-17-pro-max-strong-reduce-motion.png) | Strong + Reduce Motion, `t0` | iPhone 17 Pro Max, iOS 26.5 | 1320×2868 | `1b4d50604c29ad43baf4c6032c5add57f23d07aa42e7f5d435b407796f09a73b` |
+| [`pr14-simulator-iphone-17-pro-max-strong-reduce-motion-t-plus-2s.png`](pr14-simulator-iphone-17-pro-max-strong-reduce-motion-t-plus-2s.png) | 同状態、`t+2 s` | iPhone 17 Pro Max, iOS 26.5 | 1320×2868 | `6ce77da80bf7058354289b79bbd7c5470b1119afd6a80a0549f968384c44f447` |
+| [`pr14-simulator-iphone-17e-normal.png`](pr14-simulator-iphone-17e-normal.png) | 最小幅 Normal | iPhone 17e, iOS 26.5 | 1170×2532 | `b4b9f18aa4c9ab4456198f4562fbbc2501474ad0389151dae8f427d4f9a7c94a` |
+
+| Normal | Quiet proxy |
+|---|---|
+| [![Normal](pr14-simulator-iphone-17-pro-max-normal.png)](pr14-simulator-iphone-17-pro-max-normal.png) | [![Quiet](pr14-simulator-iphone-17-pro-max-quiet-proxy.png)](pr14-simulator-iphone-17-pro-max-quiet-proxy.png) |
+
+| Strong open | Strong + Ushimitsu |
+|---|---|
+| [![Strong](pr14-simulator-iphone-17-pro-max-strong-open.png)](pr14-simulator-iphone-17-pro-max-strong-open.png) | [![Strong Ushimitsu](pr14-simulator-iphone-17-pro-max-strong-ushimitsu.png)](pr14-simulator-iphone-17-pro-max-strong-ushimitsu.png) |
+
+| Strong + Reduce Motion `t0` | iPhone 17e Normal |
+|---|---|
+| [![Reduce Motion](pr14-simulator-iphone-17-pro-max-strong-reduce-motion.png)](pr14-simulator-iphone-17-pro-max-strong-reduce-motion.png) | [![iPhone 17e](pr14-simulator-iphone-17e-normal.png)](pr14-simulator-iphone-17e-normal.png) |
+
+### Reduce Motion `t0`／`t+2 s` の機械検証
+
+唐傘ledgerと異なり、full PNGのSHA-256は同一**ではありません**。ピクセル差分を機械計測した結果は次のとおりです。
+
+- 夜行絵巻canvasのスプライト描画領域(y = 372...837)は**差分0バイト**で完全一致。位置・姿勢・輪郭・先導灯はすべて静止している。
+- 差分は (1) canvas最下段の境界線行と直下のハーネスUI(コントロールパネル)に散る**単一チャンネル±1/255**の合成ノイズ(最大チャンネル和差2、知覚不能)、(2) 画面最下部のscroll indicatorのフェード残り、の2種のみ。
+- したがってReduce Motionの静止契約(スプライトの位置とscaleが時刻に依らず一致)は満たしている。full PNG同一ではない理由は行列表示の外側にある。
+
+### 目視QA(取得画像に対する検収)
+
+- 全状態で混在画風なし。行列は9体すべて新40×48契約で、旧8bitスプライトは現れない。
+- Strong系: 反応するのは唐傘・鬼太鼓(太鼓打ち+金の光)・木魚(バチ+squash)・狐火(flare)・天狗(羽団扇hit)のみ。河童・雪女・琵琶牧々・一つ目小僧は反応しない(契約どおり)。
+- Reduce Motion + Strong: 破線輪郭はstrongフレームを持つ妖怪だけに出て、透明余白ではなく本体bboxにフィットする。先導灯(唐傘resident)は頭頂に密着。
+- Quiet proxy: 全妖怪が `idle` fallback。
+- 最小幅iPhone 17e: 天狗・雪女・琵琶牧々・唐傘を確認、切れ・補間・衝突なし。
+
 ## QA状態
 
 - **構造検証:** 8体×全48フレームが共通契約（キャンバス、色数、余白、接地または浮遊帯、中心整合、walk／strongドリフト制限、承認パレット完全一致）をPASS。同じ契約を `ParadeSpriteContractTests` がXcode側で恒久化する。
 - **独立視覚QA:** 制作エージェントとは別の2レンズ（identity契約／frame family一貫性）のレビュアーが各妖怪をAPPROVED。天狗のみ修復1回を経てAPPROVED、他はブロッカー0。
 - **画風一貫性:** 唐傘を基準に9体のlineupを独立レビューし、墨の使い方・ランプ彩度・顔の意匠・相対サイズ・接地整合で外れ値なし（coherent判定）。
-- **未完了:** Mac側での Xcode build／full suite／Simulator 検証（通常・quiet・strong・丑三つ時・Reduce Motion・最小幅）、およびユーザー本人の見た目承認。これらが済むまで視覚完了・`main` 統合とはしません。
+- **Simulator検証:** ユーザー環境のMac(iOS 26.5 runtime)で通常・quiet・strong・丑三つ時・Reduce Motion(t0/t+2s)・最小幅の7枚を取得済み。スプライト描画領域のReduce Motion差分0バイトと、上記の目視QA項目を確認した。
+- **未完了:** ユーザー本人の見た目承認。これが済むまで視覚完了・`main` 統合とはしません。
