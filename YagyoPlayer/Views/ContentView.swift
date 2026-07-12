@@ -665,6 +665,8 @@ private struct TrackRow: View {
             if isCurrent {
                 // いま流れている曲は頭出しし直さず、再生/一時停止を切り替える
                 // (行のアイコンがpause表示のときの期待どおりの挙動)。
+                // 次曲/前曲の文脈だけは見えているスコープへ合わせる。
+                player.adoptContext(playbackContext, from: library)
                 player.togglePlayPause()
             } else {
                 player.load(track, from: library, autoplay: true, context: playbackContext)

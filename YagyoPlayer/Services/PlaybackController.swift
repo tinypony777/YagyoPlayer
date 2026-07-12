@@ -242,6 +242,19 @@ final class PlaybackController: ObservableObject {
         isPlaying ? pause() : play()
     }
 
+    /// 再生中の曲と再生位置を触らずに、次曲/前曲の文脈(行列/巻物)だけを
+    /// 見えているスコープへ合わせる。同じ曲の行タップは load でやり直さず
+    /// これで文脈だけ引き継ぐ(頭出しバグの回避)。
+    func adoptContext(_ context: PlaybackContext, from library: AudioLibraryStore) {
+        remoteLibrary = library
+        switch context {
+        case .library:
+            library.activePlaylistID = nil
+        case .playlist(let playlistID):
+            library.activePlaylistID = playlistID
+        }
+    }
+
     func play() {
         guard let audioPlayer else {
             playbackErrorMessage = "No track is loaded yet."
