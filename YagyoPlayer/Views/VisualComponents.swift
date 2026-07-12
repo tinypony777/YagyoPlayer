@@ -300,8 +300,10 @@ struct StepProgressBar: View {
     }
 }
 
-/// 灯芯 — 音量の自前スライダー。標準Sliderの白い丸ノブを提灯玉に置き換え、
-/// 通過側の線が提灯色にほのかに灯る。StepProgressBar と同族の意匠。
+/// 灯芯 — 音量の自前スライダー。明治大正の計器を思わせる「罫と丸紋」の意匠:
+/// 単罫+四半目盛のトラック、通過側は提灯色の実線、ノブは丸紋(提灯色+
+/// 墨の輪+朱の芯)。フラット塗りで、ドラッグ中は朱の芯がわずかに広がる
+/// (Reduce Motion時は変化なし)。StepProgressBar と同族。
 struct TomoshibiSlider: View {
     @Binding var value: Double
 
@@ -317,34 +319,40 @@ struct TomoshibiSlider: View {
     var body: some View {
         GeometryReader { geometry in
             let width = geometry.size.width
+            let midY = geometry.size.height / 2
             let knobRadius = Self.knobDiameter / 2
             let knobCenterX = knobRadius + CGFloat(value) * max(0, width - Self.knobDiameter)
-            let glowsStronger = isDragging && !reduceMotion
+            let coreDiameter: CGFloat = isDragging && !reduceMotion ? 7 : 5
 
             ZStack(alignment: .leading) {
-                Capsule()
+                Rectangle()
                     .fill(YagyoColor.line)
                     .frame(height: 2)
 
-                Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [YagyoColor.chochin.opacity(0.16), YagyoColor.chochin.opacity(0.62)],
-                            startPoint: .leading,
-                            endPoint: .trailing
+                ForEach([0.0, 0.25, 0.5, 0.75, 1.0], id: \.self) { mark in
+                    Rectangle()
+                        .fill(YagyoColor.line)
+                        .frame(width: 1.5, height: 7)
+                        .position(
+                            x: knobRadius + CGFloat(mark) * max(0, width - Self.knobDiameter),
+                            y: midY
                         )
-                    )
+                }
+
+                Rectangle()
+                    .fill(YagyoColor.chochin)
                     .frame(width: max(knobCenterX, 2), height: 2)
-                    .shadow(color: YagyoColor.chochin.opacity(0.3), radius: 3)
 
                 Circle()
                     .fill(YagyoColor.chochin)
-                    .frame(width: Self.knobDiameter, height: Self.knobDiameter)
-                    .shadow(
-                        color: YagyoColor.chochin.opacity(glowsStronger ? 0.75 : 0.45),
-                        radius: glowsStronger ? 8 : 5
+                    .overlay(Circle().stroke(YagyoColor.sumi, lineWidth: 2))
+                    .overlay(
+                        Circle()
+                            .fill(YagyoColor.shu)
+                            .frame(width: coreDiameter, height: coreDiameter)
                     )
-                    .position(x: knobCenterX, y: geometry.size.height / 2)
+                    .frame(width: Self.knobDiameter, height: Self.knobDiameter)
+                    .position(x: knobCenterX, y: midY)
             }
             .frame(maxHeight: .infinity)
             .contentShape(Rectangle())

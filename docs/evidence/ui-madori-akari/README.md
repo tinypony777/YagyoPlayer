@@ -6,9 +6,10 @@
 
 音量の標準 `Slider`(白い丸ノブ+狐火色tint)を、`StepProgressBar` と同族の自前ビュー `TomoshibiSlider` へ置換。
 
-- **実装**: `VisualComponents.swift`(StepProgressBarと同居)。トラックは墨色の細線、通過側は提灯色の淡いグラデーション、ノブは提灯玉+柔らかなglow。ドラッグ中はglowがわずかに強まり、Reduce Motion時は変化しない。タップ位置ジャンプ+ドラッグ(最小距離8ptはStepProgressBarと同じ)。VoiceOverは `.adjustable`(%読み上げ、一歩5%)。
+- **意匠**: 明治大正の計器を思わせる「罫と丸紋」(オーナーのモダンレトロ指向フィードバックを受け、3案の実描画比較からB案を選定)。単罫+四半目盛のトラック、通過側は提灯色のフラットな実線、ノブは丸紋(提灯色+墨の輪+朱の芯)。グラデーション・ソフトglowは不使用。ドラッグ中は朱の芯がわずかに広がり、Reduce Motion時は変化しない。
+- **実装**: `VisualComponents.swift`(StepProgressBarと同居)。タップ位置ジャンプ+ドラッグ(最小距離8ptはStepProgressBarと同じ)。位置→値はノブ可動域 [r, width−r] の逆写像で、表示と操作が同一写像(Copilot/Codex指摘対応)。VoiceOverは `.adjustable`(%読み上げ、一歩5%)。
 - **置換箇所**: `ContentView.swift` の音量行のみ。両端のスピーカーアイコン、`volumeBinding`、`PlaybackController` は不変。
-- **テスト**: `TomoshibiSliderTests` — 位置→値の写像とクランプ(4)、VoiceOver増減とクランプ(4)、Simulator実描画のQA artifact(2、単色検知つき)。TDD(RED: `Cannot find 'TomoshibiSlider' in scope` → GREEN)で追加。
+- **テスト**: `TomoshibiSliderTests` — 位置→値の写像とクランプ(4)+ノブ中心が左右端で0/1へ写る回帰(2)、VoiceOver増減とクランプ(4)、Simulator実描画のQA artifact(2、単色検知つき)。TDD(RED: `Cannot find 'TomoshibiSlider' in scope` → GREEN、写像修正もRED 0.07/0.93 → GREEN)で追加。
 
 ### Simulator実描画(iPhone 17 Pro / iOS 27.0)
 
