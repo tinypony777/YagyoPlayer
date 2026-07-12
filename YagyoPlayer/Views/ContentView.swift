@@ -81,9 +81,11 @@ struct ContentView: View {
                 Text(player.playbackErrorMessage ?? "")
             }
             .onChange(of: router.pendingAction) { _, action in
-                guard action == .continueLastTrack else { return }
-                player.playMostRecent(from: library)
-                selectedTab = .yagyo
+                guard let action else { return }
+                if action == .continueLastTrack {
+                    player.playMostRecent(from: library)
+                }
+                selectedTab = YagyoTab.destination(for: action)
                 router.pendingAction = nil
             }
         }
@@ -97,30 +99,45 @@ struct ContentView: View {
         ZStack {
             YagyoBackdrop(isUshimitsu: ushimitsu.isNight)
 
-            ScrollView {
-                VStack(spacing: 18) {
-                    switch tab {
-                    case .yagyo:
-                        HeaderView(isUshimitsu: ushimitsu.isNight, importAction: { isImporterPresented = true })
-                        ReactiveVisualStage(
-                            signals: player.paradeSignals,
-                            track: latestCurrentTrack,
-                            progress: player.progress,
-                            isUshimitsu: ushimitsu.isNight,
-                            onMoonTap: { ushimitsu.toggleForced() }
-                        )
-                        TransportView()
-                        FooterView()
-                    case .gyoretsu:
-                        LibrarySection(importAction: { isImporterPresented = true })
-                        PlatformNote()
-                    case .makimono:
-                        PlaylistSection()
-                    }
+            switch tab {
+            case .yagyo:
+                // 夜行はスクロールなしの1画面(実機フィードバック): 波形の四角が
+                // 残り高さへ縮み、絵巻と再生操作が同時に見える。
+                VStack(spacing: 12) {
+                    HeaderView(isUshimitsu: ushimitsu.isNight, importAction: { isImporterPresented = true })
+                    ReactiveVisualStage(
+                        signals: player.paradeSignals,
+                        track: latestCurrentTrack,
+                        progress: player.progress,
+                        isUshimitsu: ushimitsu.isNight,
+                        isCompact: true,
+                        onMoonTap: { ushimitsu.toggleForced() }
+                    )
+                    TransportView()
+                    FooterView()
                 }
                 .padding(.horizontal, 18)
-                .padding(.top, 18)
-                .padding(.bottom, 32)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
+            case .gyoretsu:
+                ScrollView {
+                    VStack(spacing: 18) {
+                        LibrarySection(importAction: { isImporterPresented = true })
+                        PlatformNote()
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 18)
+                    .padding(.bottom, 32)
+                }
+            case .makimono:
+                ScrollView {
+                    VStack(spacing: 18) {
+                        PlaylistSection()
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 18)
+                    .padding(.bottom, 32)
+                }
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -252,6 +269,7 @@ private struct ReactiveVisualStage: View {
     var track: AudioTrack?
     var progress: Double
     var isUshimitsu: Bool
+    var isCompact: Bool = false
     var onMoonTap: () -> Void
 
     var body: some View {
@@ -269,7 +287,8 @@ private struct ReactiveVisualStage: View {
             progress: progress,
             level: snapshot.level,
             activity: snapshot.activity,
-            levelBand: snapshot.levelBand
+            levelBand: snapshot.levelBand,
+            isCompact: isCompact
         )
     }
 }
@@ -280,50 +299,97 @@ private struct ArtworkStage: View {
     var level: Double
     var activity: ParadeSignalSnapshot.Activity
     var levelBand: ParadeSignalSnapshot.LevelBand
+    /// 夜行タブの1画面レイアウト用。波形の四角を残り高さへ縮め、
+    /// 曲札を1行へ畳んで、スクロールなしで再生操作まで見えるようにする。
+    var isCompact: Bool = false
 
     var body: some View {
-        VStack(spacing: 16) {
-            ZStack {
-                Image("DefaultArtwork")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .aspectRatio(1, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 30, style: .continuous)
-                            .stroke(YagyoColor.line.opacity(0.9), lineWidth: 1)
+        VStack(spacing: isCompact ? 10 : 16) {
+            if isCompact {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .fill(.clear)
+                        .overlay {
+                            Image("DefaultArtwork")
+                                .resizable()
+                                .scaledToFill()
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                                .stroke(YagyoColor.line.opacity(0.9), lineWidth: 1)
+                        }
+
+                    CircularWaveform(
+                        progress: progress,
+                        level: level,
+                        activity: activity,
+                        levelBand: levelBand
+                    )
+                    .padding(18)
+                }
+                .aspectRatio(1, contentMode: .fit)
+                .frame(minHeight: 140, maxHeight: .infinity)
+                .frame(maxWidth: .infinity)
+            } else {
+                ZStack {
+                    Image("DefaultArtwork")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity)
+                        .aspectRatio(1, contentMode: .fit)
+                        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                                .stroke(YagyoColor.line.opacity(0.9), lineWidth: 1)
+                        }
+
+                    CircularWaveform(
+                        progress: progress,
+                        level: level,
+                        activity: activity,
+                        levelBand: levelBand
+                    )
+                    .padding(28)
+                }
+            }
+
+            if isCompact {
+                HStack(spacing: 8) {
+                    Text(track?.title ?? "行列はまだ静か")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(YagyoColor.geppaku)
+                        .lineLimit(1)
+                    if let artist = track?.artist, !artist.isEmpty {
+                        Text("· \(artist)")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(YagyoColor.kitsunebi)
+                            .lineLimit(1)
+                    }
+                }
+            } else {
+                VStack(spacing: 5) {
+                    Text(track?.title ?? "行列はまだ静か")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(YagyoColor.geppaku)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+
+                    if let artist = track?.artist, !artist.isEmpty {
+                        Text(artist)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(YagyoColor.kitsunebi)
+                            .lineLimit(1)
                     }
 
-                CircularWaveform(
-                    progress: progress,
-                    level: level,
-                    activity: activity,
-                    levelBand: levelBand
-                )
-                    .padding(28)
-            }
-
-            VStack(spacing: 5) {
-                Text(track?.title ?? "行列はまだ静か")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(YagyoColor.geppaku)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-
-                if let artist = track?.artist, !artist.isEmpty {
-                    Text(artist)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(YagyoColor.kitsunebi)
+                    Text(track?.originalFilename ?? "Import a track to start the procession")
+                        .font(.footnote)
+                        .foregroundStyle(YagyoColor.dim)
                         .lineLimit(1)
                 }
-
-                Text(track?.originalFilename ?? "Import a track to start the procession")
-                    .font(.footnote)
-                    .foregroundStyle(YagyoColor.dim)
-                    .lineLimit(1)
             }
         }
+        .frame(maxWidth: .infinity)
         .ritualPanel(radius: 32, padding: 12, tint: YagyoColor.kitsunebi.opacity(0.08))
         .shadow(color: YagyoColor.chochin.opacity(activity == .stopped ? 0 : 0.16), radius: 24)
     }
@@ -1055,6 +1121,14 @@ enum YagyoTab: String, CaseIterable {
     var showsMiniAkari: Bool {
         self != .yagyo
     }
+
+    /// URLショートカットの行き先。libraryは行列、再生系は夜行へ。
+    static func destination(for action: AppRouter.PendingAction) -> YagyoTab {
+        switch action {
+        case .showLibrary: .gyoretsu
+        case .showNowPlaying, .continueLastTrack: .yagyo
+        }
+    }
 }
 
 /// ミニ灯り — 行列/巻物タブの下部に、現在曲がある間だけ灯る小さなバー。
@@ -1110,6 +1184,7 @@ struct MiniAkariBar: View {
         .padding(.bottom, 6)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("ミニ灯り: \(title)。タップで夜行へ")
+        .accessibilityAction(named: "夜行を開く") { onOpenYagyo() }
     }
 }
 
