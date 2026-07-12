@@ -1,4 +1,5 @@
 import Accelerate
+import AudioToolbox
 import AVFoundation
 
 /// 狐火の帳(Step 5 Phase A)のオフライン解析。
@@ -111,6 +112,9 @@ final class KitsunebiAnalyzerEngine {
     /// Short-term 3 秒 = 30 ホップ。
     private let hopsPerShortTerm = 30
     private let channelWeights: [Float]
+    /// モノ互換の相関に使う実際のL/R(レイアウトで先頭2chがL/Rでない場合がある)。
+    private let correlationLeftChannel: Int
+    private let correlationRightChannel: Int
     private let stage1Coefficients: [Float]
     private let stage2Coefficients: [Float]
     private let firFilter: [Float]
@@ -167,15 +171,19 @@ final class KitsunebiAnalyzerEngine {
     private var upsampledWithTail: [Float]
     private var convolutionOutput: [Float]
 
-    /// - Parameter channelWeights: BS.1770のチャンネル重み。nil なら全チャンネル 1.0
-    ///   (モノラル/ステレオはこれが正式値。レイアウト不明の多チャンネルも、
-    ///   決め打ちでチャンネルを落とすより等重みで全て数える方を選ぶ)。
-    ///   既知の5.1レイアウトはファイル入口が `KitsunebiAnalyzer.channelWeights(for:)` で解決する。
+    /// - Parameters:
+    ///   - channelWeights: BS.1770のチャンネル重み。nil なら全チャンネル 1.0
+    ///     (モノラル/ステレオはこれが正式値。レイアウト不明の多チャンネルも、
+    ///     決め打ちでチャンネルを落とすより等重みで全て数える方を選ぶ)。
+    ///     ファイル入口が `KitsunebiAnalyzer.channelWeights(for:)` でラベルから解決する。
+    ///   - correlationChannels: モノ互換の相関に使う2チャンネルのインデックス。
+    ///     nil なら先頭2ch。レイアウトで実際のL/Rが先頭でない場合に入口が指定する。
     init(
         sampleRate: Double,
         channelCount: Int,
         maximumChunkFrames: Int = 65536,
-        channelWeights: [Float]? = nil
+        channelWeights: [Float]? = nil,
+        correlationChannels: (Int, Int)? = nil
     ) {
         precondition(sampleRate > 0, "sampleRate must be positive")
         precondition(channelCount > 0, "channelCount must be positive")
@@ -184,12 +192,23 @@ final class KitsunebiAnalyzerEngine {
             channelWeights == nil || channelWeights?.count == channelCount,
             "channelWeights count mismatch"
         )
+        let correlationPair = correlationChannels ?? (0, 1)
+        precondition(
+            channelCount < 2 || (
+                correlationPair.0 >= 0 && correlationPair.0 < channelCount
+                && correlationPair.1 >= 0 && correlationPair.1 < channelCount
+                && correlationPair.0 != correlationPair.1
+            ),
+            "correlationChannels out of range"
+        )
 
         self.sampleRate = sampleRate
         self.channelCount = channelCount
         self.maximumChunkFrames = maximumChunkFrames
         self.hopSize = max(1, Int(sampleRate * 0.1))
         self.channelWeights = channelWeights ?? Array(repeating: 1.0, count: channelCount)
+        self.correlationLeftChannel = correlationPair.0
+        self.correlationRightChannel = correlationPair.1
         self.stage1Coefficients = KWeightingCoefficients.stage1(sampleRate: sampleRate)
         self.stage2Coefficients = KWeightingCoefficients.stage2(sampleRate: sampleRate)
         self.firFilter = Self.makeInterpolationFIR()
@@ -315,10 +334,10 @@ final class KitsunebiAnalyzerEngine {
             }
         }
 
-        // 位相相関(ステレオ以上は先頭2ch)
+        // 位相相関(レイアウトから解決した実際のL/R。既定は先頭2ch)
         if channelCount >= 2 {
-            let left = channelPointers[0] + offset
-            let right = channelPointers[1] + offset
+            let left = channelPointers[correlationLeftChannel] + offset
+            let right = channelPointers[correlationRightChannel] + offset
             var dot: Float = 0
             var l2: Float = 0
             var r2: Float = 0
@@ -646,23 +665,89 @@ enum KitsunebiAnalyzer {
     static let readBufferFrames: AVAudioFrameCount = 65536
 
     /// BS.1770-4 のチャンネル重みをレイアウトから解決する。
-    /// 既知の5.1タグのみサラウンド1.41・LFE除外を適用し、レイアウト不明の
-    /// 多チャンネルは nil(=等重み)。順序決め打ちでチャンネルを黙って落とさない。
+    /// タグ決め打ちではなくチャンネルラベル(タグはAudioToolboxで展開)から導くため、
+    /// MPEG/AAC/AudioUnit等どの5.1タグ順序でもLFE除外・サラウンド1.41が正しく載る。
+    /// ラベルが得られない多チャンネルは nil(=等重み)で、チャンネルを黙って落とさない。
     static func channelWeights(for format: AVAudioFormat) -> [Float]? {
-        guard format.channelCount > 2, let tag = format.channelLayout?.layoutTag else {
+        guard format.channelCount > 2,
+              let labels = channelLabels(for: format),
+              labels.count == Int(format.channelCount),
+              labels.allSatisfy({ $0 != kAudioChannelLabel_Unknown }) else {
             return nil
         }
-        switch tag {
-        case kAudioChannelLayoutTag_MPEG_5_1_A: // L R C LFE Ls Rs
-            return [1.0, 1.0, 1.0, 0.0, 1.41, 1.41]
-        case kAudioChannelLayoutTag_MPEG_5_1_B: // L R Ls Rs C LFE
-            return [1.0, 1.0, 1.41, 1.41, 1.0, 0.0]
-        case kAudioChannelLayoutTag_MPEG_5_1_C, // L C R Ls Rs LFE
-             kAudioChannelLayoutTag_MPEG_5_1_D: // C L R Ls Rs LFE
-            return [1.0, 1.0, 1.0, 1.41, 1.41, 0.0]
-        default:
+        return labels.map { label -> Float in
+            switch label {
+            case kAudioChannelLabel_LFEScreen, kAudioChannelLabel_LFE2:
+                return 0.0
+            case kAudioChannelLabel_LeftSurround, kAudioChannelLabel_RightSurround,
+                 kAudioChannelLabel_LeftSurroundDirect, kAudioChannelLabel_RightSurroundDirect,
+                 kAudioChannelLabel_RearSurroundLeft, kAudioChannelLabel_RearSurroundRight:
+                return 1.41
+            default:
+                return 1.0
+            }
+        }
+    }
+
+    /// モノ互換の相関に使う実際のL/Rのインデックス。レイアウトからLeft/Rightラベルを
+    /// 探し(例: MPEG_5_1_DはC,L,R,…なので(1,2))、判別できなければ先頭2ch。
+    /// 相関は対称なので順序自体は結果へ影響しない。
+    static func correlationChannels(for format: AVAudioFormat) -> (Int, Int) {
+        guard format.channelCount > 2,
+              let labels = channelLabels(for: format),
+              let left = labels.firstIndex(of: kAudioChannelLabel_Left),
+              let right = labels.firstIndex(of: kAudioChannelLabel_Right),
+              left != right else {
+            return (0, 1)
+        }
+        return (left, right)
+    }
+
+    /// レイアウトからチャンネルラベル列を得る。descriptions直持ちはそのまま読み、
+    /// タグ形式は kAudioFormatProperty_ChannelLayoutForTag で展開する。
+    private static func channelLabels(for format: AVAudioFormat) -> [AudioChannelLabel]? {
+        guard let layout = format.channelLayout else { return nil }
+        let pointer = layout.layout
+        let tag = pointer.pointee.mChannelLayoutTag
+        if tag == kAudioChannelLayoutTag_UseChannelDescriptions {
+            return labels(from: pointer)
+        }
+        if tag == kAudioChannelLayoutTag_UseChannelBitmap {
+            // ビットマップ形式はPhase Aでは展開しない(等重みへ)。
             return nil
         }
+        var mutableTag = tag
+        let tagSize = UInt32(MemoryLayout<AudioChannelLayoutTag>.size)
+        var size: UInt32 = 0
+        guard AudioFormatGetPropertyInfo(
+            kAudioFormatProperty_ChannelLayoutForTag, tagSize, &mutableTag, &size
+        ) == noErr, Int(size) >= MemoryLayout<AudioChannelLayout>.size else {
+            return nil
+        }
+        let raw = UnsafeMutableRawPointer.allocate(
+            byteCount: Int(size),
+            alignment: MemoryLayout<AudioChannelLayout>.alignment
+        )
+        defer { raw.deallocate() }
+        guard AudioFormatGetProperty(
+            kAudioFormatProperty_ChannelLayoutForTag, tagSize, &mutableTag, &size, raw
+        ) == noErr else {
+            return nil
+        }
+        return labels(from: raw.bindMemory(to: AudioChannelLayout.self, capacity: 1))
+    }
+
+    /// AudioChannelLayout の可変長 mChannelDescriptions からラベルを読む。
+    /// (structコピーは先頭1要素しか運ばないため、必ずポインタ経由で読む。)
+    private static func labels(from pointer: UnsafePointer<AudioChannelLayout>) -> [AudioChannelLabel]? {
+        let count = Int(pointer.pointee.mNumberChannelDescriptions)
+        guard count > 0,
+              let offset = MemoryLayout<AudioChannelLayout>.offset(of: \.mChannelDescriptions) else {
+            return nil
+        }
+        let descriptions = (UnsafeRawPointer(pointer) + offset)
+            .assumingMemoryBound(to: AudioChannelDescription.self)
+        return (0..<count).map { descriptions[$0].mChannelLabel }
     }
 
     static func analyze(
@@ -690,7 +775,8 @@ enum KitsunebiAnalyzer {
             sampleRate: sampleRate,
             channelCount: channelCount,
             maximumChunkFrames: Int(readBufferFrames),
-            channelWeights: channelWeights(for: audioFile.processingFormat)
+            channelWeights: channelWeights(for: audioFile.processingFormat),
+            correlationChannels: correlationChannels(for: audioFile.processingFormat)
         )
 
         let totalFrames = max(0, Int(audioFile.length))

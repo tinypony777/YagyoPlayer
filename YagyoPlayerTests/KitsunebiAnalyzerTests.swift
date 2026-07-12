@@ -205,6 +205,72 @@ final class KitsunebiAnalyzerTests: XCTestCase {
         )
     }
 
+    // MARK: - チャンネルレイアウト → BS.1770重み / 相関ペア
+
+    func testChannelLayoutResolvesWeightsAndCorrelationPair() throws {
+        // MPEG_5_1_D は C L R Ls Rs LFE。ラベル展開が正しければ
+        // C/L/R=1.0, Ls/Rs=1.41, LFE=0、相関ペアは(L,R)=(1,2)になる。
+        let layoutD = try XCTUnwrap(
+            AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_MPEG_5_1_D)
+        )
+        let formatD = AVAudioFormat(standardFormatWithSampleRate: 48000, channelLayout: layoutD)
+        XCTAssertEqual(
+            KitsunebiAnalyzer.channelWeights(for: formatD),
+            [1.0, 1.0, 1.0, 1.41, 1.41, 0.0]
+        )
+        let pairD = KitsunebiAnalyzer.correlationChannels(for: formatD)
+        XCTAssertEqual(pairD.0, 1)
+        XCTAssertEqual(pairD.1, 2)
+
+        // MPEG_5_1_A は L R C LFE Ls Rs。
+        let layoutA = try XCTUnwrap(
+            AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_MPEG_5_1_A)
+        )
+        let formatA = AVAudioFormat(standardFormatWithSampleRate: 48000, channelLayout: layoutA)
+        XCTAssertEqual(
+            KitsunebiAnalyzer.channelWeights(for: formatA),
+            [1.0, 1.0, 1.0, 0.0, 1.41, 1.41]
+        )
+        let pairA = KitsunebiAnalyzer.correlationChannels(for: formatA)
+        XCTAssertEqual(pairA.0, 0)
+        XCTAssertEqual(pairA.1, 1)
+
+        // ステレオは重みnil(=等重み)・先頭2ch。
+        let stereo = try XCTUnwrap(
+            AVAudioFormat(standardFormatWithSampleRate: 48000, channels: 2)
+        )
+        XCTAssertNil(KitsunebiAnalyzer.channelWeights(for: stereo))
+        let stereoPair = KitsunebiAnalyzer.correlationChannels(for: stereo)
+        XCTAssertEqual(stereoPair.0, 0)
+        XCTAssertEqual(stereoPair.1, 1)
+    }
+
+    func testCorrelationUsesResolvedChannels() {
+        // 3ch構成で「実際のL/R」が(1,2)にある場合: ch0(=C相当)は無音でも
+        // 逆相のL/Rから相関-1.0を検出できる。先頭2ch決め打ちだと0除算→1.0側に落ちる。
+        let left = sine(frequency: 997, amplitude: 0.5, seconds: 2)
+        let right = left.map { -$0 }
+        let center = [Float](repeating: 0, count: left.count)
+
+        let engine = KitsunebiAnalyzerEngine(
+            sampleRate: sampleRate,
+            channelCount: 3,
+            correlationChannels: (1, 2)
+        )
+        center.withUnsafeBufferPointer { c in
+            left.withUnsafeBufferPointer { l in
+                right.withUnsafeBufferPointer { r in
+                    engine.process(
+                        channelPointers: [c.baseAddress!, l.baseAddress!, r.baseAddress!],
+                        frameCount: left.count
+                    )
+                }
+            }
+        }
+        let result = engine.finalize()
+        XCTAssertEqual(result.stereoCorrelation ?? .nan, -1.0, accuracy: 0.0001)
+    }
+
     // MARK: - ファイル経由のE2E(AVAudioFile読み取り経路)
 
     func testAnalyzeFileEndToEnd() throws {
