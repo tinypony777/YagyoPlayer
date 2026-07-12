@@ -23,4 +23,21 @@
 
 ## Step 2: タブ分け(仕様§4.2)
 
-未着手。Step 1の承認後に独立PRで実施する。
+一枚の縦長スクロールを、承認済みの推奨案「3タブ+ミニ灯り」へ分割。
+
+- **間取り**: ネイティブ `TabView`(tint=提灯色)で 夜行(house)/行列(list.bullet)/巻物(scroll)。夜行=ヘッダ・絵巻・円形波形・再生操作・音量、行列=検索・スコープ・並び替え・曲リスト・取込(+PlatformNote)、巻物=巻物一覧。ヘッダの取込ボタンは初回起動(空ライブラリで夜行に着地)のため残した(仕様の「実装時に見た目で判断」)。
+- **夜行は1画面(スクロールなし)**: 実機フィードバック「スクロールせずに再生停止へ届き、夜行を隠さない」を受け、波形の四角を残り高さに合わせて縮む可変レイアウト(最小140pt)へ、曲札は1行(タイトル+·アーティスト)へ畳んだ。行列/巻物は従来どおりスクロール。
+- **URLルーティング**: `yagyo://library`→行列タブ、`yagyo://nowPlaying`→夜行タブ、`yagyo://continue`→夜行タブ+再生再開(`YagyoTab.destination(for:)`、Codex指摘対応)。
+- **ミニ灯り**: 行列/巻物タブの下部(`safeAreaInset`)に、現在曲がある間だけ出る小さなバー。曲名+再生/一時停止(同一曲toggleの原則)+タップで夜行タブへ。意匠は灯芯と同じ「罫と丸紋」の文法(フラット塗り、再生中は丸紋に朱の芯が灯る)。
+- **不変**: `AudioLibraryStore`/`PlaybackController`はノータッチ。帳・札直し・削除確認のsheetと共存規則、fileImporter・alert類・URLルーティング(continueLastTrackで夜行タブへ)もContentView据え置き。
+- **テスト**: `YagyoTabTests` — タブ順・表題・アイコン・ミニ灯り表示規則(TDD: `cannot find 'YagyoTab' in scope` のRED→GREEN)+実描画QA artifact 4本(3タブ+ミニ灯り2状態、単色検知つき)。
+
+### Simulator実描画(iPhone 17 Pro / iOS 27.0)
+
+| 夜行 | 行列 | 巻物 |
+|---|---|---|
+| ![tab-yagyo](tab-yagyo.png) | ![tab-gyoretsu](tab-gyoretsu.png) | ![tab-makimono](tab-makimono.png) |
+
+ミニ灯り(再生中=朱の芯が灯る/一時停止=芯消灯):
+
+![mini-akari](mini-akari.png)
