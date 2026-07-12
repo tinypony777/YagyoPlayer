@@ -50,7 +50,12 @@ Step 4 の frame matrix と同様に、段階ごとにゲートを置く。**こ
 | クリップ疑い | \|x\| ≥ 0.999 が3サンプル以上連続するランの回数と位置 |
 | モノ互換 | L/R の位相相関係数(−1...+1)。モノラル音源は「モノ」と表示 |
 
-- 外部ライブラリ(FFmpeg / libebur128 等)は導入しない。Swift + Accelerate(vDSP)の自前実装とし、既知テスト信号(正弦波、無音、フルスケール方形波、逆相ステレオ)に対する期待値をユニットテストで固定する。
+- 外部ライブラリ(FFmpeg / libebur128 等)は導入しない。実装は同一作者の [Mastering-App](https://github.com/tinypony777/Mastering-App) で検証済みのSwift + Accelerate(vDSP) DSPコアを移植・補修して用いる(ゼロからの再実装はしない)。移植対象と補修内容:
+  - **移植:** `LUFSMeter`(BS.1770-4 K-weighting・ゲーティング・Integrated/Short-term/LRA)、`KWeightingFilter`(任意サンプルレートの係数算出)、`TruePeakMeter`(dBTP/サンプルピーク)、`AudioAnalyzer` のchunked読み込み・streaming Integrated LUFS・ステレオ位相相関(=モノ互換)。
+  - **補修1(メモリ):** 全サンプルを`[[Float]]`へ読む非streaming経路は長尺音源でメモリ過大のため、Short-term計測もstreaming(チャンク間biquad状態持ち回り+3秒リング)へ拡張し、全指標を1パスのchunked読みで算出する。
+  - **補修2(クリップ疑い):** 単発サンプル計数を、連続3サンプル以上のランの回数+位置の検出へ改める。
+  - **持ち込まない:** RTA系(installTap/lock-freeリング — `AVAudioPlayer`にtapはなくオフライン解析に不要)、SpectrumAnalyzer(Phase Aスコープ外。将来のA/B根拠表示の候補として保留)、ボーカル検出・学習特徴量・デバッグログ等のMastering-App固有部。
+  - 既知テスト信号(正弦波、無音、フルスケール方形波、逆相ステレオ)に対する期待値のユニットテストは移植後もこちら側で固定する。
 - 解析は再生と完全に独立した低優先度の非同期タスクで行い、進捗と失敗を帳の中に明示する。解析の失敗・中断は再生に一切影響しない。
 - 結果は `contentHash` + アナライザversion をキーに `library.json` へキャッシュし、同一音源の再解析を省く。旧 `library.json` は解析欄なしでそのまま読める(optional)。
 - 旧データで `contentHash` が nil のトラックは、帳を開いた時点(または解析開始前)に既存のhash補完経路でSHA-256をbackfillしてからキャッシュキーを確定する。backfillに失敗した場合はキャッシュせず、その回の解析結果だけを表示する(失敗を無言にしない)。
