@@ -37,7 +37,7 @@ Step 4 feature branch では、15 Hz の `AVAudioPlayer.averagePower` から得�
 | 音量入力 | `averagePower` のみ。正規化・非対称平滑化後の level と、その時間変化から `quietProxy` / `strongRiseProxy` を作る。拍、デジタル無音、BPM、セクション、音楽的意味は判定しない |
 | 視覚信号 | 純粋 reducer と表示専用 coordinator を feature branch に実装。再生経路と Audio Session は変更しない |
 | 行列 | 固定8体 + 丑三つ時だけ一つ目小僧。未使用のぬりかべを完成数に含めない |
-| アート | 唐傘基準体（40×48 px・8フレーム）に加え、残り7体と一つ目小僧も[frame matrix 仕様](superpowers/specs/2026-07-12-remaining-yokai-frame-matrix.md)で同じ40×48契約へ描き直し済み（feature branch、ユーザー承認待ち）。旧8bitアートと3倍表示は撤去。strong 2フレームは唐傘・鬼太鼓・木魚・狐火・天狗のみ、`hush` 専用姿勢は唐傘のみ |
+| アート | 唐傘基準体（40×48 px・8フレーム）に加え、残り7体と一つ目小僧も[frame matrix 仕様](superpowers/specs/2026-07-12-remaining-yokai-frame-matrix.md)で同じ40×48契約へ描き直し、2026-07-12にPR #14でユーザー本人が見た目を承認。旧8bitアートと3倍表示は撤去。strong 2フレームは唐傘・鬼太鼓・木魚・狐火・天狗のみ、`hush` 専用姿勢は唐傘のみ |
 | residency | UUID 由来の安定した割当を維持。feature branch では現在曲の resident が先導する |
 | 再生統計 | `playCount / lastPlayedAt / playHourCounts` は記録・永続化済み。歴史による行列振付には未接続 |
 | Accessibility | 夜行絵巻のVoiceOver値と、夜行絵巻・円形波形のReduce Motion代替をfeature branchに実装し、現行full suite合格。semantic AX 1 / 1、`t0`／`t+2 s` full PNG同一、canvas crop差分0、独立native visual QA APPROVED |
@@ -60,9 +60,9 @@ Step 4 feature branch では、15 Hz の `AVAudioPlayer.averagePower` から得�
 1. 唐傘を通常時・丑三つ時、resident 先導、Reduce Motion、狭い iPhone 幅でsemantic AX検証する（Pro 4 + 1、17e 1、すべてGREEN／skip 0で完了）。
 2. 保存済みSimulator画像を2名の独立native reviewerがAPPROVED済み。ユーザー本人が正面の赤い輪郭、頭頂と帯、目・笑い口・舌、一本足と下駄、reaction、補間、基準線を承認する（未完了）。
 3. 残り7体と一つ目小僧について、各状態と必要フレームの matrix を[別仕様](superpowers/specs/2026-07-12-remaining-yokai-frame-matrix.md)として提示する（完了）。
-4. その matrix に基づく残り8体の制作・構造検証・独立視覚QAは follow-up branch で完了。[証跡ledger](evidence/step4-remaining-yokai/README.md)を正本とし、Mac 側の Xcode build／full suite／Simulator 検証とユーザー本人の見た目承認が残っている。
+4. その matrix に基づく残り8体の制作・構造検証・独立視覚QA・Simulator検収(iOS 26.5)は完了し、2026-07-12にPR #14でユーザー本人が見た目を承認した。[証跡ledger](evidence/step4-remaining-yokai/README.md)を正本とする。
 
-したがって、唐傘縦切りは全妖怪の SNES 刷新でも Step 4 完了でもない。残り8体の展開もユーザー承認までは完了と扱わない。背景用の大判妖怪（例: 125×105 のがしゃどくろ案）の規格を、40×48 の行列規格へ流用しない。
+残るゲートは唐傘本体(Draft PR #13)の承認と `main` 統合のみ。背景用の大判妖怪（例: 125×105 のがしゃどくろ案）の規格を、40×48 の行列規格へ流用しない。
 
 ## デザイントークン
 

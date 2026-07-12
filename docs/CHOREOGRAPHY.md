@@ -43,4 +43,4 @@ SNES 相当の基準体は唐傘（40×48 px、2倍整数表示 80×96 pt、透�
 
 残り7体と一つ目小僧は、[残り行列妖怪・frame matrix 仕様](superpowers/specs/2026-07-12-remaining-yokai-frame-matrix.md)に基づき同じ行列用契約（40×48 px、最大12色、共通の墨 `k = 0x24160f`、`anchorX = 20`、`baselineY = 45`）で feature branch に描き直し済みです。`hush` 専用姿勢は唐傘だけが持ち、他は `idle` へ fallback します。strong 2 フレームを持つのは鬼太鼓・木魚・狐火・天狗（と唐傘）だけです。旧8bitアートと3倍表示は撤去し、行列は全体で2倍整数表示になりました。証跡は[残り妖怪の証跡ledger](evidence/step4-remaining-yokai/README.md)を正本とします。
 
-唐傘のsemantic Simulator state、Reduce Motion静止、保存済みSimulator画像の独立native目視QAは完了しています。残り8体は同一ASCIIソースからの contact sheet／motion preview の構造検証と独立視覚QAまで完了し、Mac 側での Xcode build／full suite／Simulator 検証と、ユーザー本人の見た目承認が残っています。承認まで、SNES 刷新完了や `main` 統合とは扱いません。
+唐傘のsemantic Simulator state、Reduce Motion静止、保存済みSimulator画像の独立native目視QAは完了しています。残り8体は構造検証・独立視覚QA・ユーザーMac(iOS 26.5)でのSimulator 7状態の取得と検収を経て、2026-07-12にPR #14のレビューでユーザー本人が見た目を承認しました。`main` 統合は引き続き唐傘(Draft PR #13)の承認とセットで行います。

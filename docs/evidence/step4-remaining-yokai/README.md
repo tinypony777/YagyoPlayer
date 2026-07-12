@@ -108,4 +108,5 @@ semantic order は各シートとも `idle, walk.contact, walk.rise, walk.cross,
 - **独立視覚QA:** 制作エージェントとは別の2レンズ（identity契約／frame family一貫性）のレビュアーが各妖怪をAPPROVED。天狗のみ修復1回を経てAPPROVED、他はブロッカー0。
 - **画風一貫性:** 唐傘を基準に9体のlineupを独立レビューし、墨の使い方・ランプ彩度・顔の意匠・相対サイズ・接地整合で外れ値なし（coherent判定）。
 - **Simulator検証:** ユーザー環境のMac(iOS 26.5 runtime)で通常・quiet・strong・丑三つ時・Reduce Motion(t0/t+2s)・最小幅の7枚を取得済み。スプライト描画領域のReduce Motion差分0バイトと、上記の目視QA項目を確認した。
-- **未完了:** ユーザー本人の見た目承認。これが済むまで視覚完了・`main` 統合とはしません。
+- **ユーザー承認:** 2026-07-12、[PR #14](https://github.com/tinypony777/YagyoPlayer/pull/14)のレビューで本人が見た目を承認(「承認します」)。残り8体の視覚ゲートはこれで完了。
+- **残るゲート:** `main` 統合は引き続き唐傘(Draft PR #13)の承認・統合とセットで行う。
