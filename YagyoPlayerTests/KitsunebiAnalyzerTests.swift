@@ -399,12 +399,25 @@ final class KitsunebiAnalyzerTests: XCTestCase {
         )
         let view = TobariView(track: track, presetMetrics: metrics)
             .environmentObject(store)
-            .environment(\.colorScheme, .dark)
-            .frame(width: 393, height: 852)
 
-        let renderer = ImageRenderer(content: view)
-        renderer.scale = 2.0
-        let image = try XCTUnwrap(renderer.uiImage, "帳を描画できません")
+        // ImageRendererはScrollView内のコンテンツを描画しないため、
+        // 実ウィンドウにホストしてレイアウトさせてから drawHierarchy で写す。
+        let host = UIHostingController(rootView: view)
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 393, height: 852))
+        window.overrideUserInterfaceStyle = .dark
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        host.view.frame = window.bounds
+        host.view.layoutIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.7))
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 2.0
+        let renderer = UIGraphicsImageRenderer(bounds: window.bounds, format: format)
+        let image = renderer.image { _ in
+            window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+        }
+        window.isHidden = true
         let data = try XCTUnwrap(image.pngData(), "PNGへ変換できません")
         XCTAssertFalse(data.isEmpty)
 
