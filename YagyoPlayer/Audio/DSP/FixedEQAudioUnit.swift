@@ -8,6 +8,8 @@ enum FixedEQAudioUnitError: LocalizedError, Equatable {
     case unsupportedFormat
     case inputOutputFormatMismatch
     case invalidMaximumFrames
+    case invalidTransitionFrames
+    case transitionConfigurationWhileAllocated
 
     var errorDescription: String? {
         switch self {
@@ -19,6 +21,10 @@ enum FixedEQAudioUnitError: LocalizedError, Equatable {
             return "Fixed EQ input and output formats must match."
         case .invalidMaximumFrames:
             return "Fixed EQ requires a positive maximum render frame count."
+        case .invalidTransitionFrames:
+            return "Fixed EQ transition frames must be between zero and 8192."
+        case .transitionConfigurationWhileAllocated:
+            return "Fixed EQ transition frames must be configured before rendering starts."
         }
     }
 }
@@ -38,6 +44,7 @@ enum FixedEQAudioUnitRenderFault: Int32, Equatable, Sendable {
 struct FixedEQAudioUnitRenderTelemetry: Equatable, Sendable {
     let appliedGeneration: UInt64?
     let processResult: FixedEQProcessResult
+    let transitionState: FixedEQTransitionState
     let isOriginalLatched: Bool
     let fault: FixedEQAudioUnitRenderFault
     let status: OSStatus
@@ -196,6 +203,19 @@ final class FixedEQAudioUnit: AUAudioUnit {
         snapshotProducer.enqueue(snapshot)
     }
 
+    /// Opt-in sample-accurate dry/wet transition. Zero preserves the immediate
+    /// behavior used by the low-level DSP contract tests.
+    @MainActor
+    func configureTransition(frameCount: Int) throws {
+        guard !renderResourcesAllocated else {
+            throw FixedEQAudioUnitError.transitionConfigurationWhileAllocated
+        }
+        guard (0...FixedEQTransitionContract.maximumFrameCount).contains(frameCount) else {
+            throw FixedEQAudioUnitError.invalidTransitionFrames
+        }
+        renderState.configureTransition(frameCount: frameCount)
+    }
+
     var lastAppliedGeneration: UInt64? {
         renderTelemetry.appliedGeneration
     }
@@ -206,6 +226,10 @@ final class FixedEQAudioUnit: AUAudioUnit {
 
     var isOriginalLatched: Bool {
         renderTelemetry.isOriginalLatched
+    }
+
+    var transitionState: FixedEQTransitionState {
+        renderTelemetry.transitionState
     }
 
     var lastRenderFault: FixedEQAudioUnitRenderFault {
@@ -257,6 +281,7 @@ private final class FixedEQAudioUnitRenderState: @unchecked Sendable {
     private let appliedGeneration = Atomic<UInt64>(0)
     private let hasAppliedGeneration = Atomic<Bool>(false)
     private let processResult = Atomic<UInt32>(FixedEQProcessResult.original.rawValue)
+    private let transitionState = Atomic<UInt32>(FixedEQTransitionState.steadyOriginal.rawValue)
     private let originalLatched = Atomic<Bool>(false)
     private let renderFault = Atomic<Int32>(FixedEQAudioUnitRenderFault.none.rawValue)
     private let renderStatus = Atomic<Int32>(noErr)
@@ -282,6 +307,9 @@ private final class FixedEQAudioUnitRenderState: @unchecked Sendable {
             let result = FixedEQProcessResult(
                 rawValue: processResult.load(ordering: .relaxed)
             ) ?? .invalidBuffers
+            let transition = FixedEQTransitionState(
+                rawValue: transitionState.load(ordering: .relaxed)
+            ) ?? .steadyOriginal
             let latched = originalLatched.load(ordering: .relaxed)
             let fault = FixedEQAudioUnitRenderFault(
                 rawValue: renderFault.load(ordering: .relaxed)
@@ -297,6 +325,7 @@ private final class FixedEQAudioUnitRenderState: @unchecked Sendable {
             return FixedEQAudioUnitRenderTelemetry(
                 appliedGeneration: hasGeneration ? generation : nil,
                 processResult: result,
+                transitionState: transition,
                 isOriginalLatched: latched,
                 fault: fault,
                 status: status
@@ -374,6 +403,11 @@ private final class FixedEQAudioUnitRenderState: @unchecked Sendable {
 
     func reset() {
         processor.reset()
+    }
+
+    func configureTransition(frameCount: Int) {
+        precondition(!ready.load(ordering: .acquiring))
+        processor.configureTransition(frameCount: frameCount)
     }
 
     func render(
@@ -580,6 +614,7 @@ private final class FixedEQAudioUnitRenderState: @unchecked Sendable {
         renderStatus.store(noErr, ordering: .relaxed)
         renderFault.store(FixedEQAudioUnitRenderFault.none.rawValue, ordering: .relaxed)
         processResult.store(report.processResult.rawValue, ordering: .relaxed)
+        transitionState.store(report.transitionState.rawValue, ordering: .relaxed)
         originalLatched.store(processor.isOriginalLatched, ordering: .relaxed)
         if let generation = report.appliedGeneration {
             hasAppliedGeneration.store(true, ordering: .relaxed)
@@ -635,6 +670,7 @@ private final class FixedEQAudioUnitRenderState: @unchecked Sendable {
         renderStatus.store(status, ordering: .relaxed)
         renderFault.store(fault.rawValue, ordering: .relaxed)
         processResult.store(FixedEQProcessResult.invalidBuffers.rawValue, ordering: .relaxed)
+        transitionState.store(FixedEQTransitionState.steadyOriginal.rawValue, ordering: .relaxed)
         originalLatched.store(true, ordering: .relaxed)
         if let generation {
             hasAppliedGeneration.store(true, ordering: .relaxed)

@@ -466,7 +466,11 @@ final class FixedEQAudioUnitTests: XCTestCase {
 
     func testAliasedInputOutputFailsSilentAndLatchesOriginal() throws {
         let frameCount = 4
-        let unit = try makeUnit(channelCount: 1, maximumFrames: frameCount)
+        let unit = try makeUnit(
+            channelCount: 1,
+            maximumFrames: frameCount,
+            transitionFrameCount: frameCount
+        )
         defer { unit.deallocateRenderResources() }
         let output = makeOutput(channelCount: 1, frameCount: frameCount)
         let values: [Float] = [0.2, 0.4, 0.6, 0.8]
@@ -489,10 +493,45 @@ final class FixedEQAudioUnitTests: XCTestCase {
         XCTAssertEqual(outcome.status, noErr)
         XCTAssertTrue(outcome.flags.contains(Self.outputIsSilence))
         XCTAssertEqual(samples(from: output, channel: 0), [0, 0, 0, 0])
-        XCTAssertEqual(unit.lastAppliedGeneration, 12)
+        XCTAssertNil(unit.lastAppliedGeneration)
         XCTAssertEqual(unit.lastRenderFault, .processorInvalidBuffers)
         XCTAssertEqual(unit.lastRenderStatus, kAudio_ParamError)
         XCTAssertTrue(unit.isOriginalLatched)
+
+        let finiteInput = RenderInputFixture(channels: [[0.2, 0.4, 0.6, 0.8]])
+        let latchedOutput = makeOutput(channelCount: 1, frameCount: frameCount)
+        XCTAssertEqual(
+            render(
+                unit: unit,
+                frameCount: frameCount,
+                outputData: latchedOutput.mutableAudioBufferList,
+                pullInputBlock: finiteInput.copyingPullBlock()
+            ).status,
+            noErr
+        )
+        XCTAssertEqual(samples(from: latchedOutput, channel: 0), [0.2, 0.4, 0.6, 0.8])
+        XCTAssertTrue(unit.isOriginalLatched)
+        XCTAssertNil(unit.lastAppliedGeneration)
+
+        XCTAssertTrue(unit.enqueue(attenuationSnapshot(generation: 13)))
+        let recoveredOutput = makeOutput(channelCount: 1, frameCount: frameCount)
+        XCTAssertEqual(
+            render(
+                unit: unit,
+                frameCount: frameCount,
+                outputData: recoveredOutput.mutableAudioBufferList,
+                pullInputBlock: finiteInput.copyingPullBlock()
+            ).status,
+            noErr
+        )
+        for (actual, expected) in zip(
+            samples(from: recoveredOutput, channel: 0),
+            [Float(0.2), 0.35, 0.45, 0.5]
+        ) {
+            XCTAssertEqual(actual, expected, accuracy: 1e-6)
+        }
+        XCTAssertEqual(unit.lastAppliedGeneration, 13)
+        XCTAssertFalse(unit.isOriginalLatched)
     }
 
     func testResetClearsFilterHistoryAndReallocationKeepsControlEndpoint() throws {
@@ -657,10 +696,106 @@ final class FixedEQAudioUnitTests: XCTestCase {
         XCTAssertFalse(unit.renderResourcesAllocated)
     }
 
+    func testTransitionConfigurationIsBoundedAndImmutableWhileRendering() throws {
+        let unit = try FixedEQAudioUnit(
+            componentDescription: FixedEQAudioUnit.componentDescription
+        )
+
+        XCTAssertThrowsError(try unit.configureTransition(frameCount: -1)) { error in
+            XCTAssertEqual(error as? FixedEQAudioUnitError, .invalidTransitionFrames)
+        }
+        XCTAssertThrowsError(
+            try unit.configureTransition(
+                frameCount: FixedEQTransitionContract.maximumFrameCount + 1
+            )
+        ) { error in
+            XCTAssertEqual(error as? FixedEQAudioUnitError, .invalidTransitionFrames)
+        }
+
+        try unit.configureTransition(frameCount: 4)
+        let format = try XCTUnwrap(
+            AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1)
+        )
+        try unit.inputBusses[0].setFormat(format)
+        try unit.outputBusses[0].setFormat(format)
+        unit.maximumFramesToRender = 4
+        try unit.allocateRenderResources()
+        defer { unit.deallocateRenderResources() }
+
+        XCTAssertThrowsError(try unit.configureTransition(frameCount: 8)) { error in
+            XCTAssertEqual(
+                error as? FixedEQAudioUnitError,
+                .transitionConfigurationWhileAllocated
+            )
+        }
+    }
+
+    func testOptInTransitionPublishesCompletionGeneration() throws {
+        let frameCount = 4
+        let unit = try FixedEQAudioUnit(
+            componentDescription: FixedEQAudioUnit.componentDescription
+        )
+        try unit.configureTransition(frameCount: frameCount)
+        let format = try XCTUnwrap(
+            AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1)
+        )
+        try unit.inputBusses[0].setFormat(format)
+        try unit.outputBusses[0].setFormat(format)
+        unit.maximumFramesToRender = AUAudioFrameCount(frameCount)
+        try unit.allocateRenderResources()
+        defer { unit.deallocateRenderResources() }
+
+        let input = RenderInputFixture(channels: [[1, 1, 1, 1]])
+        XCTAssertTrue(unit.enqueue(attenuationSnapshot(generation: 31)))
+        let processedOutput = makeOutput(channelCount: 1, frameCount: frameCount)
+        XCTAssertEqual(
+            render(
+                unit: unit,
+                frameCount: frameCount,
+                outputData: processedOutput.mutableAudioBufferList,
+                pullInputBlock: input.copyingPullBlock()
+            ).status,
+            noErr
+        )
+        XCTAssertEqual(samples(from: processedOutput, channel: 0), [1, 0.875, 0.75, 0.625])
+        XCTAssertEqual(unit.lastAppliedGeneration, 31)
+        XCTAssertEqual(unit.transitionState, .steadyProcessed)
+
+        XCTAssertTrue(unit.enqueue(.original(generation: 32)))
+        let fadingOutput = makeOutput(channelCount: 1, frameCount: frameCount)
+        XCTAssertEqual(
+            render(
+                unit: unit,
+                frameCount: frameCount,
+                outputData: fadingOutput.mutableAudioBufferList,
+                pullInputBlock: input.copyingPullBlock()
+            ).status,
+            noErr
+        )
+        XCTAssertEqual(samples(from: fadingOutput, channel: 0), [0.5, 0.625, 0.75, 0.875])
+        XCTAssertEqual(unit.lastAppliedGeneration, 31)
+        XCTAssertEqual(unit.transitionState, .rampingToOriginal)
+
+        let originalOutput = makeOutput(channelCount: 1, frameCount: frameCount)
+        XCTAssertEqual(
+            render(
+                unit: unit,
+                frameCount: frameCount,
+                outputData: originalOutput.mutableAudioBufferList,
+                pullInputBlock: input.copyingPullBlock()
+            ).status,
+            noErr
+        )
+        XCTAssertEqual(samples(from: originalOutput, channel: 0), [1, 1, 1, 1])
+        XCTAssertEqual(unit.lastAppliedGeneration, 32)
+        XCTAssertEqual(unit.transitionState, .steadyOriginal)
+    }
+
     private func makeUnit(
         sampleRate: Double = 48_000,
         channelCount: Int,
-        maximumFrames: Int
+        maximumFrames: Int,
+        transitionFrameCount: Int? = nil
     ) throws -> FixedEQAudioUnit {
         let unit = try FixedEQAudioUnit(
             componentDescription: FixedEQAudioUnit.componentDescription
@@ -673,6 +808,9 @@ final class FixedEQAudioUnitTests: XCTestCase {
         )
         try unit.inputBusses[0].setFormat(format)
         try unit.outputBusses[0].setFormat(format)
+        if let transitionFrameCount {
+            try unit.configureTransition(frameCount: transitionFrameCount)
+        }
         unit.maximumFramesToRender = AUAudioFrameCount(maximumFrames)
         try unit.allocateRenderResources()
         return unit

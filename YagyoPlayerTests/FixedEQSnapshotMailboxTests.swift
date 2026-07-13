@@ -83,6 +83,250 @@ final class FixedEQSnapshotMailboxTests: XCTestCase {
         XCTAssertEqual(secondOutput[0], firstOutput[0], accuracy: 1e-6)
     }
 
+    func testOptInTransitionRampsBothDirectionsAndAcknowledgesOriginalAtNextBoundary() {
+        var mailbox = FixedEQSnapshotMailbox()
+        guard var producer = mailbox.takeProducer(),
+              let consumer = mailbox.takeConsumer() else {
+            return XCTFail("SPSC endpoints must be available exactly once")
+        }
+        var processor = FixedEQRenderProcessor(
+            consumer: consume consumer,
+            transitionFrameCount: 4
+        )
+        let input = Array(repeating: Float(1), count: 4)
+
+        XCTAssertTrue(producer.enqueue(processedLinearSnapshot(generation: 1, trim: 0.5)))
+        let processed = render(input, through: &processor)
+        XCTAssertEqual(processed.output, [1, 0.875, 0.75, 0.625])
+        XCTAssertEqual(processed.report.appliedGeneration, 1)
+        XCTAssertEqual(processed.report.transitionState, .steadyProcessed)
+
+        XCTAssertTrue(producer.enqueue(.original(generation: 2)))
+        let fadingToOriginal = render(input, through: &processor)
+        XCTAssertEqual(fadingToOriginal.output, [0.5, 0.625, 0.75, 0.875])
+        XCTAssertNil(fadingToOriginal.report.appliedGeneration)
+        XCTAssertEqual(fadingToOriginal.report.transitionState, .rampingToOriginal)
+
+        let original = render(input, through: &processor)
+        XCTAssertEqual(original.output.map(\.bitPattern), input.map(\.bitPattern))
+        XCTAssertEqual(original.report.appliedGeneration, 2)
+        XCTAssertEqual(original.report.processResult, .original)
+        XCTAssertEqual(original.report.transitionState, .steadyOriginal)
+    }
+
+    func testTransitionReversesSameRecipeAndFadesDifferentRecipeThroughDry() {
+        var mailbox = FixedEQSnapshotMailbox()
+        guard var producer = mailbox.takeProducer(),
+              let consumer = mailbox.takeConsumer() else {
+            return XCTFail("SPSC endpoints must be available exactly once")
+        }
+        var processor = FixedEQRenderProcessor(
+            consumer: consume consumer,
+            transitionFrameCount: 4
+        )
+        let input = Array(repeating: Float(1), count: 4)
+
+        XCTAssertTrue(producer.enqueue(processedLinearSnapshot(generation: 1, trim: 0.5)))
+        _ = render(input, through: &processor)
+
+        XCTAssertTrue(producer.enqueue(.original(generation: 2)))
+        let partialFadeOut = render([1, 1], through: &processor)
+        XCTAssertEqual(partialFadeOut.output, [0.5, 0.625])
+        XCTAssertEqual(partialFadeOut.report.transitionState, .rampingToOriginal)
+
+        XCTAssertTrue(producer.enqueue(processedLinearSnapshot(generation: 3, trim: 0.5)))
+        let reversed = render([1, 1], through: &processor)
+        XCTAssertEqual(reversed.output, [0.75, 0.625])
+        XCTAssertEqual(reversed.report.appliedGeneration, 3)
+        XCTAssertEqual(reversed.report.transitionState, .steadyProcessed)
+
+        XCTAssertTrue(
+            producer.enqueue(
+                processedLinearSnapshot(generation: 4, trim: 0.25)
+            )
+        )
+        let replacementFadeOut = render(input, through: &processor)
+        XCTAssertEqual(replacementFadeOut.output, [0.5, 0.625, 0.75, 0.875])
+        XCTAssertNil(replacementFadeOut.report.appliedGeneration)
+        XCTAssertEqual(replacementFadeOut.report.transitionState, .replacingProcessed)
+
+        let replacementFadeIn = render(input, through: &processor)
+        XCTAssertEqual(replacementFadeIn.output[0], 1, accuracy: 1e-6)
+        XCTAssertEqual(replacementFadeIn.output[1], 0.8125, accuracy: 1e-6)
+        XCTAssertEqual(replacementFadeIn.output[2], 0.625, accuracy: 1e-6)
+        XCTAssertEqual(replacementFadeIn.output[3], 0.4375, accuracy: 1e-6)
+        XCTAssertEqual(replacementFadeIn.report.appliedGeneration, 4)
+        XCTAssertEqual(replacementFadeIn.report.transitionState, .steadyProcessed)
+    }
+
+    func testTransitionResetRestartsFromDryWithoutLosingPendingGeneration() {
+        var mailbox = FixedEQSnapshotMailbox()
+        guard var producer = mailbox.takeProducer(),
+              let consumer = mailbox.takeConsumer() else {
+            return XCTFail("SPSC endpoints must be available exactly once")
+        }
+        var processor = FixedEQRenderProcessor(
+            consumer: consume consumer,
+            transitionFrameCount: 4
+        )
+
+        XCTAssertTrue(producer.enqueue(processedLinearSnapshot(generation: 7, trim: 0.5)))
+        let partial = render([1, 1], through: &processor)
+        XCTAssertEqual(partial.output, [1, 0.875])
+        XCTAssertNil(partial.report.appliedGeneration)
+
+        processor.reset()
+        let restarted = render([1, 1, 1, 1], through: &processor)
+        XCTAssertEqual(restarted.output, [1, 0.875, 0.75, 0.625])
+        XCTAssertEqual(restarted.report.appliedGeneration, 7)
+        XCTAssertEqual(restarted.report.transitionState, .steadyProcessed)
+    }
+
+    func testTransitionFaultReturnsOriginalAndRequiresExplicitRecoverySnapshot() {
+        var mailbox = FixedEQSnapshotMailbox()
+        guard var producer = mailbox.takeProducer(),
+              let consumer = mailbox.takeConsumer() else {
+            return XCTFail("SPSC endpoints must be available exactly once")
+        }
+        var processor = FixedEQRenderProcessor(
+            consumer: consume consumer,
+            transitionFrameCount: 4
+        )
+
+        XCTAssertTrue(producer.enqueue(processedLinearSnapshot(generation: 1, trim: 0.5)))
+        let fault = render([1, .nan, .infinity, -.infinity], through: &processor)
+        XCTAssertEqual(fault.output, [1, 0, 0, 0])
+        XCTAssertEqual(fault.report.processResult, .latchedOriginal)
+        XCTAssertEqual(fault.report.transitionState, .steadyOriginal)
+
+        let stillLatched = render([1, 1, 1, 1], through: &processor)
+        XCTAssertEqual(stillLatched.output, [1, 1, 1, 1])
+        XCTAssertEqual(stillLatched.report.processResult, .original)
+        XCTAssertNil(stillLatched.report.appliedGeneration)
+
+        XCTAssertTrue(producer.enqueue(processedLinearSnapshot(generation: 2, trim: 0.5)))
+        let recovered = render([1, 1, 1, 1], through: &processor)
+        XCTAssertEqual(recovered.output, [1, 0.875, 0.75, 0.625])
+        XCTAssertEqual(recovered.report.appliedGeneration, 2)
+        XCTAssertEqual(recovered.report.transitionState, .steadyProcessed)
+    }
+
+    func testDisablingTransitionCommitsPendingTargetAtNextBoundary() {
+        var mailbox = FixedEQSnapshotMailbox()
+        guard var producer = mailbox.takeProducer(),
+              let consumer = mailbox.takeConsumer() else {
+            return XCTFail("SPSC endpoints must be available exactly once")
+        }
+        var processor = FixedEQRenderProcessor(
+            consumer: consume consumer,
+            transitionFrameCount: 4
+        )
+
+        XCTAssertTrue(producer.enqueue(processedLinearSnapshot(generation: 1, trim: 0.5)))
+        _ = render([1, 1, 1, 1], through: &processor)
+        XCTAssertTrue(producer.enqueue(processedLinearSnapshot(generation: 2, trim: 0.25)))
+        _ = render([1, 1], through: &processor)
+
+        processor.configureTransition(frameCount: 0)
+        let committed = render([1, 1], through: &processor)
+        XCTAssertEqual(committed.output, [0.25, 0.25])
+        XCTAssertEqual(committed.report.appliedGeneration, 2)
+        XCTAssertEqual(committed.report.transitionState, .steadyProcessed)
+    }
+
+    func testSameRecipeReversalPreservesIIRHistory() {
+        var mailbox = FixedEQSnapshotMailbox()
+        guard var producer = mailbox.takeProducer(),
+              let consumer = mailbox.takeConsumer() else {
+            return XCTFail("SPSC endpoints must be available exactly once")
+        }
+        var processor = FixedEQRenderProcessor(
+            consumer: consume consumer,
+            transitionFrameCount: 4
+        )
+
+        XCTAssertTrue(producer.enqueue(tailSnapshot(generation: 1)))
+        _ = render([1, 0, 0, 0], through: &processor)
+        XCTAssertTrue(producer.enqueue(.original(generation: 2)))
+        _ = render([0], through: &processor)
+
+        XCTAssertTrue(producer.enqueue(tailSnapshot(generation: 3)))
+        let reversed = render([0], through: &processor)
+        XCTAssertGreaterThan(abs(reversed.output[0]), 1e-8)
+        XCTAssertEqual(reversed.report.appliedGeneration, 3)
+        XCTAssertEqual(reversed.report.transitionState, .steadyProcessed)
+    }
+
+    func testTransitionOutputIsInvariantAcrossRenderChunking() {
+        var singleMailbox = FixedEQSnapshotMailbox()
+        guard var singleProducer = singleMailbox.takeProducer(),
+              let singleConsumer = singleMailbox.takeConsumer() else {
+            return XCTFail("single-buffer endpoints must be available")
+        }
+        var singleProcessor = FixedEQRenderProcessor(
+            consumer: consume singleConsumer,
+            transitionFrameCount: 7
+        )
+        XCTAssertTrue(
+            singleProducer.enqueue(processedLinearSnapshot(generation: 1, trim: 0.5))
+        )
+        let single = render(Array(repeating: 1, count: 10), through: &singleProcessor)
+
+        var chunkedMailbox = FixedEQSnapshotMailbox()
+        guard var chunkedProducer = chunkedMailbox.takeProducer(),
+              let chunkedConsumer = chunkedMailbox.takeConsumer() else {
+            return XCTFail("chunked endpoints must be available")
+        }
+        var chunkedProcessor = FixedEQRenderProcessor(
+            consumer: consume chunkedConsumer,
+            transitionFrameCount: 7
+        )
+        XCTAssertTrue(
+            chunkedProducer.enqueue(processedLinearSnapshot(generation: 1, trim: 0.5))
+        )
+        var chunkedOutput: [Float] = []
+        var lastReport: FixedEQRenderReport?
+        for frameCount in [2, 3, 5] {
+            let chunk = render(
+                Array(repeating: 1, count: frameCount),
+                through: &chunkedProcessor
+            )
+            chunkedOutput.append(contentsOf: chunk.output)
+            lastReport = chunk.report
+        }
+
+        XCTAssertEqual(chunkedOutput, single.output)
+        XCTAssertEqual(single.report.appliedGeneration, 1)
+        XCTAssertEqual(lastReport?.appliedGeneration, 1)
+        XCTAssertEqual(lastReport?.transitionState, .steadyProcessed)
+    }
+
+    func testLatestSnapshotSupersedesReplacementAtExactDryBoundary() {
+        var mailbox = FixedEQSnapshotMailbox()
+        guard var producer = mailbox.takeProducer(),
+              let consumer = mailbox.takeConsumer() else {
+            return XCTFail("SPSC endpoints must be available exactly once")
+        }
+        var processor = FixedEQRenderProcessor(
+            consumer: consume consumer,
+            transitionFrameCount: 4
+        )
+        let input = Array(repeating: Float(1), count: 4)
+
+        XCTAssertTrue(producer.enqueue(processedLinearSnapshot(generation: 1, trim: 0.5)))
+        _ = render(input, through: &processor)
+        XCTAssertTrue(producer.enqueue(processedLinearSnapshot(generation: 2, trim: 0.25)))
+        let dryBoundary = render(input, through: &processor)
+        XCTAssertNil(dryBoundary.report.appliedGeneration)
+        XCTAssertEqual(dryBoundary.report.transitionState, .replacingProcessed)
+
+        XCTAssertTrue(producer.enqueue(processedLinearSnapshot(generation: 3, trim: 0.125)))
+        let newest = render(input, through: &processor)
+        XCTAssertEqual(newest.output, [1, 0.78125, 0.5625, 0.34375])
+        XCTAssertEqual(newest.report.appliedGeneration, 3)
+        XCTAssertEqual(newest.report.transitionState, .steadyProcessed)
+    }
+
     func testSingleProducerConsumerRemainsMonotonicAcrossRingWraps() {
         var mailbox = FixedEQSnapshotMailbox()
         guard var producer = mailbox.takeProducer(),
@@ -137,10 +381,14 @@ final class FixedEQSnapshotMailboxTests: XCTestCase {
         XCTAssertEqual(state.finalGeneration, finalGeneration)
     }
 
-    private func processedAttenuationSnapshot(generation: UInt64) -> FixedEQSnapshot {
+    private func processedAttenuationSnapshot(
+        generation: UInt64,
+        id: String = "mailbox-test-attenuation",
+        outputTrimDB: Double = -6
+    ) -> FixedEQSnapshot {
         FixedEQSnapshotFactory.make(
             recipe: FixedEQRecipe(
-                id: "mailbox-test-attenuation",
+                id: id,
                 catalogVersion: 1,
                 inputHeadroomDB: 0,
                 bands: [
@@ -148,11 +396,62 @@ final class FixedEQSnapshotMailboxTests: XCTestCase {
                     FixedEQBand(frequencyHz: 1_000, gainDB: 0, q: 1),
                     FixedEQBand(frequencyHz: 5_000, gainDB: 0, q: 1),
                 ],
-                outputTrimDB: -6
+                outputTrimDB: outputTrimDB
             ),
             sampleRate: 48_000,
             generation: generation
         )
+    }
+
+    private func processedLinearSnapshot(
+        generation: UInt64,
+        trim: Float
+    ) -> FixedEQSnapshot {
+        FixedEQSnapshot(
+            generation: generation,
+            mode: .processed,
+            bandCount: 3,
+            coefficients: .identity,
+            inputHeadroomLinear: 1,
+            outputTrimLinear: trim
+        )
+    }
+
+    private func tailSnapshot(generation: UInt64) -> FixedEQSnapshot {
+        FixedEQSnapshotFactory.make(
+            recipe: FixedEQRecipe(
+                id: "mailbox-test-tail",
+                catalogVersion: 1,
+                inputHeadroomDB: -3,
+                bands: [
+                    FixedEQBand(frequencyHz: 500, gainDB: 3, q: 1),
+                    FixedEQBand(frequencyHz: 2_000, gainDB: 0, q: 1),
+                    FixedEQBand(frequencyHz: 8_000, gainDB: 0, q: 1),
+                ],
+                outputTrimDB: 0
+            ),
+            sampleRate: 48_000,
+            generation: generation
+        )
+    }
+
+    private func render(
+        _ input: [Float],
+        through processor: inout FixedEQRenderProcessor
+    ) -> (output: [Float], report: FixedEQRenderReport) {
+        var output = Array(repeating: Float.nan, count: input.count)
+        let report = input.withUnsafeBufferPointer { inputBuffer in
+            output.withUnsafeMutableBufferPointer { outputBuffer in
+                processor.process(
+                    inputLeft: inputBuffer,
+                    inputRight: nil,
+                    outputLeft: outputBuffer,
+                    outputRight: nil,
+                    frameCount: input.count
+                )
+            }
+        }
+        return (output, report)
     }
 
     private static func stressSnapshot(generation: UInt64) -> FixedEQSnapshot {

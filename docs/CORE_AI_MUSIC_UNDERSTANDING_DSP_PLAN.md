@@ -203,6 +203,8 @@ recipe ID の意味を版の途中で変更しない。削除・調整時は cat
 
 - render callback 内で Music Understanding、Core AI、キャッシュ、永続化、ログ、ロック、割り当てを呼ばない。
 - snapshot は固定容量SPSC mailboxを介し、buffer boundaryの先頭で完成済みの最新1件だけを交換する。mailboxが満杯ならcontrol側の新規投入を拒否し、render側が読んでいるslotを上書きしない。producer／consumer endpointはone-shot builderから各1つだけ取得でき、noncopyableかつmutating APIとして同一endpointの安全でない共有を型で防ぐ。
+- 試聴切替は事前設定した固定frame数のallocation-free dry／wet rampとする。同じprocessed payloadへの反転ではIIR stateを維持し、異なるprocessed payloadは旧処理をdryまで落として次のbuffer boundaryでだけ係数を交換する。
+- `appliedGeneration` は係数を読み取った世代ではなく、要求したtargetがsteadyかつ次sampleから完全に可聴となった世代を示す。Originalへのfade-outはdry到達後の次buffer boundaryでOriginalを適用してackする。
 - bypass／Original は恒久的な first-class path とし、DSP 障害時にも再生を継続する。
 - 出力が非有限になった場合は診断をレート制限し、そのバッファを安全化したうえで Original へ latch する。
 - interruption、seek、background、route change は解析や推論より再生状態機械を優先する。
@@ -335,6 +337,8 @@ YagyoPlayer は次だけを縮小して独自実装する。
 2026-07-14 時点で、3〜5 band peaking EQ、±3 dB、Q `0.5...2.0`、`20 Hz...min(20 kHz, Nyquist × 0.95)`、非正input headroom／output trimを検証してimmutable snapshotへ変換するpure coreを追加した。input headroomは各bandの正boost合計以上の減衰を必須とし、output trimで内部余裕を代用しない。render kernelはmono/stereo、44.1/48/96 kHz、可変chunk、有限入力に対するOriginalのbit transparency、非有限入力のzero化、impulse、中心周波数応答、DC、決定論的noise、denormal、channel独立、全buffer alias、buffer境界適用、invalid state時Original latch、無効frameの非部分処理、同一周波数5-band最大boostをfocused test `16 / 16` で確認した。さらにcapacity 4のSPSC mailboxとrender-owned processorを追加し、one-shot endpoint所有権、満杯時no-overwrite、stale snapshotの定数時間破棄、buffer先頭での最新世代適用、20,000世代のring wrapとpayload整合性をfocused test `3 / 3` とThread Sanitizerで確認した。合同focused testは `19 / 19`。PlaybackControllerにはfailure-atomic load/seek契約とexact schedule identity照合を持つ再生backend境界を追加し、既存controller 22件＋seam 8件を `30 / 30` で確認した。
 
 同日、pure coreを最小のin-process `AUAudioUnit`へ載せるrender境界を追加した。render state、入力scratch、`mData == nil`時のAU所有output fallbackはresource allocation時に確保し、snapshotはbuffer先頭だけで適用する。pull／DSP失敗は要求bufferをzero化して`OutputIsSilence + noErr`で閉じ、frame超過・不正bus・不正ABLなどhost contract違反だけを非zero statusにする。Original bit transparency、先頭sampleからの世代適用、nil output、pullによるinput pointer差し替えと次回復元、非有限値latch、pull失敗、未allocate、frame超過、undersized／alias buffer、reset・再allocate、render/control並行2,000世代のcoherent telemetryをdirect test `15 / 15`、44.1/48/96 kHz × mono/stereo × `64 + 64 + 3` frameの`AVAudioEngine` offline graphを `1 / 1`、app full suiteを `194 / 194`、skip 0で確認した。これはoffline／Simulator証跡であり、実機Release buildでのrender-thread allocation、lock、underrun、route／interruption、CPU／thermalは未検証である。既定は従来のAVAudioPlayer adapterのままで、productionのAVAudioEngine playback backend、Fixed EQ選択UI、Core AIは未接続なので現在の再生音は変わらない。
+
+さらに実機試聴へ進む前段として、0〜8192 frameで設定できるsample-accurate dry／wet transitionをrender processorとAU telemetryへ追加した。低レベルAUの既定値は0 frameの即時適用を維持し、後続preview backendだけがinstantiate直後・render resource確保前に256 frameを必須設定する。設定失敗時はgraphを開始せずOriginalへfail closedとし、0 frameへの暗黙fallbackは行わない。同一recipeの途中反転とIIR history維持、Original往復、異なるrecipeのdry経由交換、dry境界での最新request優先、render chunk不変性、seek/reset時のdry再開、alias／non-finite latch後の明示snapshot recovery、target完了世代ackをfocused test `29 / 29`、app full suite `204 / 204`、skip 0で確認した。preview backendと256 frame設定の実体、切替UI、実機realtime検証はこの時点では未実装である。
 
 **Gate:** DSP と UX の価値が AI 抜きで成立し、bypass、切替、リアルタイム制約に合格すること。
 
