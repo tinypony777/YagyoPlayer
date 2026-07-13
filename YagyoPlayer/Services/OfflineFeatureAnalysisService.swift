@@ -33,12 +33,7 @@ actor FeatureSnapshotCache {
         let url = entryURL(for: sourceFingerprint)
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
 
-        let data: Data
-        do {
-            data = try Data(contentsOf: url, options: [.mappedIfSafe])
-        } catch {
-            throw error
-        }
+        let data = try Data(contentsOf: url, options: [.mappedIfSafe])
         try Task.checkCancellation()
 
         do {

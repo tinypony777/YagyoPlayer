@@ -3,7 +3,7 @@ import XCTest
 @testable import YagyoPlayer
 
 final class SilenceHysteresisTests: XCTestCase {
-    func testCodableNormalizesNonFiniteFiniteCaseToUnavailable() throws {
+    func testCodableNormalizesNonFiniteReadingToUnavailable() throws {
         let legacyData = Data(#"{"finite":{"_0":-18.2}}"#.utf8)
 
         XCTAssertEqual(
