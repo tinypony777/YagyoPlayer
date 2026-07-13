@@ -1,8 +1,8 @@
-# Core AI / Music Understanding / DSP 仮計画
+# Core AI / Music Understanding / DSP 実装計画
 
-> Status: **Provisional architecture — runtime implementation is not authorized.**
+> Status: **Active — Phase 0 Music Understanding capability spike in progress.**
 >
-> 対象は iOS 27 正式版 SDK での再検証後に着手可否を判断する将来構想である。現時点の YagyoPlayer の再生経路は Music Understanding、Core AI、DSP のいずれにも依存しない。
+> 2026-07-14、ユーザーの明示承認により iOS 27 beta SDK で Step 3 を再開した。正式版 SDK での再検証はリリースゲートとして残す。現時点の再生経路は Music Understanding、Core AI、Listening Profile DSP のいずれにも依存しない。
 
 ## 1. 目的とプロダクト境界
 
@@ -14,7 +14,7 @@ YagyoPlayer は音楽プレイヤーであり、自動マスタリング製品�
 - 再生時に動くのは、版を固定した決定論的 DSP だけである。
 - 未対応、解析失敗、モデル失敗、検証失敗、ルート変更時の既定値は常に Original とする。
 
-この文書は実装可能性と安全境界を定義するものであり、ランタイム実装、モデル学習、配布物への `.aimodel` 追加、再生グラフ変更を承認しない。
+この文書は実装可能性と安全境界を定義する。各 phase は独立して検証し、`.aimodel` 追加と再生グラフ変更は対応 phase の gate を通るまで行わない。
 
 ## 2. Evidence labels
 
@@ -28,12 +28,23 @@ YagyoPlayer は音楽プレイヤーであり、自動マスタリング製品�
    - instrument activity の分類は bass、drum、vocal、other である。structure は時間境界であり、verse／chorus の意味ラベルではない。
    - これらの境界は、任意のローカルファイル形式、結果の永続化可否、端末条件まで保証しない。
 3. Core AI は、開発者が用意する `.aimodel` を使った汎用オンデバイス推論フレームワークであり、名前付きの NDArray／pixel-buffer 値をモデル入出力として扱う。DSP レシピ提案器は内蔵されていないため、YagyoPlayer 用モデル、schema、学習・評価、版管理は開発側で用意する。
-4. 現在の YagyoPlayer に Music Understanding、Core AI、Listening Profile DSP の実行時依存はない。
+4. Phase 0 の作業ブランチには availability-gated `MusicUnderstandingAdapter` があるが、UI、キャッシュ、再生開始、render callback からは未接続である。Core AI と Listening Profile DSP の実行時依存はない。
 
 Apple reference:
 
 - [Music Understanding](https://developer.apple.com/documentation/musicunderstanding)
 - [Core AI](https://developer.apple.com/documentation/coreai)
+
+### Verified capability evidence（2026-07-14、Xcode 27 beta）
+
+- Xcode 27.0 build `27A5194q` / iOS 27.0 SDK の Swift interface で、`MusicUnderstandingSession` の `AVAsset` 入力、六つの集約結果、cancellation、loudness stream を確認した。
+- iOS 26 deployment target のアプリへ adapter を追加し、生成バイナリが `MusicUnderstanding.framework` を weak link することを `otool -L` で確認した。iOS 26.5 Simulator では framework をロードせず `.requiresIOS27` を返して test host が正常起動した。
+- iOS 27 Simulator で、24秒・44.1 kHz・stereo のローカル CAF を `AVURLAsset` から解析し、全結果を Apple 型から版付き Codable 型へ変換した。解析テストは約2.4秒で完了した。
+- 合成素材の integrated loudness は Music Understanding `-22.8568916 LUFS`、現行 `KitsunebiAnalyzer` `-22.8568924 LUFS`（差 約 `0.0000008 LU`）。120 BPM、49 beats、13 bars、2 sections、3 segments、6 phrases と楽器 activity も返った。
+- Apple `peak` は同素材の sample peak と一致した。API も true peak と明記しないため、True Peak、clip run、stereo correlation は引き続き `KitsunebiAnalyzer` を正本とする。
+- momentary loudness用の純粋reducerは `<= -70 LUFS` で無音へ入り、`> -65 LUFS` で抜ける。デジタル無音の `-∞` と未取得を別のapp-owned値として保持し、JSONへ非有限値を保存しない。
+- capability lane は六次元の結果、task cancellation、存在しないassetのerror境界を含め `7 / 7`、通常suiteは `151 / 151`、skip 0。framework由来errorはapp-owned failureへ変換し、cancel時は `CancellationError` を優先する。
+- Simulator では Core ML / MPSGraph の互換性 warning が記録されたが解析は成功した。性能、警告の有無、対応端末、保護コンテンツ、実曲精度は iOS 27 実機で未確認であり、Phase 0 の残件とする。
 
 ### Design inferences（確認済み事実から導く設計判断）
 
@@ -293,12 +304,12 @@ YagyoPlayer は **NaN/Infinity を clamp より前に拒否**し、AI 応答、F
 
 各 phase は独立したレビューと合格証拠を必要とする。前 phase の合格は次 phase の自動承認ではない。
 
-### Phase 0 — Release-SDK capability spike
+### Phase 0 — SDK capability spike（進行中）
 
-- 正式版 Xcode／iOS SDK で `MusicUnderstandingSession` と Core AI を最小アプリにコンパイルする。
+- iOS 27 beta SDK で `MusicUnderstandingSession` の境界を先行実証し、正式版 Xcode／iOS SDK で差分を再検証する。
 - ローカル音源の入力、結果型、cancellation、availability、対応端末、保護コンテンツ、オンデバイス条件を実機で記録する。
 - 最小の開発者提供 `.aimodel` を読み込み、既知入力に対する型付き出力、レイテンシ、メモリ、電力を測る。
-- 仮定が成立しなければ、本計画を更新して停止する。YagyoPlayer の runtime code へは統合しない。
+- Phase 0 では adapter の弱リンクと app-owned 型への正規化までを許可し、UI、キャッシュ、再生グラフへは接続しない。仮定が成立しなければ本計画を更新し、通常再生を維持する。
 
 **Gate:** API boundary と端末条件をテストで再現でき、Apple beta 前提との差分が文書化されていること。
 
@@ -312,7 +323,7 @@ YagyoPlayer は **NaN/Infinity を clamp より前に拒否**し、AI 応答、F
 
 ### Phase 2 — Music Understanding adapter and cache
 
-- adapter、bounded extractor、`FeatureSnapshot`、app-owned cache を追加する。
+- Phase 0 adapter を production contract へ昇格し、bounded extractor、`FeatureSnapshot`、app-owned cache を追加する。
 - キャッシュ invalidation、キャンセル、非対応音源、破損値、offline を試験する。
 - 特徴抽出が再生開始や render callback をブロックしないことを測る。
 
@@ -411,4 +422,4 @@ YagyoPlayer は **NaN/Infinity を clamp より前に拒否**し、AI 応答、F
 - [WWDC26 Music notes](WWDC26-Music-notes.md)
 - [Archived Step 3 DSP draft](../Draft/Step3-One-Ear/README.md)
 
-この仮計画を runtime implementation の仕様へ昇格させるには、Phase 0 の正式版 SDK 証拠、Phase 1 の DSP/UX 証拠、更新された正本仕様、別途の明示承認が必要である。
+Listening Profile を production runtime へ接続するには、Phase 0 の実機／正式版 SDK 証拠、Phase 1 の DSP/UX 証拠、更新された正本仕様が必要である。

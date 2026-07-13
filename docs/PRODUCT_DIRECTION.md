@@ -64,16 +64,16 @@ North Star は次の 3 条件。確認の物差しは市場指標ではなく、
 - 妖怪の頭数を増やすことより、一体あたりの挙動深度を上げることに投資する。
 - **現在地(正直に)**: Step 4 では、従来の音量連動の跳ねを単一の `ParadeSignalSnapshot` に基づく振付へ置き換え、resident 先導、Reduce Motion、VoiceOver を接続した。現在の唐傘は、赤〜珊瑚色の正面円錐形、茶色の頭頂と金帯、一つ目、笑い口と桃色の舌、淡色の一本足、一足の下駄を全8枚で共有する。内部phase名`.open`は互換性のため残るが、表示は正面reactionであり、初期の紫色・横向き／長い柄・横に開いた造形はsupersededである。Xcode 27.0のgeneric iOS buildに成功し、iOS 27のiPhone 17 Pro destinationでfocused QA **11 / 11**、full suite **65 / 65**、いずれもskip 0を確認した。Pro semantic AX **4 + 1**、17e **1 / 1**もskip 0で通過し、Reduce Motionの2枚はfull PNG同一／canvas crop差分0である。2名の独立native reviewerはcontact sheet／GIFとSimulator画像7枚をすべてAPPROVEDし、BLOCKER／MAJOR／MINOR 0。GitHub binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`の9 binary hash／link、旧5画像削除、PR本文も確認済みである。その後、残り7体と一つ目小僧も[frame matrix仕様](superpowers/specs/2026-07-12-remaining-yokai-frame-matrix.md)に基づき同じ40×48契約へ描き直し、2026-07-12にユーザー本人が唐傘(PR #13)と残り8体(PR #14)の見た目を承認した。行列9体すべてが統一され、混在画風は解消のうえ`main`へ統合済み。証跡は[唐傘ledger](evidence/step4-karakasa/README.md)と[残り妖怪ledger](evidence/step4-remaining-yokai/README.md)を正本とする。
 
-### 4.2 狐火の調律 — 好みの聴き方を、自分で選ぶ（保留中の構想）
+### 4.2 狐火の調律 — 好みの聴き方を、自分で選ぶ（Phase 0 再開）
 
-音を勝手に「正解」へ直すのではなく、いくつかの聴き方を狐火として差し出し、最後は自分の耳で選ぶ構想。Music Understanding / Core AI と、YagyoPlayer があらかじめ検証した少数の DSP レシピを組み合わせられる可能性を想定しているが、**iOS 27 の正式 SDK で API、入力境界、対応端末、オンデバイス条件を再検証できるまで Step 3 全体を保留する**。現時点ではどれも実装契約ではない。
+音を勝手に「正解」へ直すのではなく、いくつかの聴き方を狐火として差し出し、最後は自分の耳で選ぶ構想。2026-07-14、iOS 27 beta SDK に実在する Music Understanding API を確認できたため Step 3 の保留を解除し、capability spike から再開した。正式版 SDK での再検証はリリースゲートとして残し、Core AI と再生 DSP は各 phase の安全条件を満たすまで接続しない。
 
 - 初期対象はヘッドホン再生。選択した Listening Profile は曲をまたいで一貫して働き、出力先が変わったときは安全に Original へ戻る。
 - Original / bypass / reset は常に残す。明示的に選ばれる前は何も加工せず、解析・提案・保存・再生処理のどこかが失敗しても通常再生を続ける。
 - 音源は外へ送らず、元ファイルも書き換えない。利用条件が local-first の約束を満たさない端末では、この機能自体を使わない。
 - Core AI が任意のエフェクトや並び順を作ることはない。選べるのは、人が測定・試聴して版を管理したレシピだけである。
 - これは将来の**再生音の Listening Profile**構想であり、Step 4 の `averagePower` 由来の視覚信号とは別の仕事として扱う。一つの巨大な解析経路へ結びつけることを前提にしない。
-- **現在地(正直に)**: 構想のみで、Core AI / Music Understanding / DSP は未実装。再生音は未加工のままであり、正式 SDK の再検証が終わるまでは実装へ進まない。
+- **現在地(正直に)**: iOS 27 の `MusicUnderstandingSession` を availability gate の内側でローカル `AVAsset` 解析へ接続し、六つの結果を app-owned Codable 型へ正規化する Phase 0 adapter を実装中。iOS 26 は weak link のまま既存経路へ戻る。UI、キャッシュ、Core AI、Listening Profile DSP は未接続で、再生音は未加工のままである。
 
 ### 4.3 住み着きの夜 — 聴いた時間が世界を深める
 
@@ -130,16 +130,17 @@ Release criteria:
 - 検索・並び替え(追加日、タイトル、長さ、巻物。**妖怪起点の並び替えは作らない** — §6 の線引き)。
 - メタデータ編集(title / artist / artwork / notes)。
 
-### Step 3 — 狐火の調律(§4.2、保留)
+### Step 3 — 狐火の調律(§4.2、Phase 0 再開)
 
-状態: **iOS 27 の正式 SDK で Music Understanding / Core AI を再検証できるまで保留。Core AI / Music Understanding / DSP は未実装。**
+状態: **2026-07-14に保留解除。iOS 27 beta SDK で Music Understanding capability spike を実施中。Core AI / Listening Profile DSP は未実装。**
 
-再開判断の条件:
-- 正式 SDK で機能、ローカル音源の入力境界、オンデバイス実行条件、対応端末を確認する。
+Phase 0 の残り条件:
+- iOS 27 実機でローカル実曲、cancellation、オンデバイス実行条件、対応端末、性能を確認する。
+- 正式 SDK で API と入力境界の差分を再確認する。
 - local-first、Original 常設、明示選択、失敗時 bypass、Playback Trust という約束を満たせるか判断する。
 - 条件を満たせない場合は通常再生のままにし、実装範囲を約束しない。
 
-候補比較や Listening Profile の詳細は、再検証後に改めて仕様承認を受ける。この文書にある構想だけを根拠に実装へ進まない。
+候補比較や Listening Profile は、capability spike と固定 DSP の測定結果を根拠に段階的に進める。Apple の beta API を安定版契約とは扱わない。
 
 ### Step 4 — 夜行絵巻 2.0(§4.1・§4.3)
 
@@ -208,4 +209,4 @@ Release criteria:
 |---|---|
 | v2 | 機能とロードマップの宣言([archive/PRODUCT_DIRECTION_v2.md](archive/PRODUCT_DIRECTION_v2.md)) |
 | v3 競合分析ドラフト | 市場調査と「永続的優位の台帳」を軸にした差別化戦略として起草。作者の判断で見送り — この製品は市場から逆算しないため(PR #5 の履歴に全文が残っている) |
-| v3 作者の憲章(この文書) | 競合の文脈を外し、「作者が楽しめること」「好きな要素への忠実さ」「再生の信頼」を軸に再構成。当時確認した重複取込と取込結果未表示は、その後 Step 0 で解消済み。本文の現在地は、統計、Step 3 保留、Step 4 完了を含む実装事実へ随時同期する |
+| v3 作者の憲章(この文書) | 競合の文脈を外し、「作者が楽しめること」「好きな要素への忠実さ」「再生の信頼」を軸に再構成。当時確認した重複取込と取込結果未表示は、その後 Step 0 で解消済み。本文の現在地は、統計、Step 3 Phase 0、Step 4 完了を含む実装事実へ随時同期する |

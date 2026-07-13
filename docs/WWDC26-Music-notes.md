@@ -17,16 +17,16 @@ Now Playing integration uses the stable `MediaPlayer` APIs (`MPNowPlayingInfoCen
 
 No music-intelligence analysis runs during import or playback in the current iOS 26 app. File intake therefore remains independent of the iOS 27 proposal.
 
-## iOS 27 Beta Direction — Provisional
+## iOS 27 Beta Direction — Phase 0 Active
 
-Apple's Music Understanding and Core AI documentation describe iOS 27 beta APIs. They are inputs to the Step 3 feasibility work, not production dependencies or stable contracts yet.
+Apple's Music Understanding and Core AI documentation describe iOS 27 beta APIs. On 2026-07-14 the user explicitly resumed Step 3, so Music Understanding is now under an availability-gated capability spike. It is not a playback dependency or stable release contract yet.
 
-- Music Understanding is the proposed source of Apple-defined musical analysis. The release SDK must reconfirm its supported local-audio inputs, result boundaries, device availability, and on-device behavior before YagyoPlayer adopts it.
+- Music Understanding is the Apple-defined musical-analysis source. The Xcode 27 beta spike compiles and analyzes a local `AVURLAsset`; the release SDK must still reconfirm input boundaries, device availability, and on-device behavior before release.
 - Core AI is the proposed on-device ranking layer for a developer-supplied model. It may rank only YagyoPlayer's allow-listed DSP recipe IDs; it does not author an executable effects graph.
 - The feature remains optional and local-first. Unsupported devices, unavailable models, invalid results, or failed validation return to unchanged `Original` playback.
 - Listening Profile processing and parade-reaction analysis are separate contracts. Music Understanding may inform either where the release API fits, but selected playback DSP is not treated as the parade's analysis engine.
 
-All API names, availability, input formats, result schemas, packaging requirements, and performance assumptions in this direction must be revalidated against Apple's iOS 27 release SDK. Until then, the direction is hypothetical and does not authorize an app-target dependency.
+The app target now contains a weak-linked adapter and app-owned result model, but import, UI, cache, playback, and render callbacks do not invoke it yet. API names, packaging, supported formats, and performance assumptions must still be revalidated against Apple's iOS 27 release SDK.
 
 ## Apple References Checked
 
