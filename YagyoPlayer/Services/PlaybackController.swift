@@ -105,9 +105,13 @@ final class PlaybackController: ObservableObject {
         applyEffectiveVolume()
     }
 
-    /// 参照Bの差し替え時、旧Bが鳴っていれば先に止めてから無効になったmatchを解除する。
-    func prepareForLoudnessMatchReferenceChange(from previousReferenceTrackID: AudioTrack.ID?) {
-        if currentTrack?.id == previousReferenceTrackID {
+    /// 参照Bの差し替え時、旧Bまたは新Bが鳴っていれば先に止めてから無効になったmatchを解除する。
+    func prepareForLoudnessMatchReferenceChange(
+        from previousReferenceTrackID: AudioTrack.ID?,
+        to newReferenceTrackID: AudioTrack.ID?
+    ) {
+        if let currentTrackID = currentTrack?.id,
+           currentTrackID == previousReferenceTrackID || currentTrackID == newReferenceTrackID {
             pause()
         }
         clearLoudnessMatch()

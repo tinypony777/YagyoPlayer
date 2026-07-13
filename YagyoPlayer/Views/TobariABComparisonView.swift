@@ -65,9 +65,13 @@ struct TobariABComparisonView: View {
             }
         }
         .modernRetroPanel(tone: .paper, radius: 12, padding: 14)
-        .onChange(of: referenceTrackID) { previousReferenceTrackID, _ in
-            // 旧Bだけが鳴り続けないよう先に止め、前の組み合わせの減衰も残さない。
-            player.prepareForLoudnessMatchReferenceChange(from: previousReferenceTrackID)
+        .onChange(of: referenceTrackID) { previousReferenceTrackID, newReferenceTrackID in
+            // Bの差し替え後に旧Bや新Bだけが鳴り続けないよう先に止め、
+            // 前の組み合わせの減衰も残さない。
+            player.prepareForLoudnessMatchReferenceChange(
+                from: previousReferenceTrackID,
+                to: newReferenceTrackID
+            )
         }
     }
 

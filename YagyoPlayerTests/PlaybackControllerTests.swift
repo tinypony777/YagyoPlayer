@@ -203,7 +203,7 @@ final class PlaybackControllerTests: XCTestCase {
         XCTAssertTrue(player.isPlaying)
         player.setLoudnessMatchMultiplier(0.5)
 
-        player.prepareForLoudnessMatchReferenceChange(from: oldReference.id)
+        player.prepareForLoudnessMatchReferenceChange(from: oldReference.id, to: nil)
 
         XCTAssertEqual(player.currentTrack?.id, oldReference.id)
         XCTAssertFalse(player.isPlaying)
@@ -213,10 +213,34 @@ final class PlaybackControllerTests: XCTestCase {
         XCTAssertTrue(player.isPlaying)
         player.setLoudnessMatchMultiplier(0.5)
 
-        player.prepareForLoudnessMatchReferenceChange(from: oldReference.id)
+        player.prepareForLoudnessMatchReferenceChange(from: oldReference.id, to: nil)
 
         XCTAssertEqual(player.currentTrack?.id, subject.id)
         XCTAssertTrue(player.isPlaying)
+        XCTAssertFalse(player.isLoudnessMatchActive)
+    }
+
+    func testChangingReferencePausesAlreadyPlayingNewReference() async throws {
+        let store = makeStore()
+        store.load()
+        let oldReference = try await importPlayableTrack(named: "old-reference.wav", into: store)
+        let newReference = try await importPlayableTrack(
+            named: "new-reference.wav",
+            sampleCount: 4001,
+            into: store
+        )
+        let player = PlaybackController()
+        player.load(newReference, from: store, autoplay: true, context: .library)
+        XCTAssertTrue(player.isPlaying)
+        player.setLoudnessMatchMultiplier(0.5)
+
+        player.prepareForLoudnessMatchReferenceChange(
+            from: oldReference.id,
+            to: newReference.id
+        )
+
+        XCTAssertEqual(player.currentTrack?.id, newReference.id)
+        XCTAssertFalse(player.isPlaying)
         XCTAssertFalse(player.isLoudnessMatchActive)
     }
 
