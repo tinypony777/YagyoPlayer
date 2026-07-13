@@ -16,9 +16,13 @@ final class PlaybackController: ObservableObject {
     @Published var duration: TimeInterval = 0
     @Published var volume: Float = 0.88 {
         didSet {
-            audioPlayer?.volume = volume
+            applyEffectiveVolume()
         }
     }
+    /// 狐火の帳でだけ使う減衰乗数。ユーザーの基準音量 `volume` とは保存・更新を分離する。
+    @Published private(set) var loudnessMatchMultiplier: Float = 1
+    /// 0 dB側も「適用中」と区別できるよう、乗数とは別に比較セッションの有効状態を持つ。
+    @Published private(set) var isLoudnessMatchActive = false
 
     let paradeSignals = ParadeSignalCoordinator()
     private var smoothedAudioLevel = 0.0
@@ -69,6 +73,36 @@ final class PlaybackController: ObservableObject {
 
     var durationText: String {
         Self.timeText(duration)
+    }
+
+    /// A/B切替直前に読むbackendの現在位置。0.35秒周期のUI表示値を比較位置へ流用しない。
+    var currentPlaybackTime: TimeInterval {
+        audioPlayer?.currentTime ?? elapsedTime
+    }
+
+    /// AVAudioPlayerへ渡す実効音量。Phase Bは基準音量を上書きせず、この積だけを変更する。
+    var effectiveVolume: Float {
+        let baseVolume = volume.isFinite ? volume : 0
+        let matchMultiplier = loudnessMatchMultiplier.isFinite ? loudnessMatchMultiplier : 1
+        return min(max(baseVolume * matchMultiplier, 0), 1)
+    }
+
+    /// 減衰だけのラウドネスマッチを適用する。1より大きい値はブーストせず等倍へ戻す。
+    func setLoudnessMatchMultiplier(_ multiplier: Float) {
+        guard multiplier.isFinite else {
+            clearLoudnessMatch()
+            return
+        }
+        loudnessMatchMultiplier = min(max(multiplier, 0), 1)
+        isLoudnessMatchActive = true
+        applyEffectiveVolume()
+    }
+
+    /// 帳の比較を解除し、保存済みの基準音量を正確に復元する。
+    func clearLoudnessMatch() {
+        loudnessMatchMultiplier = 1
+        isLoudnessMatchActive = false
+        applyEffectiveVolume()
     }
 
     /// AVAudioSession の割り込み・ルート変更を監視する。トラック未読込の時点から効くよう init で登録する。
@@ -196,6 +230,8 @@ final class PlaybackController: ObservableObject {
         autoplay: Bool = false,
         context: PlaybackContext? = nil
     ) {
+        // Phase Bの減衰はトラックをまたいで持ち越さない。A/B側はload後に対象側の値を明示適用する。
+        clearLoudnessMatch()
         resetParadeSignal(reason: .trackLoadStarted, isPlaying: false)
         remoteLibrary = library
         if let context {
@@ -211,7 +247,7 @@ final class PlaybackController: ObservableObject {
             try configureAudioSession()
             let fileURL = library.fileURL(for: track)
             let player = try AVAudioPlayer(contentsOf: fileURL)
-            player.volume = volume
+            player.volume = effectiveVolume
             player.isMeteringEnabled = true
             player.prepareToPlay()
 
@@ -312,6 +348,7 @@ final class PlaybackController: ObservableObject {
 
     func stopForDeletedTrack(_ track: AudioTrack) {
         guard currentTrack?.id == track.id else { return }
+        clearLoudnessMatch()
         audioPlayer?.stop()
         audioPlayer = nil
         currentTrack = nil
@@ -337,6 +374,10 @@ final class PlaybackController: ObservableObject {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playback, mode: .default)
         try session.setActive(true)
+    }
+
+    private func applyEffectiveVolume() {
+        audioPlayer?.volume = effectiveVolume
     }
 
     private func startTimer() {

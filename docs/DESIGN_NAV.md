@@ -8,6 +8,8 @@
 
 Xcode 27.0 generic iOS build、iPhone 17 Pro / iOS 26.5 full suite **127 / 127**、iPhone 17 Pro / iOS 27.0のPlaybackController以外 **115 / 115**、iPhone 17e / iOS 27.0の3タブ実描画 **1 / 1**は、いずれもfailure 0・skip 0。iOS 27.0 beta Simulatorだけで既存PlaybackController群の同期AVAudioSession初期化が返らないため、その12件はiOS 26.5 full suiteでgreenを確認した。PR #23レビュー後は、円形波形だけを曲中の局所floor/ceilingへ相対化し、高ラウドネス定常入力が常時`烈`へ張り付かない回帰を追加した。[現在の実描画証跡](evidence/modern-retro-ui/README.md)にDay、丑三つ時、17e、Dynamic Type、波形状態、狐火の帳とhashを集約する。コンセプトは承認済みだが、実装された実機描画は本人の最終確認まで完成扱いにしない。
 
+狐火の帳 Phase Bのfeature branchでは、A/B比較を一枚紙の先頭へ追加した。選択中のA札とラウドネスマッチ操作だけを柿色にし、青緑は目盛の解析値へ限定する。Integrated Loudness差は減衰だけの候補gainとしてA/B両方をdB表示し、初期状態は「マッチなし」。[Phase B実描画と解除・DSP境界の証跡](evidence/step5-tobari/README.md)は標準幅とDynamic Type Accessibility 2、実機installを含む。ユーザー実機操作確認とPR統合は未完了である。
+
 ## Step 4 唐傘縦切りの現在地
 
 Step 4 では、毎秒15回(15 Hz周期)で読む `AVAudioPlayer.averagePower` から得る単一の `ParadeSignalSnapshot` を、小さな `ReactiveVisualStage` だけが coordinator から購読する。この wrapper が snapshot を夜行絵巻へ、snapshot の `level / activity / levelBand` を円形波形へ渡し、root `ContentView` やライブラリ全体を 15 Hz 更新へ巻き込まない。snapshot は `level / activity / strongPhase / strongSequence` を持ち、停止、meter 利用不可、`quietProxy`、通常状態を区別する。現在トラックの resident は固定 roster による互換割当を保ったまま先導へ移る。
