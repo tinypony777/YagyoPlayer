@@ -105,6 +105,14 @@ final class PlaybackController: ObservableObject {
         applyEffectiveVolume()
     }
 
+    /// 参照Bの差し替え時、旧Bが鳴っていれば先に止めてから無効になったmatchを解除する。
+    func prepareForLoudnessMatchReferenceChange(from previousReferenceTrackID: AudioTrack.ID?) {
+        if currentTrack?.id == previousReferenceTrackID {
+            pause()
+        }
+        clearLoudnessMatch()
+    }
+
     /// AVAudioSession の割り込み・ルート変更を監視する。トラック未読込の時点から効くよう init で登録する。
     private func installAudioSessionObservers() {
         let center = NotificationCenter.default

@@ -189,6 +189,37 @@ final class PlaybackControllerTests: XCTestCase {
         XCTAssertEqual(store.nextTrack(after: reference)?.id, libraryNext.id)
     }
 
+    func testChangingReferencePausesLoadedOldReferenceButKeepsSubjectPlaying() async throws {
+        let store = makeStore()
+        store.load()
+        let oldReference = try await importPlayableTrack(
+            named: "old-reference.wav",
+            sampleCount: 4001,
+            into: store
+        )
+        let subject = try await importPlayableTrack(named: "subject.wav", into: store)
+        let player = PlaybackController()
+        player.load(oldReference, from: store, autoplay: true, context: .library)
+        XCTAssertTrue(player.isPlaying)
+        player.setLoudnessMatchMultiplier(0.5)
+
+        player.prepareForLoudnessMatchReferenceChange(from: oldReference.id)
+
+        XCTAssertEqual(player.currentTrack?.id, oldReference.id)
+        XCTAssertFalse(player.isPlaying)
+        XCTAssertFalse(player.isLoudnessMatchActive)
+
+        player.load(subject, from: store, autoplay: true, context: .library)
+        XCTAssertTrue(player.isPlaying)
+        player.setLoudnessMatchMultiplier(0.5)
+
+        player.prepareForLoudnessMatchReferenceChange(from: oldReference.id)
+
+        XCTAssertEqual(player.currentTrack?.id, subject.id)
+        XCTAssertTrue(player.isPlaying)
+        XCTAssertFalse(player.isLoudnessMatchActive)
+    }
+
     func testPauseKeepsMatchForResumeButTrueStopClearsIt() async throws {
         let store = makeStore()
         store.load()
