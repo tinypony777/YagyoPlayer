@@ -73,7 +73,7 @@ North Star は次の 3 条件。確認の物差しは市場指標ではなく、
 - 音源は外へ送らず、元ファイルも書き換えない。利用条件が local-first の約束を満たさない端末では、この機能自体を使わない。
 - Core AI が任意のエフェクトや並び順を作ることはない。選べるのは、人が測定・試聴して版を管理したレシピだけである。
 - これは将来の**再生音の Listening Profile**構想であり、Step 4 の `averagePower` 由来の視覚信号とは別の仕事として扱う。一つの巨大な解析経路へ結びつけることを前提にしない。
-- **現在地(正直に)**: iOS 27 の `MusicUnderstandingSession` を availability gate の内側でローカル `AVAsset` 解析へ接続し、六つの結果を app-owned Codable 型へ正規化する Phase 0 adapterを実装した。Phase 1では、AI非依存の3〜5 band固定EQ pure core、Original latch、固定容量SPSC snapshot境界を実装した。iOS 26はweak linkのまま既存経路へ戻り、UI、キャッシュ、Core AI、再生経路には未接続なので、現在の再生音は未加工のままである。
+- **現在地(正直に)**: iOS 27 の `MusicUnderstandingSession` を availability gate の内側でローカル `AVAsset` 解析へ接続し、六つの結果を app-owned Codable 型へ正規化する Phase 0 adapterを実装した。Phase 1では、AI非依存の3〜5 band固定EQ pure core、Original latch、固定容量SPSC snapshot境界を実装し、PlaybackControllerから従来のAVAudioPlayerをadapter化した。既定backendは従来経路のままで、Fixed EQ、UI、キャッシュ、Core AIには未接続なので、現在の再生音は未加工のままである。
 
 ### 4.3 住み着きの夜 — 聴いた時間が世界を深める
 
@@ -132,7 +132,7 @@ Release criteria:
 
 ### Step 3 — 狐火の調律(§4.2、Phase 0 / 1 進行中)
 
-状態: **2026-07-14に保留解除。iOS 27 betaのMusic Understanding境界、AI非依存の固定EQ pure core、固定容量snapshot handoffを実装。Core AI / UI / 再生経路は未接続。**
+状態: **2026-07-14に保留解除。iOS 27 betaのMusic Understanding境界、AI非依存の固定EQ pure core、固定容量snapshot handoff、既存音を保つ再生backend境界を実装。Core AI / UI / DSP再生は未接続。**
 
 Phase 0 の残り条件:
 - iOS 27 実機でローカル実曲、cancellation、オンデバイス実行条件、対応端末、性能を確認する。
