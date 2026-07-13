@@ -326,13 +326,15 @@ YagyoPlayer は次だけを縮小して独自実装する。
 
 **Gate:** API boundary と端末条件をテストで再現でき、Apple beta 前提との差分が文書化されていること。
 
-### Phase 1 — Deterministic DSP catalog and preview without AI（pure core 進行中）
+### Phase 1 — Deterministic DSP catalog and preview without AI（AU境界まで進行中）
 
 - 固定 EQ chain、Original/bypass、`DSPRecipeCatalog`、snapshot、プレビュー UI を fixture recipe だけで作る。
 - 正のゲインを使わないラウドネスマッチと明示選択フローを検証する。
 - AI がなくても安全性、音切れ、比較可能性、アクセシビリティを評価できるようにする。
 
-2026-07-14 時点で、3〜5 band peaking EQ、±3 dB、Q `0.5...2.0`、`20 Hz...min(20 kHz, Nyquist × 0.95)`、非正input headroom／output trimを検証してimmutable snapshotへ変換するpure coreを追加した。input headroomは各bandの正boost合計以上の減衰を必須とし、output trimで内部余裕を代用しない。render kernelはmono/stereo、44.1/48/96 kHz、可変chunk、有限入力に対するOriginalのbit transparency、非有限入力のzero化、impulse、中心周波数応答、DC、決定論的noise、denormal、channel独立、全buffer alias、buffer境界適用、invalid state時Original latch、無効frameの非部分処理、同一周波数5-band最大boostをfocused test `16 / 16` で確認した。さらにcapacity 4のSPSC mailboxとrender-owned processorを追加し、one-shot endpoint所有権、満杯時no-overwrite、stale snapshotの定数時間破棄、buffer先頭での最新世代適用、20,000世代のring wrapとpayload整合性をfocused test `3 / 3` とThread Sanitizerで確認した。合同focused testは `19 / 19`。PlaybackControllerにはfailure-atomic load/seek契約とexact schedule identity照合を持つ再生backend境界を追加し、既存controller 22件＋seam 8件を `30 / 30`、app full suiteを `178 / 178`、skip 0で確認した。既定は従来のAVAudioPlayer adapterであり、Fixed EQ、AVAudioEngine、UIは未接続なので再生音は変わらない。
+2026-07-14 時点で、3〜5 band peaking EQ、±3 dB、Q `0.5...2.0`、`20 Hz...min(20 kHz, Nyquist × 0.95)`、非正input headroom／output trimを検証してimmutable snapshotへ変換するpure coreを追加した。input headroomは各bandの正boost合計以上の減衰を必須とし、output trimで内部余裕を代用しない。render kernelはmono/stereo、44.1/48/96 kHz、可変chunk、有限入力に対するOriginalのbit transparency、非有限入力のzero化、impulse、中心周波数応答、DC、決定論的noise、denormal、channel独立、全buffer alias、buffer境界適用、invalid state時Original latch、無効frameの非部分処理、同一周波数5-band最大boostをfocused test `16 / 16` で確認した。さらにcapacity 4のSPSC mailboxとrender-owned processorを追加し、one-shot endpoint所有権、満杯時no-overwrite、stale snapshotの定数時間破棄、buffer先頭での最新世代適用、20,000世代のring wrapとpayload整合性をfocused test `3 / 3` とThread Sanitizerで確認した。合同focused testは `19 / 19`。PlaybackControllerにはfailure-atomic load/seek契約とexact schedule identity照合を持つ再生backend境界を追加し、既存controller 22件＋seam 8件を `30 / 30` で確認した。
+
+同日、pure coreを最小のin-process `AUAudioUnit`へ載せるrender境界を追加した。render state、入力scratch、`mData == nil`時のAU所有output fallbackはresource allocation時に確保し、snapshotはbuffer先頭だけで適用する。pull／DSP失敗は要求bufferをzero化して`OutputIsSilence + noErr`で閉じ、frame超過・不正bus・不正ABLなどhost contract違反だけを非zero statusにする。Original bit transparency、先頭sampleからの世代適用、nil output、pullによるinput pointer差し替えと次回復元、非有限値latch、pull失敗、未allocate、frame超過、undersized／alias buffer、reset・再allocate、render/control並行2,000世代のcoherent telemetryをdirect test `15 / 15`、44.1/48/96 kHz × mono/stereo × `64 + 64 + 3` frameの`AVAudioEngine` offline graphを `1 / 1`、app full suiteを `194 / 194`、skip 0で確認した。これはoffline／Simulator証跡であり、実機Release buildでのrender-thread allocation、lock、underrun、route／interruption、CPU／thermalは未検証である。既定は従来のAVAudioPlayer adapterのままで、productionのAVAudioEngine playback backend、Fixed EQ選択UI、Core AIは未接続なので現在の再生音は変わらない。
 
 **Gate:** DSP と UX の価値が AI 抜きで成立し、bypass、切替、リアルタイム制約に合格すること。
 

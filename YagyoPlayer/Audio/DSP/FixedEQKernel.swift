@@ -1,6 +1,6 @@
 import Foundation
 
-enum FixedEQProcessResult: Equatable, Sendable {
+enum FixedEQProcessResult: UInt32, Equatable, Sendable {
     case original
     case processed
     case latchedOriginal
@@ -176,7 +176,7 @@ struct FixedEQKernel: Sendable {
         return .latchedOriginal
     }
 
-    private mutating func latchOriginal() {
+    mutating func latchOriginal() {
         isOriginalLatched = true
         reset()
     }

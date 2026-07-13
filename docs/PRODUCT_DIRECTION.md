@@ -73,7 +73,7 @@ North Star は次の 3 条件。確認の物差しは市場指標ではなく、
 - 音源は外へ送らず、元ファイルも書き換えない。利用条件が local-first の約束を満たさない端末では、この機能自体を使わない。
 - Core AI が任意のエフェクトや並び順を作ることはない。選べるのは、人が測定・試聴して版を管理したレシピだけである。
 - これは将来の**再生音の Listening Profile**構想であり、Step 4 の `averagePower` 由来の視覚信号とは別の仕事として扱う。一つの巨大な解析経路へ結びつけることを前提にしない。
-- **現在地(正直に)**: iOS 27 の `MusicUnderstandingSession` を availability gate の内側でローカル `AVAsset` 解析へ接続し、六つの結果を app-owned Codable 型へ正規化する Phase 0 adapterを実装した。Phase 1では、AI非依存の3〜5 band固定EQ pure core、Original latch、固定容量SPSC snapshot境界を実装し、PlaybackControllerから従来のAVAudioPlayerをadapter化した。既定backendは従来経路のままで、Fixed EQ、UI、キャッシュ、Core AIには未接続なので、現在の再生音は未加工のままである。
+- **現在地(正直に)**: iOS 27 の `MusicUnderstandingSession` を availability gate の内側でローカル `AVAsset` 解析へ接続し、六つの結果を app-owned Codable 型へ正規化する Phase 0 adapterを実装した。Phase 1では、AI非依存の3〜5 band固定EQ pure core、Original latch、固定容量SPSC snapshot境界を実装し、PlaybackControllerから従来のAVAudioPlayerをadapter化した。さらに固定EQを最小のin-process `AUAudioUnit`へ載せ、direct renderと`AVAudioEngine` offline graphでmono/stereo・44.1/48/96 kHzを検証した。これは再生backendへ組み込む前の境界証跡であり、実機realtime性能は未検証である。既定backendは従来経路のままで、Fixed EQ選択UI、productionのAVAudioEngine再生、キャッシュ、Core AIには未接続なので、現在の再生音は未加工のままである。
 
 ### 4.3 住み着きの夜 — 聴いた時間が世界を深める
 

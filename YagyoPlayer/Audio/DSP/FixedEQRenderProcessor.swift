@@ -25,6 +25,10 @@ struct FixedEQRenderProcessor: ~Copyable, Sendable {
         kernel.reset()
     }
 
+    mutating func latchOriginal() {
+        kernel.latchOriginal()
+    }
+
     mutating func process(
         inputLeft: UnsafeBufferPointer<Float>,
         inputRight: UnsafeBufferPointer<Float>?,

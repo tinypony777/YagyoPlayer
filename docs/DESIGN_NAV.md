@@ -49,7 +49,7 @@ Step 4 では、毎秒15回(15 Hz周期)で読む `AVAudioPlayer.averagePower` �
 | residency | UUID 由来の安定した割当を維持。現在曲の resident が行列を先導する |
 | 再生統計 | `playCount / lastPlayedAt / playHourCounts` は記録・永続化済み。歴史による行列振付には未接続 |
 | Accessibility | 夜行絵巻のVoiceOver値と、夜行絵巻・円形波形のReduce Motion代替を実装し`main`へ統合済み。現行full suite合格。semantic AX 1 / 1、`t0`／`t+2 s` full PNG同一、canvas crop差分0、独立native visual QA APPROVED |
-| Step 3 | 2026-07-14に保留解除。Music Understanding adapter、AI非依存の固定EQ pure core、固定容量snapshot handoff、既存音を保つ再生backend境界を実装。Core AI / UI / DSP再生は未接続 |
+| Step 3 | 2026-07-14に保留解除。Music Understanding adapter、AI非依存の固定EQ pure core、固定容量snapshot handoff、既存音を保つ再生backend境界、最小in-process AUとoffline engine証跡を実装。Core AI / UI / production DSP再生は未接続 |
 
 ## 唐傘の SNES 相当アート契約
 
