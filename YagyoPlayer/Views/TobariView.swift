@@ -115,14 +115,22 @@ final class TobariAnalysisController: ObservableObject {
 
 struct TobariView: View {
     let track: AudioTrack
+    private let presetReference: TobariReferencePreview?
 
     @EnvironmentObject private var library: AudioLibraryStore
+    @EnvironmentObject private var player: PlaybackController
     @StateObject private var controller: TobariAnalysisController
     @Environment(\.dismiss) private var dismiss
 
-    /// `presetMetrics` はQA artifact / プレビュー用(解析を走らせず結果を描く)。
-    init(track: AudioTrack, presetMetrics: TobariMetrics? = nil) {
+    /// `presetMetrics` / `presetReference` はQA artifact用。
+    /// 実ファイルを解析せず、A/Bを含む帳の実描画を固定値で検証する。
+    init(
+        track: AudioTrack,
+        presetMetrics: TobariMetrics? = nil,
+        presetReference: TobariReferencePreview? = nil
+    ) {
         self.track = track
+        self.presetReference = presetReference
         _controller = StateObject(
             wrappedValue: TobariAnalysisController(presenting: presetMetrics)
         )
@@ -142,6 +150,11 @@ struct TobariView: View {
                 case .failed(let message):
                     failureSection(message: message)
                 case .finished(let metrics):
+                    TobariABComparisonView(
+                        subjectTrack: track,
+                        subjectMetrics: metrics,
+                        presetReference: presetReference
+                    )
                     meterLedger(metrics: metrics)
                     findingsSection(metrics: metrics)
                     footnote(metrics: metrics)
@@ -155,6 +168,10 @@ struct TobariView: View {
         .background(YagyoPrintColor.canvas.ignoresSafeArea())
         .onAppear {
             controller.start(track: track, library: library)
+        }
+        .onDisappear {
+            // 帳の外へ比較用の減衰を持ち出さない。
+            player.clearLoudnessMatch()
         }
     }
 

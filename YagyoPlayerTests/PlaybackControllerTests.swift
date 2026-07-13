@@ -23,11 +23,15 @@ final class PlaybackControllerTests: XCTestCase {
     }
 
     /// 実際にデコード・再生できる無音WAVを取り込み、本物の AVAudioPlayer ロード経路を通す。
-    private func importPlayableTrack(named name: String = "clip.wav", into store: AudioLibraryStore) async throws -> AudioTrack {
+    private func importPlayableTrack(
+        named name: String = "clip.wav",
+        sampleCount: Int = 4000,
+        into store: AudioLibraryStore
+    ) async throws -> AudioTrack {
         let url = temporaryDirectory.appending(path: name, directoryHint: .notDirectory)
-        try Self.makeSilentWAVData().write(to: url)
+        try Self.makeSilentWAVData(sampleCount: sampleCount).write(to: url)
         await store.importAudioFiles(from: [url])
-        return try XCTUnwrap(store.tracks.first)
+        return try XCTUnwrap(store.tracks.first { $0.originalFilename == name })
     }
 
     /// NotificationCenter の投稿から生まれる `Task { @MainActor in ... }` の実行を待つ。
@@ -41,6 +45,219 @@ final class PlaybackControllerTests: XCTestCase {
         player.paradeSignals.ingest(level: 0.20, isPlaying: true, sampledAt: 0)
         player.paradeSignals.ingest(level: 0.20, isPlaying: true, sampledAt: 0.31)
         player.paradeSignals.ingest(level: 0.80, isPlaying: true, sampledAt: 0.40)
+    }
+
+    // MARK: - 狐火の帳 Phase B は基準音量と減衰乗数を分離する
+
+    func testLoudnessMatchMultiplierDoesNotOverwriteBaseVolume() {
+        let player = PlaybackController()
+        player.volume = 0.8
+
+        player.setLoudnessMatchMultiplier(0.5)
+
+        XCTAssertEqual(player.volume, 0.8, accuracy: 1e-6)
+        XCTAssertEqual(player.loudnessMatchMultiplier, 0.5, accuracy: 1e-6)
+        XCTAssertTrue(player.isLoudnessMatchActive)
+        XCTAssertEqual(player.effectiveVolume, 0.4, accuracy: 1e-6)
+
+        player.clearLoudnessMatch()
+
+        XCTAssertEqual(player.volume, 0.8, accuracy: 1e-6)
+        XCTAssertEqual(player.loudnessMatchMultiplier, 1, accuracy: 1e-6)
+        XCTAssertFalse(player.isLoudnessMatchActive)
+        XCTAssertEqual(player.effectiveVolume, 0.8, accuracy: 1e-6)
+    }
+
+    func testLoudnessMatchMultiplierCannotBoostOrPropagateNonFiniteValues() {
+        let player = PlaybackController()
+        player.volume = 0.75
+
+        player.setLoudnessMatchMultiplier(1.4)
+        XCTAssertEqual(player.loudnessMatchMultiplier, 1, accuracy: 1e-6)
+        XCTAssertTrue(player.isLoudnessMatchActive, "0 dB側も比較セッションとしては適用中")
+        XCTAssertEqual(player.effectiveVolume, 0.75, accuracy: 1e-6)
+
+        player.setLoudnessMatchMultiplier(.nan)
+        XCTAssertEqual(player.loudnessMatchMultiplier, 1, accuracy: 1e-6)
+        XCTAssertFalse(player.isLoudnessMatchActive)
+
+        player.setLoudnessMatchMultiplier(-0.4)
+        XCTAssertEqual(player.loudnessMatchMultiplier, 0, accuracy: 1e-6)
+        XCTAssertEqual(player.effectiveVolume, 0, accuracy: 1e-6)
+    }
+
+    func testLoadingAnotherTrackClearsLoudnessMatchWithoutChangingBaseVolume() async throws {
+        let store = makeStore()
+        store.load()
+        let firstTrack = try await importPlayableTrack(named: "first.wav", into: store)
+        let nextTrack = try await importPlayableTrack(named: "next.wav", sampleCount: 4001, into: store)
+        let player = PlaybackController()
+        player.volume = 0.72
+        player.load(firstTrack, from: store)
+        player.play()
+        XCTAssertTrue(player.isPlaying)
+        player.setLoudnessMatchMultiplier(0.4)
+
+        player.load(nextTrack, from: store)
+
+        XCTAssertEqual(player.currentTrack?.id, nextTrack.id)
+        XCTAssertFalse(player.isPlaying)
+        XCTAssertEqual(player.volume, 0.72, accuracy: 1e-6)
+        XCTAssertEqual(player.loudnessMatchMultiplier, 1, accuracy: 1e-6)
+        XCTAssertFalse(player.isLoudnessMatchActive)
+        XCTAssertEqual(player.effectiveVolume, 0.72, accuracy: 1e-6)
+    }
+
+    func testReloadingSameTrackClearsMatchSessionEvenWhenTrackIDDoesNotChange() async throws {
+        let store = makeStore()
+        store.load()
+        let track = try await importPlayableTrack(into: store)
+        let player = PlaybackController()
+        player.load(track, from: store)
+        player.play()
+        XCTAssertTrue(player.isPlaying)
+        player.setLoudnessMatchMultiplier(0.4)
+
+        player.load(track, from: store)
+
+        XCTAssertEqual(player.currentTrack?.id, track.id)
+        XCTAssertFalse(player.isPlaying)
+        XCTAssertEqual(player.loudnessMatchMultiplier, 1, accuracy: 1e-6)
+        XCTAssertFalse(player.isLoudnessMatchActive)
+    }
+
+    func testFailedTrackLoadClearsMatchSessionFromPreviouslyLoadedTrack() async throws {
+        let store = makeStore()
+        store.load()
+        let track = try await importPlayableTrack(into: store)
+        let player = PlaybackController()
+        player.load(track, from: store)
+        player.play()
+        XCTAssertTrue(player.isPlaying)
+        player.setLoudnessMatchMultiplier(0.4)
+        let missing = AudioTrack(
+            title: "参照なし",
+            originalFilename: "missing.wav",
+            storedFilename: "missing-\(UUID().uuidString).wav"
+        )
+
+        player.load(missing, from: store)
+
+        XCTAssertEqual(player.currentTrack?.id, track.id)
+        XCTAssertFalse(player.isPlaying)
+        XCTAssertEqual(player.loudnessMatchMultiplier, 1, accuracy: 1e-6)
+        XCTAssertFalse(player.isLoudnessMatchActive)
+        XCTAssertNotNil(player.playbackErrorMessage)
+    }
+
+    func testCurrentPlaybackTimeReadsBackendInsteadOfStalePublishedTick() async throws {
+        let store = makeStore()
+        store.load()
+        let track = try await importPlayableTrack(into: store)
+        let player = PlaybackController()
+        player.load(track, from: store)
+        player.seek(to: 0.3)
+        player.elapsedTime = 0
+
+        XCTAssertEqual(player.currentPlaybackTime, 0.3, accuracy: 0.01)
+    }
+
+    func testLibraryContextClearsStalePlaylistBeforeComparisonReferenceLoad() async throws {
+        let store = makeStore()
+        store.load()
+        let libraryNext = try await importPlayableTrack(
+            named: "library-next.wav",
+            sampleCount: 4002,
+            into: store
+        )
+        let reference = try await importPlayableTrack(
+            named: "reference.wav",
+            sampleCount: 4001,
+            into: store
+        )
+        let subject = try await importPlayableTrack(named: "subject.wav", into: store)
+        let playlist = try XCTUnwrap(store.createPlaylist(named: "比較前の巻物"))
+        store.addTrack(subject, to: playlist)
+        let player = PlaybackController()
+        player.load(subject, from: store, context: .playlist(playlist.id))
+        XCTAssertEqual(store.activePlaylistID, playlist.id)
+
+        player.load(reference, from: store, context: .library)
+
+        XCTAssertNil(store.activePlaylistID)
+        XCTAssertEqual(player.currentTrack?.id, reference.id)
+        XCTAssertEqual(store.nextTrack(after: reference)?.id, libraryNext.id)
+    }
+
+    func testChangingReferencePausesLoadedOldReferenceButKeepsSubjectPlaying() async throws {
+        let store = makeStore()
+        store.load()
+        let oldReference = try await importPlayableTrack(
+            named: "old-reference.wav",
+            sampleCount: 4001,
+            into: store
+        )
+        let subject = try await importPlayableTrack(named: "subject.wav", into: store)
+        let player = PlaybackController()
+        player.load(oldReference, from: store, autoplay: true, context: .library)
+        XCTAssertTrue(player.isPlaying)
+        player.setLoudnessMatchMultiplier(0.5)
+
+        player.prepareForLoudnessMatchReferenceChange(from: oldReference.id, to: nil)
+
+        XCTAssertEqual(player.currentTrack?.id, oldReference.id)
+        XCTAssertFalse(player.isPlaying)
+        XCTAssertFalse(player.isLoudnessMatchActive)
+
+        player.load(subject, from: store, autoplay: true, context: .library)
+        XCTAssertTrue(player.isPlaying)
+        player.setLoudnessMatchMultiplier(0.5)
+
+        player.prepareForLoudnessMatchReferenceChange(from: oldReference.id, to: nil)
+
+        XCTAssertEqual(player.currentTrack?.id, subject.id)
+        XCTAssertTrue(player.isPlaying)
+        XCTAssertFalse(player.isLoudnessMatchActive)
+    }
+
+    func testChangingReferencePausesAlreadyPlayingNewReference() async throws {
+        let store = makeStore()
+        store.load()
+        let oldReference = try await importPlayableTrack(named: "old-reference.wav", into: store)
+        let newReference = try await importPlayableTrack(
+            named: "new-reference.wav",
+            sampleCount: 4001,
+            into: store
+        )
+        let player = PlaybackController()
+        player.load(newReference, from: store, autoplay: true, context: .library)
+        XCTAssertTrue(player.isPlaying)
+        player.setLoudnessMatchMultiplier(0.5)
+
+        player.prepareForLoudnessMatchReferenceChange(
+            from: oldReference.id,
+            to: newReference.id
+        )
+
+        XCTAssertEqual(player.currentTrack?.id, newReference.id)
+        XCTAssertFalse(player.isPlaying)
+        XCTAssertFalse(player.isLoudnessMatchActive)
+    }
+
+    func testPauseKeepsMatchForResumeButTrueStopClearsIt() async throws {
+        let store = makeStore()
+        store.load()
+        let track = try await importPlayableTrack(into: store)
+        let player = PlaybackController()
+        player.load(track, from: store)
+        player.setLoudnessMatchMultiplier(0.5)
+
+        player.pause()
+        XCTAssertTrue(player.isLoudnessMatchActive, "一時停止から同じA/B条件で再開できる")
+
+        player.stopForDeletedTrack(track)
+        XCTAssertFalse(player.isLoudnessMatchActive)
+        XCTAssertEqual(player.loudnessMatchMultiplier, 1, accuracy: 1e-6)
     }
 
     // MARK: - ファイル欠落・読み込み失敗は無言で止まらない

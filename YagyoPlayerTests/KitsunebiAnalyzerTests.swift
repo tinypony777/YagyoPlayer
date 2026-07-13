@@ -393,12 +393,37 @@ final class KitsunebiAnalyzerTests: XCTestCase {
             storedFilename: "yoinosoko.caf",
             artist: "tinypony"
         )
+        let referenceTrack = AudioTrack(
+            title: "薄明 Reference",
+            originalFilename: "hakumei-reference.wav",
+            storedFilename: "hakumei-reference.caf",
+            artist: "tinypony"
+        )
+        var referenceMetrics = metrics
+        referenceMetrics.contentHash = "artifact-reference"
+        referenceMetrics.integratedLUFS = -17.8
+        referenceMetrics.maxShortTermLUFS = -14.2
+        referenceMetrics.truePeakDBTP = -1.1
+        referenceMetrics.clipRunCount = 0
+        referenceMetrics.clipRunSeconds = []
+        referenceMetrics.stereoCorrelation = 0.92
+        let referencePreview = TobariReferencePreview(
+            track: referenceTrack,
+            metrics: referenceMetrics
+        )
         let store = AudioLibraryStore(
             documentsDirectory: FileManager.default.temporaryDirectory
                 .appendingPathComponent("tobari-artifact-\(UUID().uuidString)", isDirectory: true)
         )
-        let standardView = TobariView(track: track, presetMetrics: metrics)
+        let standardPlayer = PlaybackController()
+        standardPlayer.currentTrack = track
+        let standardView = TobariView(
+            track: track,
+            presetMetrics: metrics,
+            presetReference: referencePreview
+        )
             .environmentObject(store)
+            .environmentObject(standardPlayer)
 
         // 撮影は共通ヘルパー(WindowArtifactExporter)で行う。Dayモードを
         // 明示し、iPhone 17 Proの402×874 ptを標準サイズの比較正本にする。
@@ -410,8 +435,15 @@ final class KitsunebiAnalyzerTests: XCTestCase {
             attachmentName: "tobari-screen.png"
         )
 
-        let accessibilityLargeView = TobariView(track: track, presetMetrics: metrics)
+        let accessibilityPlayer = PlaybackController()
+        accessibilityPlayer.currentTrack = track
+        let accessibilityLargeView = TobariView(
+            track: track,
+            presetMetrics: metrics,
+            presetReference: referencePreview
+        )
             .environmentObject(store)
+            .environmentObject(accessibilityPlayer)
         try exportWindowArtifact(
             rootView: accessibilityLargeView,
             windowWidth: 390,
