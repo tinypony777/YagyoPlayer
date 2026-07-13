@@ -73,7 +73,7 @@ North Star は次の 3 条件。確認の物差しは市場指標ではなく、
 - 音源は外へ送らず、元ファイルも書き換えない。利用条件が local-first の約束を満たさない端末では、この機能自体を使わない。
 - Core AI が任意のエフェクトや並び順を作ることはない。選べるのは、人が測定・試聴して版を管理したレシピだけである。
 - これは将来の**再生音の Listening Profile**構想であり、Step 4 の `averagePower` 由来の視覚信号とは別の仕事として扱う。一つの巨大な解析経路へ結びつけることを前提にしない。
-- **現在地(正直に)**: iOS 27 の `MusicUnderstandingSession` を availability gate の内側でローカル `AVAsset` 解析へ接続し、六つの結果を app-owned Codable 型へ正規化する Phase 0 adapter を実装中。iOS 26 は weak link のまま既存経路へ戻る。UI、キャッシュ、Core AI、Listening Profile DSP は未接続で、再生音は未加工のままである。
+- **現在地(正直に)**: iOS 27 の `MusicUnderstandingSession` を availability gate の内側でローカル `AVAsset` 解析へ接続し、六つの結果を app-owned Codable 型へ正規化する Phase 0 adapterを実装した。Phase 1では、AI非依存の3〜5 band固定EQ pure coreとOriginal latchを実装中。iOS 26はweak linkのまま既存経路へ戻り、UI、キャッシュ、Core AI、再生経路には未接続なので、現在の再生音は未加工のままである。
 
 ### 4.3 住み着きの夜 — 聴いた時間が世界を深める
 
@@ -130,9 +130,9 @@ Release criteria:
 - 検索・並び替え(追加日、タイトル、長さ、巻物。**妖怪起点の並び替えは作らない** — §6 の線引き)。
 - メタデータ編集(title / artist / artwork / notes)。
 
-### Step 3 — 狐火の調律(§4.2、Phase 0 再開)
+### Step 3 — 狐火の調律(§4.2、Phase 0 / 1 進行中)
 
-状態: **2026-07-14に保留解除。iOS 27 beta SDK で Music Understanding capability spike を実施中。Core AI / Listening Profile DSP は未実装。**
+状態: **2026-07-14に保留解除。iOS 27 betaのMusic Understanding境界と、AI非依存の固定EQ pure coreを実装中。Core AI / UI / 再生経路は未接続。**
 
 Phase 0 の残り条件:
 - iOS 27 実機でローカル実曲、cancellation、オンデバイス実行条件、対応端末、性能を確認する。
@@ -209,4 +209,4 @@ Release criteria:
 |---|---|
 | v2 | 機能とロードマップの宣言([archive/PRODUCT_DIRECTION_v2.md](archive/PRODUCT_DIRECTION_v2.md)) |
 | v3 競合分析ドラフト | 市場調査と「永続的優位の台帳」を軸にした差別化戦略として起草。作者の判断で見送り — この製品は市場から逆算しないため(PR #5 の履歴に全文が残っている) |
-| v3 作者の憲章(この文書) | 競合の文脈を外し、「作者が楽しめること」「好きな要素への忠実さ」「再生の信頼」を軸に再構成。当時確認した重複取込と取込結果未表示は、その後 Step 0 で解消済み。本文の現在地は、統計、Step 3 Phase 0、Step 4 完了を含む実装事実へ随時同期する |
+| v3 作者の憲章(この文書) | 競合の文脈を外し、「作者が楽しめること」「好きな要素への忠実さ」「再生の信頼」を軸に再構成。当時確認した重複取込と取込結果未表示は、その後 Step 0 で解消済み。本文の現在地は、統計、Step 3 Phase 0 / 1、Step 4 完了を含む実装事実へ随時同期する |

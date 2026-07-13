@@ -268,6 +268,19 @@ YagyoPlayer は **NaN/Infinity を clamp より前に拒否**し、AI 応答、F
 
 これらは YagyoPlayer の「少数の聴き方を明示選択する音楽プレイヤー」という境界を越え、複雑性、故障面、検証コストを増やすため採用しない。
 
+### 6.3 提供された Swift DSP Reference の監査差分
+
+2026-07-14 に提供された `DSP_Reference` は、完成品として直接移植せず設計資料として監査した。`ParamEQKernel.process` は `min(frameCount, maxFrames)` までしか処理せず超過tailを残すこと、snapshotの二面swapはconsumerが旧面をコピー中に次のwriterが上書きできること、previewのoutput gainがユーザー音量と同じmixer経路で正値も許すことを確認した。
+
+YagyoPlayer は次だけを縮小して独自実装する。
+
+- RBJ peaking EQの係数設計をcontrol側で行い、Float化後にもfinite／安定性を再検証する。
+- 3〜5 bandの完成済み係数、input headroom、非正output trimを一つのimmutable snapshotにする。
+- render側は要求frameを全量処理するか明示失敗し、部分処理しない。
+- pure kernelの`invalidBuffers`は未処理outputを変更しない。AVAudioUnit adapter接続時はこの結果を受けて要求frame全体をzero-clearする契約と回帰テストを必須にする。
+- Original、DSP safety trim、ユーザー音量、将来のラウドネスマッチ乗数を別の責務として保持する。
+- snapshot handoffは二面swapをコピーせず、所有権が明確なbounded SPSC mailboxとして別commitで実装する。
+
 ## 7. Availability, privacy, and fallback
 
 ### Availability
@@ -313,11 +326,13 @@ YagyoPlayer は **NaN/Infinity を clamp より前に拒否**し、AI 応答、F
 
 **Gate:** API boundary と端末条件をテストで再現でき、Apple beta 前提との差分が文書化されていること。
 
-### Phase 1 — Deterministic DSP catalog and preview without AI
+### Phase 1 — Deterministic DSP catalog and preview without AI（pure core 進行中）
 
 - 固定 EQ chain、Original/bypass、`DSPRecipeCatalog`、snapshot、プレビュー UI を fixture recipe だけで作る。
 - 正のゲインを使わないラウドネスマッチと明示選択フローを検証する。
 - AI がなくても安全性、音切れ、比較可能性、アクセシビリティを評価できるようにする。
+
+2026-07-14 時点で、3〜5 band peaking EQ、±3 dB、Q `0.5...2.0`、`20 Hz...min(20 kHz, Nyquist × 0.95)`、非正input headroom／output trimを検証してimmutable snapshotへ変換するpure coreを追加した。input headroomは各bandの正boost合計以上の減衰を必須とし、output trimで内部余裕を代用しない。render kernelはmono/stereo、44.1/48/96 kHz、可変chunk、有限入力に対するOriginalのbit transparency、非有限入力のzero化、impulse、中心周波数応答、DC、決定論的noise、denormal、channel独立、全buffer alias、buffer境界適用、invalid state時Original latch、無効frameの非部分処理、同一周波数5-band最大boostをfocused test `16 / 16` で確認した。app full suiteは `167 / 167`、skip 0、generic iOS buildも成功。PlaybackController、AVAudioEngine、UIには未接続である。
 
 **Gate:** DSP と UX の価値が AI 抜きで成立し、bypass、切替、リアルタイム制約に合格すること。
 
