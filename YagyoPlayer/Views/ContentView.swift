@@ -11,6 +11,7 @@ struct ContentView: View {
 
     @State private var selectedTab: YagyoTab
     @State private var isImporterPresented = false
+    @State private var isFixedEQAuditionPresented = false
     @State private var importErrorMessage: String?
     @State private var importSummary: ImportSummary?
     private let initiallyExpandedPlaylistID: Playlist.ID?
@@ -94,6 +95,10 @@ struct ContentView: View {
             } message: {
                 Text(player.playbackErrorMessage ?? "")
             }
+            .sheet(isPresented: $isFixedEQAuditionPresented) {
+                FixedEQAuditionView()
+                    .environmentObject(player)
+            }
             .onChange(of: router.pendingAction) { _, action in
                 guard let action else { return }
                 if action == .continueLastTrack {
@@ -166,7 +171,12 @@ struct ContentView: View {
 
     private var yagyoContent: some View {
         VStack(spacing: 12) {
-            HeaderView(isUshimitsu: ushimitsu.isNight, importAction: { isImporterPresented = true })
+            HeaderView(
+                isUshimitsu: ushimitsu.isNight,
+                showsFixedEQAudition: player.supportsFixedEQAudition,
+                auditionAction: { isFixedEQAuditionPresented = true },
+                importAction: { isImporterPresented = true }
+            )
             ReactiveVisualStage(
                 signals: player.paradeSignals,
                 track: latestCurrentTrack,
@@ -244,6 +254,8 @@ struct ContentView: View {
 
 private struct HeaderView: View {
     var isUshimitsu: Bool
+    var showsFixedEQAudition: Bool
+    var auditionAction: () -> Void
     var importAction: () -> Void
 
     var body: some View {
@@ -283,23 +295,35 @@ private struct HeaderView: View {
 
             Spacer()
 
-            Button(action: importAction) {
-                Label("Import", systemImage: "square.and.arrow.down")
-                    .labelStyle(.iconOnly)
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: 44, height: 44)
+            HStack(spacing: 8) {
+                if showsFixedEQAudition {
+                    RetroIconButton(
+                        systemImage: "ear",
+                        accessibilityLabel: "一本の耳を開く",
+                        accent: YagyoPrintColor.vermillionInk,
+                        shape: .seal,
+                        action: auditionAction
+                    )
+                }
+
+                Button(action: importAction) {
+                    Label("Import", systemImage: "square.and.arrow.down")
+                        .labelStyle(.iconOnly)
+                        .font(.system(size: 18, weight: .semibold))
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(YagyoPrintColor.ink)
+                .background(YagyoPrintColor.paperRaised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(YagyoPrintColor.ink, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .inset(by: 4)
+                        .stroke(YagyoPrintColor.paperMuted, lineWidth: 1)
+                }
+                .accessibilityLabel("Import audio")
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(YagyoPrintColor.ink)
-            .background(YagyoPrintColor.paperRaised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(YagyoPrintColor.ink, lineWidth: 1)
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .inset(by: 4)
-                    .stroke(YagyoPrintColor.paperMuted, lineWidth: 1)
-            }
-            .accessibilityLabel("Import audio")
         }
         .modernRetroPanel(tone: .paper, radius: 12, padding: 12)
         .animation(.easeInOut(duration: 1.2), value: isUshimitsu)

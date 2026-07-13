@@ -1,8 +1,8 @@
 # Core AI / Music Understanding / DSP 実装計画
 
-> Status: **Active — Phase 0 capability and Phase 1 deterministic DSP boundary verified; playback integration next.**
+> Status: **Active — Phase 0 capability verified; Phase 1 has an iOS 27 Debug audition vertical slice under device verification.**
 >
-> 2026-07-14、ユーザーの明示承認により iOS 27 beta SDK で Step 3 を再開した。正式版 SDK での再検証はリリースゲートとして残す。現時点の再生経路は Music Understanding、Core AI、Listening Profile DSP のいずれにも依存しない。
+> 2026-07-14、ユーザーの明示承認により iOS 27 beta SDK で Step 3 を再開した。正式版 SDK での再検証はリリースゲートとして残す。Release／iOS 26 の既定再生経路は Music Understanding、Core AI、Listening Profile DSP のいずれにも依存しない。iOS 27 Debug だけが、明示試聴用の固定EQ preview backendを使う。
 
 ## 1. 目的とプロダクト境界
 
@@ -328,7 +328,7 @@ YagyoPlayer は次だけを縮小して独自実装する。
 
 **Gate:** API boundary と端末条件をテストで再現でき、Apple beta 前提との差分が文書化されていること。
 
-### Phase 1 — Deterministic DSP catalog and preview without AI（AU境界まで進行中）
+### Phase 1 — Deterministic DSP catalog and preview without AI（iOS 27実機試聴へ進行中）
 
 - 固定 EQ chain、Original/bypass、`DSPRecipeCatalog`、snapshot、プレビュー UI を fixture recipe だけで作る。
 - 正のゲインを使わないラウドネスマッチと明示選択フローを検証する。
@@ -338,7 +338,13 @@ YagyoPlayer は次だけを縮小して独自実装する。
 
 同日、pure coreを最小のin-process `AUAudioUnit`へ載せるrender境界を追加した。render state、入力scratch、`mData == nil`時のAU所有output fallbackはresource allocation時に確保し、snapshotはbuffer先頭だけで適用する。pull／DSP失敗は要求bufferをzero化して`OutputIsSilence + noErr`で閉じ、frame超過・不正bus・不正ABLなどhost contract違反だけを非zero statusにする。Original bit transparency、先頭sampleからの世代適用、nil output、pullによるinput pointer差し替えと次回復元、非有限値latch、pull失敗、未allocate、frame超過、undersized／alias buffer、reset・再allocate、render/control並行2,000世代のcoherent telemetryをdirect test `15 / 15`、44.1/48/96 kHz × mono/stereo × `64 + 64 + 3` frameの`AVAudioEngine` offline graphを `1 / 1`、app full suiteを `194 / 194`、skip 0で確認した。これはoffline／Simulator証跡であり、実機Release buildでのrender-thread allocation、lock、underrun、route／interruption、CPU／thermalは未検証である。既定は従来のAVAudioPlayer adapterのままで、productionのAVAudioEngine playback backend、Fixed EQ選択UI、Core AIは未接続なので現在の再生音は変わらない。
 
-さらに実機試聴へ進む前段として、0〜8192 frameで設定できるsample-accurate dry／wet transitionをrender processorとAU telemetryへ追加した。低レベルAUの既定値は0 frameの即時適用を維持し、後続preview backendだけがinstantiate直後・render resource確保前に256 frameを必須設定する。設定失敗時はgraphを開始せずOriginalへfail closedとし、0 frameへの暗黙fallbackは行わない。同一recipeの途中反転とIIR history維持、Original往復、異なるrecipeのdry経由交換、dry境界での最新request優先、render chunk不変性、seek/reset時のdry再開、alias／non-finite latch後の明示snapshot recovery、target完了世代ackをfocused test `29 / 29`、app full suite `204 / 204`、skip 0で確認した。preview backendと256 frame設定の実体、切替UI、実機realtime検証はこの時点では未実装である。
+さらに実機試聴へ進む前段として、0〜8192 frameで設定できるsample-accurate dry／wet transitionをrender processorとAU telemetryへ追加した。低レベルAUの既定値は0 frameの即時適用を維持し、preview backendだけがinstantiate直後・render resource確保前に256 frameを必須設定する。設定失敗時はgraphを開始せずOriginalへfail closedとし、0 frameへの暗黙fallbackは行わない。同一recipeの途中反転とIIR history維持、Original往復、異なるrecipeのdry経由交換、dry境界での最新request優先、render chunk不変性、alias／non-finite latch後の明示snapshot recovery、target完了世代ackをfocused test `29 / 29`、app full suite `204 / 204`、skip 0で確認した。
+
+同日、iOS 27 Debug限定の `AVAudioEngineFixedEQPlaybackBackend` と「一本の耳」試聴sheetを追加した。graphは `AVAudioPlayerNode -> FixedEQAudioUnit -> main mixer -> output` で固定し、同一トラック／同一render scheduleのままOriginalと固定3-band fixtureを切り替える。切替は音量差補正を行わず、狐火の帳の二曲A/Bと減衰専用ラウドネス乗数から独立している。新規track、出力route変更、Bluetooth profile変更ではOriginalを最新要求とし、再生中は最大256 framesで遷移する。Original要求をmailboxへ投入できない場合はFixed EQを鳴らし続けず一時停止する。ReleaseおよびiOS 26は従来backendのままである。実graph、controller seam、route失敗を含むfocused testは `19 / 19`、app full suiteは `215 / 215`、いずれもskip 0で通過した。Simulatorでは同期的な `AVAudioSession` activate/deactivateにUI hang-risk warningが出るため、実機での操作応答、underrun、CPU／thermal、route／interruptionは未確認のrelease gateとして残す。
+
+**UNMET REQUIREMENT / WHY NOT / ALTERNATIVE / IMPACT / FOLLOW-UP:** seek直後の最初のsampleでIIR stateまで厳密にresetする要件は未達である。実行中のAUへcontrol側から同期 `reset()` を呼ぶとrender callbackと競合し、通常snapshotだけでは「新scheduleの最初のbuffer」へresetを結び付けられない。現段階ではexact schedule identityと再生位置を壊さず、render所有のIIR historyを連続させる。seek後の短い区間ではseek前のfilter historyが残り得るが、位置の巻き戻り、二重再生、control/render data raceは作らない。将来の再生engine移行でsource token付き非同期render barrierを設けてから実装する。
+
+Music Understandingによる曲別候補、feature cache、Core AI ranker、Listening Profile永続化、候補間ラウドネスマッチは未実装である。この縦切りは固定fixtureを耳で評価するためのもので、Phase 1全体またはStep 3完了を意味しない。
 
 **Gate:** DSP と UX の価値が AI 抜きで成立し、bypass、切替、リアルタイム制約に合格すること。
 

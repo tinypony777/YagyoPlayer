@@ -23,6 +23,9 @@ final class PlaybackController: ObservableObject {
     @Published private(set) var loudnessMatchMultiplier: Float = 1
     /// 0 dB側も「適用中」と区別できるよう、乗数とは別に比較セッションの有効状態を持つ。
     @Published private(set) var isLoudnessMatchActive = false
+    /// 同一トラック上のFixed EQ試聴。狐火の帳の二曲比較・音量乗数とは独立させる。
+    @Published private(set) var fixedEQAuditionState: FixedEQAuditionState = .unsupported
+    @Published private(set) var fixedEQAuditionErrorMessage: String?
 
     let paradeSignals = ParadeSignalCoordinator()
     private var smoothedAudioLevel = 0.0
@@ -59,6 +62,7 @@ final class PlaybackController: ObservableObject {
         self.backend = backend ?? LegacyAudioPlayerPlaybackBackend()
         self.activateAudioSession = activateAudioSession
         self.backend.outputVolume = effectiveVolume
+        syncFixedEQAuditionState()
         installAudioSessionObservers()
     }
 
@@ -81,6 +85,14 @@ final class PlaybackController: ObservableObject {
 
     var durationText: String {
         Self.timeText(duration)
+    }
+
+    var supportsFixedEQAudition: Bool {
+        fixedEQAuditionState.availability != .unsupported
+    }
+
+    var fixedEQAuditionMessage: String? {
+        fixedEQAuditionErrorMessage ?? fixedEQAuditionState.failureMessage
     }
 
     /// A/B切替直前に読むbackendの現在位置。0.35秒周期のUI表示値を比較位置へ流用しない。
@@ -111,6 +123,23 @@ final class PlaybackController: ObservableObject {
         loudnessMatchMultiplier = 1
         isLoudnessMatchActive = false
         applyEffectiveVolume()
+    }
+
+    /// 同じ再生グラフのOriginal / Fixed EQだけを切り替える。
+    /// 狐火の帳のA/Bセッションやラウドネスマッチには触れない。
+    func selectFixedEQAuditionMode(_ mode: FixedEQAuditionMode) {
+        guard let auditionBackend = backend as? any FixedEQAuditionControlling else {
+            syncFixedEQAuditionState()
+            return
+        }
+
+        do {
+            try auditionBackend.requestFixedEQAuditionMode(mode)
+            fixedEQAuditionErrorMessage = nil
+        } catch {
+            fixedEQAuditionErrorMessage = "Fixed EQ preview could not switch: \(error.localizedDescription)"
+        }
+        syncFixedEQAuditionState()
     }
 
     /// 参照Bの差し替え時、旧Bまたは新Bが鳴っていれば先に止めてから無効になったmatchを解除する。
@@ -186,14 +215,17 @@ final class PlaybackController: ObservableObject {
         }
     }
 
-    /// イヤホン・Bluetoothが外れたら一時停止する。スピーカーで自動継続しない — 音を意図せず外に出さないための約束。
-    /// 割り込み中に出力先を失った場合は、割り込みが終わってもスピーカーへ自動再開しない。
+    /// Fixed EQは出力先・Bluetooth profileを含む全route changeで、最大256 framesの
+    /// click-safe遷移を使ってOriginalへ戻す。イヤホン等を失った場合はさらに一時停止し、
+    /// スピーカーへ自動継続しない。
     private func handleRouteChange(reasonValue: UInt?) {
         guard let reasonValue,
-              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue),
-              reason == .oldDeviceUnavailable else { return }
-        wasPlayingBeforeInterruption = false
-        pause()
+              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else { return }
+        if reason == .oldDeviceUnavailable {
+            wasPlayingBeforeInterruption = false
+            pause()
+        }
+        resetFixedEQAuditionForSafety()
     }
 
     func installRemoteCommands(library: AudioLibraryStore) {
@@ -253,6 +285,7 @@ final class PlaybackController: ObservableObject {
         // 比較中の旧backendを先に無音化してから基準音量へ戻す。
         // file初期化中だけ旧音源が大きくなる過渡を作らず、A/B側はload後に対象側の値を明示適用する。
         backend.pause()
+        resetFixedEQAuditionForSafety()
         clearLoudnessMatch()
         resetParadeSignal(reason: .trackLoadStarted, isPlaying: false)
         remoteLibrary = library
@@ -287,6 +320,8 @@ final class PlaybackController: ObservableObject {
             wasPlayingBeforeInterruption = false
             interruptionDepth = 0
             library.select(track)
+            fixedEQAuditionErrorMessage = nil
+            syncFixedEQAuditionState()
             updateNowPlaying()
 
             if autoplay {
@@ -306,6 +341,7 @@ final class PlaybackController: ObservableObject {
                 invalidatePlaybackStateForScheduleMismatch(reason: .loadFailure)
             }
             playbackErrorMessage = "\(track.title) could not be played: \(error.localizedDescription)"
+            syncFixedEQAuditionState()
             resetParadeSignal(reason: .loadFailure, isPlaying: false)
         }
     }
@@ -342,13 +378,16 @@ final class PlaybackController: ObservableObject {
             stopTimer()
             stopMetering()
             resetParadeSignal(reason: .playFailure, isPlaying: false)
+            syncFixedEQAuditionState()
             updateNowPlaying()
             return
         }
         playbackErrorMessage = nil
+        fixedEQAuditionErrorMessage = nil
         isPlaying = true
         startTimer()
         startMetering()
+        syncFixedEQAuditionState()
         updateNowPlaying()
     }
 
@@ -359,6 +398,7 @@ final class PlaybackController: ObservableObject {
         stopMetering()
         resetParadeSignal(reason: .pause, isPlaying: false)
         syncProgress()
+        syncFixedEQAuditionState()
         updateNowPlaying()
     }
 
@@ -380,12 +420,14 @@ final class PlaybackController: ObservableObject {
             }
             committedSchedule = newSchedule
             syncProgress()
+            syncFixedEQAuditionState()
             updateNowPlaying()
         } catch {
             if backendReturnedFromSeek || !hasAlignedBackendSchedule {
                 invalidatePlaybackStateForScheduleMismatch(reason: .seek)
             }
             playbackErrorMessage = "Playback could not seek: \(error.localizedDescription)"
+            syncFixedEQAuditionState()
         }
     }
 
@@ -414,11 +456,13 @@ final class PlaybackController: ObservableObject {
         elapsedTime = 0
         duration = 0
         playbackErrorMessage = nil
+        fixedEQAuditionErrorMessage = nil
         wasPlayingBeforeInterruption = false
         interruptionDepth = 0
         stopTimer()
         stopMetering()
         resetParadeSignal(reason: .stop, isPlaying: false)
+        syncFixedEQAuditionState()
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 
@@ -440,6 +484,31 @@ final class PlaybackController: ObservableObject {
 
     private func applyEffectiveVolume() {
         backend.outputVolume = effectiveVolume
+    }
+
+    private func syncFixedEQAuditionState() {
+        let nextState = (backend as? any FixedEQAuditionControlling)?.fixedEQAuditionState
+            ?? .unsupported
+        if fixedEQAuditionState != nextState {
+            fixedEQAuditionState = nextState
+        }
+    }
+
+    /// 出力先喪失やトラック差し替えではOriginalを最新要求にする。再生中は最大256 framesで
+    /// 遷移し、停止中は次の明示再生より前に要求を投入する。投入失敗時はFixed EQを鳴らし続けない。
+    private func resetFixedEQAuditionForSafety() {
+        guard let auditionBackend = backend as? any FixedEQAuditionControlling else {
+            syncFixedEQAuditionState()
+            return
+        }
+        do {
+            try auditionBackend.resetFixedEQAudition()
+            fixedEQAuditionErrorMessage = nil
+        } catch {
+            pause()
+            fixedEQAuditionErrorMessage = "Fixed EQ preview could not return to Original: \(error.localizedDescription)"
+        }
+        syncFixedEQAuditionState()
     }
 
     private var hasAlignedBackendSchedule: Bool {
@@ -465,6 +534,8 @@ final class PlaybackController: ObservableObject {
         stopMetering()
         clearLoudnessMatch()
         resetParadeSignal(reason: reason, isPlaying: false)
+        fixedEQAuditionErrorMessage = nil
+        syncFixedEQAuditionState()
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 
@@ -503,6 +574,7 @@ final class PlaybackController: ObservableObject {
     }
 
     private func updateMeter() {
+        syncFixedEQAuditionState()
         guard isPlaying else { return }
         let sampledAt = ProcessInfo.processInfo.systemUptime
         guard let meterLevel = backend.normalizedMeterLevel(), meterLevel.isFinite else {
@@ -526,6 +598,7 @@ final class PlaybackController: ObservableObject {
 
     private func tick() {
         syncProgress()
+        syncFixedEQAuditionState()
         recordPlaybackEventIfNeeded()
         if !backend.isPlaying, isPlaying {
             if elapsedTime >= max(duration - 0.25, 0) {
@@ -558,6 +631,7 @@ final class PlaybackController: ObservableObject {
         stopTimer()
         stopMetering()
         syncProgress()
+        syncFixedEQAuditionState()
         updateNowPlaying()
     }
 

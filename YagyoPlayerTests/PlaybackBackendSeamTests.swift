@@ -239,6 +239,142 @@ final class PlaybackBackendSeamTests: XCTestCase {
         controller.pause()
     }
 
+    func testFixedEQAuditionStaysSeparateFromTobariLoudnessMatch() {
+        let backend = FakeFixedEQAuditionPlaybackBackend(duration: 30)
+        let controller = makeController(backend: backend)
+        let store = AudioLibraryStore(documentsDirectory: temporaryDirectory)
+        let track = makeTrack(named: "same-track-preview.wav")
+
+        XCTAssertTrue(controller.supportsFixedEQAudition)
+        XCTAssertEqual(controller.fixedEQAuditionState, .waitingForTrack)
+
+        controller.load(track, from: store, autoplay: true)
+        controller.setLoudnessMatchMultiplier(0.5)
+        controller.selectFixedEQAuditionMode(.fixedEQ)
+
+        XCTAssertEqual(backend.requestedModes, [.fixedEQ])
+        XCTAssertEqual(controller.fixedEQAuditionState.requestedMode, .fixedEQ)
+        XCTAssertEqual(controller.fixedEQAuditionState.appliedMode, .fixedEQ)
+        XCTAssertTrue(controller.isLoudnessMatchActive)
+        XCTAssertEqual(controller.loudnessMatchMultiplier, 0.5, accuracy: 1e-6)
+        XCTAssertNil(controller.fixedEQAuditionMessage)
+        controller.pause()
+    }
+
+    func testRouteLossReturnsFixedEQAuditionToOriginal() async {
+        let backend = FakeFixedEQAuditionPlaybackBackend(duration: 30)
+        let controller = makeController(backend: backend)
+        let store = AudioLibraryStore(documentsDirectory: temporaryDirectory)
+        let track = makeTrack(named: "headphones.wav")
+
+        controller.load(track, from: store, autoplay: true)
+        controller.selectFixedEQAuditionMode(.fixedEQ)
+        let resetsBeforeRouteLoss = backend.resetCallCount
+
+        NotificationCenter.default.post(
+            name: AVAudioSession.routeChangeNotification,
+            object: nil,
+            userInfo: [
+                AVAudioSessionRouteChangeReasonKey:
+                    NSNumber(value: AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue)
+            ]
+        )
+        await flushMainActor()
+
+        XCTAssertFalse(controller.isPlaying)
+        XCTAssertEqual(backend.resetCallCount, resetsBeforeRouteLoss + 1)
+        XCTAssertEqual(controller.fixedEQAuditionState.requestedMode, .original)
+        XCTAssertEqual(controller.fixedEQAuditionState.appliedMode, .original)
+    }
+
+    func testBluetoothProfileRouteChangeKeepsPlaybackButReturnsToOriginal() async {
+        let backend = FakeFixedEQAuditionPlaybackBackend(duration: 30)
+        let controller = makeController(backend: backend)
+        let store = AudioLibraryStore(documentsDirectory: temporaryDirectory)
+        let track = makeTrack(named: "bluetooth-profile.wav")
+
+        controller.load(track, from: store, autoplay: true)
+        controller.selectFixedEQAuditionMode(.fixedEQ)
+        let resetsBeforeRouteChange = backend.resetCallCount
+
+        NotificationCenter.default.post(
+            name: AVAudioSession.routeChangeNotification,
+            object: nil,
+            userInfo: [
+                AVAudioSessionRouteChangeReasonKey:
+                    NSNumber(value: AVAudioSession.RouteChangeReason.routeConfigurationChange.rawValue)
+            ]
+        )
+        await flushMainActor()
+
+        XCTAssertTrue(controller.isPlaying)
+        XCTAssertEqual(backend.resetCallCount, resetsBeforeRouteChange + 1)
+        XCTAssertEqual(controller.fixedEQAuditionState.requestedMode, .original)
+        XCTAssertEqual(controller.fixedEQAuditionState.appliedMode, .original)
+    }
+
+    func testRouteResetFailurePausesInsteadOfLeavingFixedEQAudible() async {
+        let backend = FakeFixedEQAuditionPlaybackBackend(duration: 30)
+        let controller = makeController(backend: backend)
+        let store = AudioLibraryStore(documentsDirectory: temporaryDirectory)
+        let track = makeTrack(named: "route-reset-failure.wav")
+
+        controller.load(track, from: store, autoplay: true)
+        controller.selectFixedEQAuditionMode(.fixedEQ)
+        backend.auditionError = StubError.play
+
+        NotificationCenter.default.post(
+            name: AVAudioSession.routeChangeNotification,
+            object: nil,
+            userInfo: [
+                AVAudioSessionRouteChangeReasonKey:
+                    NSNumber(value: AVAudioSession.RouteChangeReason.routeConfigurationChange.rawValue)
+            ]
+        )
+        await flushMainActor()
+
+        XCTAssertFalse(controller.isPlaying)
+        XCTAssertFalse(backend.isPlaying)
+        XCTAssertNotNil(controller.fixedEQAuditionMessage)
+        XCTAssertEqual(controller.fixedEQAuditionState.appliedMode, .fixedEQ)
+
+        backend.auditionError = nil
+        controller.play()
+
+        XCTAssertTrue(controller.isPlaying)
+        XCTAssertNil(controller.fixedEQAuditionMessage)
+    }
+
+    func testSuccessfulLoadClearsAuditionErrorFromReplacedGraph() async {
+        let backend = FakeFixedEQAuditionPlaybackBackend(duration: 30)
+        let controller = makeController(backend: backend)
+        let store = AudioLibraryStore(documentsDirectory: temporaryDirectory)
+        let firstTrack = makeTrack(named: "failed-reset-source.wav")
+        let secondTrack = makeTrack(named: "fresh-original.wav")
+
+        controller.load(firstTrack, from: store, autoplay: true)
+        controller.selectFixedEQAuditionMode(.fixedEQ)
+        backend.auditionError = StubError.play
+
+        NotificationCenter.default.post(
+            name: AVAudioSession.routeChangeNotification,
+            object: nil,
+            userInfo: [
+                AVAudioSessionRouteChangeReasonKey:
+                    NSNumber(value: AVAudioSession.RouteChangeReason.routeConfigurationChange.rawValue)
+            ]
+        )
+        await flushMainActor()
+        XCTAssertNotNil(controller.fixedEQAuditionMessage)
+
+        controller.load(secondTrack, from: store, autoplay: false)
+
+        XCTAssertEqual(controller.currentTrack?.id, secondTrack.id)
+        XCTAssertFalse(controller.isPlaying)
+        XCTAssertEqual(controller.fixedEQAuditionState.appliedMode, .original)
+        XCTAssertNil(controller.fixedEQAuditionMessage)
+    }
+
     private func makeController(backend: FakeAudioPlaybackBackend) -> PlaybackController {
         PlaybackController(backend: backend, activateAudioSession: {})
     }

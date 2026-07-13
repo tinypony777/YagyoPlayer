@@ -73,7 +73,7 @@ North Star は次の 3 条件。確認の物差しは市場指標ではなく、
 - 音源は外へ送らず、元ファイルも書き換えない。利用条件が local-first の約束を満たさない端末では、この機能自体を使わない。
 - Core AI が任意のエフェクトや並び順を作ることはない。選べるのは、人が測定・試聴して版を管理したレシピだけである。
 - これは将来の**再生音の Listening Profile**構想であり、Step 4 の `averagePower` 由来の視覚信号とは別の仕事として扱う。一つの巨大な解析経路へ結びつけることを前提にしない。
-- **現在地(正直に)**: iOS 27 の `MusicUnderstandingSession` を availability gate の内側でローカル `AVAsset` 解析へ接続し、六つの結果を app-owned Codable 型へ正規化する Phase 0 adapterを実装した。Phase 1では、AI非依存の3〜5 band固定EQ pure core、Original latch、固定容量SPSC snapshot境界を実装し、PlaybackControllerから従来のAVAudioPlayerをadapter化した。さらに固定EQを最小のin-process `AUAudioUnit`へ載せ、direct renderと`AVAudioEngine` offline graphでmono/stereo・44.1/48/96 kHzを検証した。実機試聴前の安全境界として、同一処理の途中反転と異なる処理のdry経由交換を扱うallocation-free dry／wet ramp、target完了世代ackも実装済み。低レベルAUの既定は即時適用のままで、後続preview backendが確保前に256 frameを明示設定する。これは再生backendへ組み込む前の境界証跡であり、実機realtime性能は未検証である。既定backendは従来経路のままで、256 frame設定の実体、Fixed EQ選択UI、productionのAVAudioEngine再生、キャッシュ、Core AIには未接続なので、現在の再生音は未加工のままである。
+- **現在地(正直に)**: iOS 27 の `MusicUnderstandingSession` を availability gate の内側でローカル `AVAsset` 解析へ接続し、六つの結果を app-owned Codable 型へ正規化する Phase 0 adapterを実装した。Phase 1では、AI非依存の3〜5 band固定EQ pure core、Original latch、固定容量SPSC snapshot境界、in-process `AUAudioUnit`、allocation-free dry／wet ramp、target完了世代ackを実装した。さらにiOS 27 Debug限定で `AVAudioPlayerNode -> FixedEQAudioUnit` のpreview backendと「一本の耳」sheetを接続し、固定3-band fixtureをOriginalと最大256 framesで切り替えられる。Release／iOS 26は従来backendのままで、選択は保存せず、狐火の帳の二曲A/B・音量乗数とも独立している。route変更ではOriginalへ戻し、要求投入失敗時はFixed EQを鳴らし続けず停止する。実graphとcontrollerのfocused testは19 / 19、app full suiteは215 / 215、いずれもskip 0。実機realtime性能と音質、Music Understandingによる曲別候補、キャッシュ、Core AI、Listening Profile保存、候補間ラウドネスマッチは未検証・未実装である。seek時の厳密なIIR resetもrender barrier導入まで保留し、現状は位置とscheduleを壊さずfilter historyを連続させる。
 
 ### 4.3 住み着きの夜 — 聴いた時間が世界を深める
 
@@ -132,7 +132,7 @@ Release criteria:
 
 ### Step 3 — 狐火の調律(§4.2、Phase 0 / 1 進行中)
 
-状態: **2026-07-14に保留解除。iOS 27 betaのMusic Understanding境界、AI非依存の固定EQ pure core、固定容量snapshot handoff、既存音を保つ再生backend境界を実装。Core AI / UI / DSP再生は未接続。**
+状態: **2026-07-14に保留解除。iOS 27 betaのMusic Understanding境界、AI非依存の固定EQ core／AU／snapshot handoffを実装し、iOS 27 Debugでは「一本の耳」から固定fixtureを実音声graphで試聴できる縦切りまで接続。Release経路、Core AI、曲別候補、永続化は未接続。**
 
 Phase 0 の残り条件:
 - iOS 27 実機でローカル実曲、cancellation、オンデバイス実行条件、対応端末、性能を確認する。

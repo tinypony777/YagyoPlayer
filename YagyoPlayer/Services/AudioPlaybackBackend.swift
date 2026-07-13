@@ -24,6 +24,59 @@ enum AudioPlaybackBackendError: LocalizedError {
     }
 }
 
+enum FixedEQAuditionMode: Equatable, Sendable {
+    case original
+    case fixedEQ
+}
+
+enum FixedEQAuditionAvailability: Equatable, Sendable {
+    /// The active backend deliberately has no Fixed EQ preview capability.
+    case unsupported
+    /// The preview backend is active, but no playable track has been committed yet.
+    case waitingForTrack
+    case ready
+}
+
+/// Control-side view of the optional same-track Fixed EQ preview. This state never
+/// reuses the two-track 狐火の帳 A/B session or its loudness multiplier.
+struct FixedEQAuditionState: Equatable, Sendable {
+    let availability: FixedEQAuditionAvailability
+    let requestedMode: FixedEQAuditionMode
+    let appliedMode: FixedEQAuditionMode
+    let isSwitching: Bool
+    let appliesOnNextPlay: Bool
+    let failureMessage: String?
+
+    static let unsupported = FixedEQAuditionState(
+        availability: .unsupported,
+        requestedMode: .original,
+        appliedMode: .original,
+        isSwitching: false,
+        appliesOnNextPlay: false,
+        failureMessage: nil
+    )
+
+    static let waitingForTrack = FixedEQAuditionState(
+        availability: .waitingForTrack,
+        requestedMode: .original,
+        appliedMode: .original,
+        isSwitching: false,
+        appliesOnNextPlay: false,
+        failureMessage: nil
+    )
+}
+
+/// Optional capability implemented only by the iOS 27 device-preview backend.
+/// PlaybackController owns presentation and route policy; the backend owns the
+/// render generation acknowledgement.
+@MainActor
+protocol FixedEQAuditionControlling: AnyObject {
+    var fixedEQAuditionState: FixedEQAuditionState { get }
+
+    func requestFixedEQAuditionMode(_ mode: FixedEQAuditionMode) throws
+    func resetFixedEQAudition() throws
+}
+
 /// Playback mechanism boundary. Policy such as queue order, loudness matching,
 /// interruptions, Now Playing, and playback statistics remains in PlaybackController.
 @MainActor

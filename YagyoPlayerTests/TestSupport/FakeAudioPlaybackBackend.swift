@@ -3,7 +3,7 @@ import Foundation
 @testable import YagyoPlayer
 
 @MainActor
-final class FakeAudioPlaybackBackend: AudioPlaybackBackend {
+class FakeAudioPlaybackBackend: AudioPlaybackBackend {
     private(set) var currentSchedule: PlaybackScheduleIdentity?
     var duration: TimeInterval
     var position: TimeInterval
@@ -86,5 +86,53 @@ final class FakeAudioPlaybackBackend: AudioPlaybackBackend {
 
     func normalizedMeterLevel() -> Double? {
         meterLevel
+    }
+}
+
+@MainActor
+final class FakeFixedEQAuditionPlaybackBackend: FakeAudioPlaybackBackend,
+    FixedEQAuditionControlling
+{
+    private(set) var fixedEQAuditionState: FixedEQAuditionState = .waitingForTrack
+    private(set) var requestedModes: [FixedEQAuditionMode] = []
+    private(set) var resetCallCount = 0
+    var auditionError: Error?
+
+    override func load(url: URL, trackID: AudioTrack.ID) throws {
+        try super.load(url: url, trackID: trackID)
+        fixedEQAuditionState = Self.state(mode: .original)
+    }
+
+    override func stop() {
+        super.stop()
+        fixedEQAuditionState = .waitingForTrack
+    }
+
+    func requestFixedEQAuditionMode(_ mode: FixedEQAuditionMode) throws {
+        if let auditionError { throw auditionError }
+        guard currentSchedule != nil else {
+            throw AudioPlaybackBackendError.noTrackLoaded
+        }
+        requestedModes.append(mode)
+        fixedEQAuditionState = Self.state(mode: mode)
+    }
+
+    func resetFixedEQAudition() throws {
+        if let auditionError { throw auditionError }
+        resetCallCount += 1
+        fixedEQAuditionState = currentSchedule == nil
+            ? .waitingForTrack
+            : Self.state(mode: .original)
+    }
+
+    private static func state(mode: FixedEQAuditionMode) -> FixedEQAuditionState {
+        FixedEQAuditionState(
+            availability: .ready,
+            requestedMode: mode,
+            appliedMode: mode,
+            isSwitching: false,
+            appliesOnNextPlay: false,
+            failureMessage: nil
+        )
     }
 }
