@@ -1,3 +1,4 @@
+import SwiftUI
 import XCTest
 @testable import YagyoPlayer
 
@@ -186,5 +187,98 @@ final class ParadeSignalReducerTests: XCTestCase {
         XCTAssertEqual(unavailable.staticLength, 20)
         XCTAssertTrue(low.usesAccentColor)
         XCTAssertFalse(unavailable.usesAccentColor)
+        XCTAssertEqual(stopped.centerMark, "止")
+        XCTAssertEqual(unavailable.centerMark, "—")
+        XCTAssertEqual(low.centerMark, "静")
+        XCTAssertEqual(
+            CircularWaveformPresentation(activity: .normal, levelBand: .medium).centerMark,
+            "響"
+        )
+        XCTAssertEqual(
+            CircularWaveformPresentation(activity: .normal, levelBand: .high).centerMark,
+            "烈"
+        )
+    }
+
+    @MainActor
+    func testExportsCircularWaveformStateBoard() throws {
+        try exportWindowArtifact(
+            rootView: CircularWaveformArtifactBoard(),
+            windowWidth: 402,
+            windowHeight: 874,
+            interfaceStyle: .light,
+            attachmentName: "circular-waveform-state-board.png"
+        )
+    }
+}
+
+private struct CircularWaveformArtifactState: Identifiable {
+    let id: String
+    let activity: ParadeSignalSnapshot.Activity
+    let levelBand: ParadeSignalSnapshot.LevelBand
+    let level: Double
+    let reduceMotion: Bool
+}
+
+private struct CircularWaveformArtifactBoard: View {
+    private let states = [
+        CircularWaveformArtifactState(
+            id: "stopped", activity: .stopped, levelBand: .high, level: 0, reduceMotion: false
+        ),
+        CircularWaveformArtifactState(
+            id: "unavailable", activity: .unavailable, levelBand: .unavailable, level: 0, reduceMotion: false
+        ),
+        CircularWaveformArtifactState(
+            id: "low", activity: .quietProxy, levelBand: .low, level: 0.08, reduceMotion: false
+        ),
+        CircularWaveformArtifactState(
+            id: "medium", activity: .normal, levelBand: .medium, level: 0.42, reduceMotion: false
+        ),
+        CircularWaveformArtifactState(
+            id: "high", activity: .normal, levelBand: .high, level: 0.88, reduceMotion: false
+        ),
+        CircularWaveformArtifactState(
+            id: "high · Reduce Motion", activity: .normal, levelBand: .high, level: 0.88, reduceMotion: true
+        )
+    ]
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("円形波形 · 状態見本")
+                    .font(.system(.headline, design: .serif))
+                    .tracking(2)
+                    .foregroundStyle(YagyoPrintColor.ink)
+
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(states) { state in
+                        VStack(spacing: 6) {
+                            CircularWaveform(
+                                progress: 0.62,
+                                level: state.level,
+                                activity: state.activity,
+                                levelBand: state.levelBand,
+                                reduceMotionOverride: state.reduceMotion
+                            )
+                            .frame(height: 150)
+
+                            Text(state.id)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(YagyoPrintColor.inkMuted)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                        .modernRetroPanel(tone: .paper, radius: 8, padding: 8)
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .background(YagyoPrintColor.canvas.ignoresSafeArea())
     }
 }

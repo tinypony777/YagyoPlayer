@@ -1,7 +1,7 @@
 # YagyoPlayer モダンレトロ UI 全面反映 — 設計仕様
 
 - **日付:** 2026-07-13
-- **状態:** Dayモードのコンセプト画と狐火の帳の再構成案をユーザー承認済み。実装中
+- **状態:** Dayモードのコンセプト画と狐火の帳の再構成案をユーザー承認済み。実装・自動検証green、実機描画の最終ユーザー確認待ち
 - **対象:** 夜行・行列・巻物・ミニ灯り・狐火の帳・円形波形
 
 ## 1. 目的
@@ -87,7 +87,7 @@
 | `vermillionInk` | `#A43D27` | 紙面上の選択文字、警告本文 |
 | `persimmon` | `#D77A3D` | 主操作、現在位置 |
 | `teal` | `#1B6666` | 紙色上の狐火の帳、分析状態 |
-| `tealMuted` | `#6F8C84` | 狐火の装飾罫。本文には使わない |
+| `tealRule` | `#6F8C84` | 狐火の区切り罫。本文には使わない |
 | `brass` | `#B88A45` | 細い強調罫、選択状態 |
 
 描画値:
@@ -103,11 +103,11 @@
 
 ### 6.1 `ModernRetroPanel`
 
-`paper`、`stage`、`ledger` の三toneを持つ表層用modifier。単色面、二重罫、任意の小札を描く。`paper` は `paper` 面＋外側 `ink`＋内側 `paperMuted`、`stage` は `stage` 面＋外側 `ink`＋内側 `paper`、`ledger` は塗り面を増やさず `canvas` 上へ `tealMuted` の区切り罫だけを置く。iOS 26 `glassEffect` と `ultraThinMaterial` は使用しない。既存 `ritualPanel` の呼び出しは、画面ごとに意図が分かるこのmodifierへ移す。
+`paper` と `stage` の二toneを持つ表層用modifier。単色面、二重罫、任意の小札を描く。`paper` は `paper` 面＋外側 `ink`＋内側 `paperMuted`、`stage` は `stage` 面＋外側 `ink`＋内側 `paper` とする。狐火の台帳は塗りパネルではないため、このmodifierへ含めず `canvas` 上へ `tealRule` の区切り罫を直接置く。iOS 26 `glassEffect` と `ultraThinMaterial` は使用しない。既存 `ritualPanel` の呼び出しは、画面ごとに意図が分かるこのmodifierへ移す。
 
 ### 6.2 `RetroPlaque`
 
-画面またはパネルの見出し。生成り地に焦茶文字、夜色地に生成り文字、朱地に生成り文字の三variant。日本語見出しはsystem serif、英字補助は小さなuppercaseと広いtrackingを使う。
+画面またはパネルの見出し。`paper`（生成り地に焦茶文字）、`stage`（舞台色に生成り文字）、`seal`（朱印）の三variant。`seal`は大きな一文字または装飾記号だけに限定し、通常サイズ本文を朱地へ載せない。日本語見出しはsystem serif、英字補助は小さなuppercaseと広いtrackingを使う。
 
 ### 6.3 `RetroIconButton`
 
@@ -146,7 +146,7 @@
 
 ### 7.3 レイアウト
 
-- 夜行の非スクロール1画面を維持する。
+- 標準Dynamic Typeでは夜行の非スクロール1画面を維持する。Accessibilityカテゴリでは内容を切らず、縦ScrollViewへfallbackしてよい。
 - 円盤は正方形ではなく円形そのものを視覚境界とし、背後の大きな角丸矩形を撤去する。
 - 最小高さ140 ptの契約を保ち、iPhone 17eで絵巻、円盤、操作、灯芯、タブが同時に収まる。
 - `DefaultArtwork` は新しい円盤内へ表示せず、盤面はSwiftUI/Canvasの限定色ベクター描画だけで構成する。既存assetはこのUI変更では削除せず、互換性のため残す。
@@ -211,7 +211,7 @@
 - 指定hexの基準コントラストは `ink/canvas = 11.92:1`、`ink/paper = 10.42:1`、`inkMuted/canvas = 5.50:1`、`inkMuted/paper = 4.81:1`、`teal/canvas = 5.40:1`、`teal/paper = 4.72:1`、`paper/stage = 5.91:1`、`vermillionInk/paper = 4.52:1`。`persimmon/canvas = 2.52:1` と `vermillion/canvas = 3.64:1` は通常サイズ文字へ使わず、大きなアイコン、太い罫、印、現在位置へ限定する。不透明度を下げる本文表現は禁止し、装飾罫だけにopacityを許す。
 - 色だけで状態を表さない。選択、停止、利用不可、音量帯は線種、長さ、中央記号も変える。
 - Reduce Motionでは波形の長さ変化、背景pattern移動、glow、scaleを行わない。
-- Dynamic Typeで見出し札を固定高にせず、2行まで伸びる。夜行の主見出しだけは1行を維持し、最小幅ではtrackingを縮める。
+- Dynamic Typeで見出し札を固定高にせず、2行まで伸びる。夜行の主見出しだけは1行を維持し、最小幅ではtrackingを縮める。Accessibilityカテゴリでは夜行も縦ScrollViewへfallbackし、標準カテゴリだけを非スクロール契約とする。
 - VoiceOverのタブ順、帳の閉じるボタン、灯芯 `.adjustable`、進捗 `.adjustable` を回帰確認する。
 
 ## 11. 実装境界
@@ -238,7 +238,8 @@
 
 - macOS内蔵ディスクの空き容量が逼迫しているため、すべての`xcodebuild`で `TMPDIR=/Volumes/MacBook_Data_Add/CodexDerivedData/YagyoPlayer/tmp` と `-derivedDataPath /Volumes/MacBook_Data_Add/CodexDerivedData/YagyoPlayer/modern-retro-ui/<run-name>` を指定する。接続先はUSB外付けAPFS SSD、空き756 GiBを確認済み。未接続時は内蔵ディスクへfallbackせず、検証を停止して明示する。
 - Xcode 27.0 generic iOS build。
-- iPhone 17 Pro / iOS 27 full suite。基準は119 tests、failure 0、skip 0。
+- iPhone 17 Pro / iOS 26.5 full suite。基準は124 tests、failure 0、skip 0。
+- iOS 27 betaはPlaybackController 12件を除く112件を実行し、Playback 12件はiOS 26.5 full suiteで担保する。
 - `CircularWaveformPresentation` の stopped / unavailable / low / medium / high とReduce Motion静止値。
 - `TomoshibiSlider` の位置逆写像とVoiceOver nudgeを維持。
 - 3タブ順、routing、ミニ灯り表示契約を維持。

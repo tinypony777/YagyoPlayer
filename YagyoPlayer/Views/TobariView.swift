@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 狐火の帳(Step 5 Phase A) — 一画面検聴。
-/// 共存規則(§3): 帳が開いている間は数値が主役で、夜行絵巻は静的な夜空だけが残る。
+/// 帳が開いている間は、数値を主役にした生成り紙の開いた台帳として見せる。
 /// 解析はオフライン・読み取り専用・オンデバイスで、再生音も元ファイルも変更しない。
 
 @MainActor
@@ -129,166 +129,237 @@ struct TobariView: View {
     }
 
     var body: some View {
-        ZStack {
-            // 静的な夜空。絵巻(行列)は帳の間は退場する。
-            LinearGradient(
-                colors: [Color(yagyoHex: 0x070812), Color(yagyoHex: 0x10131f)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                header
+                recordNote
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    header
-
-                    switch controller.state {
-                    case .preparing:
-                        progressPanel(text: "支度中…", fraction: nil)
-                    case .analyzing(let fraction):
-                        progressPanel(text: "狐火が聴き込んでいます…", fraction: fraction)
-                    case .failed(let message):
-                        failurePanel(message: message)
-                    case .finished(let metrics):
-                        meterPanel(metrics: metrics)
-                        suggestionPanel(metrics: metrics)
-                        footnote(metrics: metrics)
-                    }
+                switch controller.state {
+                case .preparing:
+                    progressSection(text: "支度中…", fraction: nil)
+                case .analyzing(let fraction):
+                    progressSection(text: "狐火が聴き込んでいます…", fraction: fraction)
+                case .failed(let message):
+                    failureSection(message: message)
+                case .finished(let metrics):
+                    meterLedger(metrics: metrics)
+                    findingsSection(metrics: metrics)
+                    footnote(metrics: metrics)
                 }
-                .padding(18)
             }
+            .padding(.horizontal, 18)
+            .padding(.top, 16)
+            .padding(.bottom, 32)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .preferredColorScheme(.dark)
+        .background(YagyoPrintColor.canvas.ignoresSafeArea())
         .onAppear {
             controller.start(track: track, library: library)
         }
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .top, spacing: 12) {
+            RetroPlaque(horizontalPadding: 14, verticalPadding: 10) {
                 Text("狐火の帳")
                     .font(.system(.title2, design: .serif).weight(.semibold))
-                    .foregroundStyle(YagyoColor.kitsunebi)
-                Text(track.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(YagyoColor.geppaku)
-                    .lineLimit(2)
-                if let artist = track.artist, !artist.isEmpty {
-                    Text(artist)
-                        .font(.caption)
-                        .foregroundStyle(YagyoColor.dim)
-                }
+                    .tracking(3)
+                    .accessibilityHeading(.h1)
             }
-            // タイトル一式は1つのAX要素に束ね、閉じるボタンは独立フォーカスのまま残す。
-            .accessibilityElement(children: .combine)
+
             Spacer()
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(YagyoColor.dim)
-            }
-            .accessibilityLabel("帳を閉じる")
+
+            RetroIconButton(
+                systemImage: "xmark",
+                accessibilityLabel: "帳を閉じる",
+                shape: .seal,
+                action: { dismiss() }
+            )
         }
     }
 
-    private func progressPanel(text: String, fraction: Double?) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+    private var recordNote: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(track.title)
+                .font(.headline)
+                .foregroundStyle(YagyoPrintColor.ink)
+                .fixedSize(horizontal: false, vertical: true)
+            if let artist = track.artist, !artist.isEmpty {
+                Text(artist)
+                    .font(.caption)
+                    .foregroundStyle(YagyoPrintColor.inkMuted)
+            }
+        }
+        .padding(.horizontal, 2)
+        .padding(.bottom, 10)
+        .overlay(alignment: .bottom) {
+            TobariDottedRule()
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func progressSection(text: String, fraction: Double?) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
             Text(text)
-                .font(.footnote)
-                .foregroundStyle(YagyoColor.geppaku)
+                .font(.system(.headline, design: .serif))
+                .foregroundStyle(YagyoPrintColor.ink)
+                .accessibilityHidden(true)
+
             ProgressView(value: fraction)
-                .tint(YagyoColor.kitsunebi)
+                .tint(YagyoPrintColor.teal)
+                .accessibilityLabel("解析状況")
+                .accessibilityValue(progressAccessibilityValue(text: text, fraction: fraction))
+
             Text("解析はこの端末の中だけで行われ、再生音と元ファイルは変更されません。")
                 .font(.caption2)
-                .foregroundStyle(YagyoColor.dim)
+                .foregroundStyle(YagyoPrintColor.inkMuted)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .ritualPanel(radius: 20, padding: 16, tint: YagyoColor.kitsunebi.opacity(0.06))
+        .padding(.vertical, 8)
+    }
+
+    private func failureSection(message: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Rectangle()
+                .fill(YagyoPrintColor.vermillionInk)
+                .frame(width: 3)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Label("解析できませんでした", systemImage: "exclamationmark.triangle")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(YagyoPrintColor.vermillionInk)
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(YagyoPrintColor.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("再生には影響しません。")
+                    .font(.caption2)
+                    .foregroundStyle(YagyoPrintColor.inkMuted)
+            }
+        }
+        .padding(.vertical, 8)
         .accessibilityElement(children: .combine)
     }
 
-    private func failurePanel(message: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("解析できませんでした", systemImage: "exclamationmark.triangle")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(YagyoColor.shu)
-            Text(message)
-                .font(.caption)
-                .foregroundStyle(YagyoColor.dim)
-            Text("再生には影響しません。")
-                .font(.caption2)
-                .foregroundStyle(YagyoColor.dim)
-        }
-        .ritualPanel(radius: 20, padding: 16, tint: YagyoColor.shu.opacity(0.08))
-        .accessibilityElement(children: .combine)
-    }
+    private func meterLedger(metrics: TobariMetrics) -> some View {
+        let rows: [(name: String, value: String)] = [
+            ("Integrated Loudness", metrics.integratedText),
+            ("Max Short-term (3s)", metrics.maxShortTermText),
+            ("Sample Peak", metrics.samplePeakText),
+            ("True Peak (4x)", metrics.truePeakText),
+            ("クリップ疑い", metrics.clipText),
+            ("モノ互換 (L/R相関)", metrics.monoCompatText)
+        ]
 
-    private func meterPanel(metrics: TobariMetrics) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        return VStack(alignment: .leading, spacing: 0) {
+            TobariDoubleRule()
+
             Text("狐火の目盛")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(YagyoColor.dim)
-                .padding(.bottom, 6)
+                .font(.system(.headline, design: .serif).weight(.semibold))
+                .foregroundStyle(YagyoPrintColor.ink)
+                .padding(.vertical, 10)
+                .accessibilityHeading(.h2)
 
-            meterRow("Integrated Loudness", metrics.integratedText)
-            meterRow("Max Short-term (3s)", metrics.maxShortTermText)
-            meterRow("Sample Peak", metrics.samplePeakText)
-            meterRow("True Peak (4x)", metrics.truePeakText)
-            meterRow("クリップ疑い", metrics.clipText)
-            meterRow("モノ互換 (L/R相関)", metrics.monoCompatText)
+            ForEach(rows.indices, id: \.self) { index in
+                meterRow(rows[index].name, rows[index].value)
+                if index < rows.index(before: rows.endIndex) {
+                    TobariDottedRule()
+                }
+            }
+
+            TobariDoubleRule()
         }
-        .ritualPanel(radius: 20, padding: 16, tint: YagyoColor.kitsunebi.opacity(0.06))
     }
 
     private func meterRow(_ name: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(name)
-                .font(.footnote)
-                .foregroundStyle(YagyoColor.geppaku)
-            Spacer()
-            Text(value)
-                .font(.system(.footnote, design: .monospaced).weight(.semibold))
-                .foregroundStyle(YagyoColor.kitsunebi)
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(name)
+                    .font(.footnote)
+                    .foregroundStyle(YagyoPrintColor.ink)
+                    .fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: 8)
+                metricValue(value)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(name)
+                    .font(.footnote)
+                    .foregroundStyle(YagyoPrintColor.ink)
+                metricValue(value)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .padding(.vertical, 5)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(name)、\(value)")
+        .padding(.vertical, 9)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(name)
+        .accessibilityValue(value)
+    }
+
+    private func metricValue(_ value: String) -> some View {
+        Text(value)
+            .font(.system(.footnote, design: .monospaced).weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(YagyoPrintColor.teal)
     }
 
     @ViewBuilder
-    private func suggestionPanel(metrics: TobariMetrics) -> some View {
+    private func findingsSection(metrics: TobariMetrics) -> some View {
         let suggestions = metrics.suggestions
-        VStack(alignment: .leading, spacing: 10) {
-            Text("提案")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(YagyoColor.dim)
+        VStack(alignment: .leading, spacing: 14) {
+            Text("狐火の見立て")
+                .font(.system(.headline, design: .serif).weight(.semibold))
+                .foregroundStyle(YagyoPrintColor.ink)
+                .accessibilityHeading(.h2)
 
             if suggestions.isEmpty {
                 Text("気になる点はありませんでした。")
                     .font(.footnote)
-                    .foregroundStyle(YagyoColor.geppaku)
+                    .foregroundStyle(YagyoPrintColor.ink)
             } else {
-                ForEach(suggestions) { suggestion in
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(suggestion.text)
-                            .font(.footnote)
-                            .foregroundStyle(YagyoColor.geppaku)
-                        Text("根拠: \(suggestion.basis)")
-                            .font(.caption2)
-                            .foregroundStyle(YagyoColor.chochin)
+                ForEach(suggestions.indices, id: \.self) { index in
+                    let suggestion = suggestions[index]
+                    HStack(alignment: .top, spacing: 10) {
+                        Text("\(index + 1)")
+                            .font(.caption.weight(.bold).monospacedDigit())
+                            .foregroundStyle(YagyoPrintColor.paperRaised)
+                            .frame(width: 24, height: 24)
+                            .background(YagyoPrintColor.vermillionInk, in: Circle())
+                            .overlay(Circle().stroke(YagyoPrintColor.vermillion, lineWidth: 1))
+                            .accessibilityHidden(true)
+
+                        VStack(alignment: .leading, spacing: 7) {
+                            Text(suggestion.text)
+                                .font(.footnote)
+                                .foregroundStyle(YagyoPrintColor.ink)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            HStack(alignment: .top, spacing: 7) {
+                                Rectangle()
+                                    .fill(YagyoPrintColor.teal)
+                                    .frame(width: 2)
+                                    .accessibilityHidden(true)
+                                Text("根拠: \(suggestion.basis)")
+                                    .font(.caption2)
+                                    .foregroundStyle(YagyoPrintColor.inkMuted)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
                     }
-                    .accessibilityElement(children: .combine)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("見立て \(index + 1)、\(suggestion.text)")
+                    .accessibilityValue("根拠、\(suggestion.basis)")
                 }
             }
 
             Text("提案は自動では適用されません。判断はいつでもあなたのものです。")
                 .font(.caption2)
-                .foregroundStyle(YagyoColor.dim)
+                .foregroundStyle(YagyoPrintColor.inkMuted)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .ritualPanel(radius: 20, padding: 16)
     }
 
     private func footnote(metrics: TobariMetrics) -> some View {
@@ -299,7 +370,46 @@ struct TobariView: View {
             TobariMetrics.timeText(metrics.durationSeconds)
         ))
         .font(.caption2)
-        .foregroundStyle(YagyoColor.footerInk)
+        .foregroundStyle(YagyoPrintColor.inkMuted)
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private func progressAccessibilityValue(text: String, fraction: Double?) -> String {
+        guard let fraction else { return text }
+        let percent = Int((min(max(fraction, 0), 1) * 100).rounded())
+        return "\(text)、\(percent)パーセント"
+    }
+}
+
+private struct TobariDoubleRule: View {
+    var body: some View {
+        VStack(spacing: 3) {
+            Rectangle()
+                .fill(YagyoPrintColor.teal)
+                .frame(height: 1)
+            Rectangle()
+                .fill(YagyoPrintColor.tealRule)
+                .frame(height: 1)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+private struct TobariDottedRule: View {
+    var body: some View {
+        GeometryReader { geometry in
+            Path { path in
+                path.move(to: CGPoint(x: 0, y: 0.5))
+                path.addLine(to: CGPoint(x: geometry.size.width, y: 0.5))
+            }
+            .stroke(
+                YagyoPrintColor.tealRule,
+                style: StrokeStyle(lineWidth: 1, dash: [2, 3])
+            )
+        }
+        .frame(height: 1)
+        .accessibilityHidden(true)
     }
 }

@@ -2,6 +2,12 @@
 
 `docs/PRODUCT_DIRECTION.md`（v3・作者の憲章）に追従するビジュアル・リファレンス。ロードマップ、原則、非目標の一次情報は憲章を参照し、音量入力と振付の正式な対応は [夜行絵巻 振付翻訳帳](CHOREOGRAPHY.md) を正本とする。
 
+## モダンレトロ Day UI の現在地
+
+2026-07-13、本人提供の明治・大正モダンレトロ参考画像をもとに、生成り紙を基本面、焦茶を本文と罫、朱・柿を選択と主操作、青緑を狐火の分析値へ限定するDayモードが本人承認された。夜行・行列・巻物・ミニ灯り・狐火の帳へ共通の札、二重罫、単罫を反映し、円形波形もレコード盤／丸紋の計器へ描き直した実装候補がgreenである。狐火の帳は濃い青い面を撤去し、一枚紙の開いた台帳へ再構成した。
+
+Xcode 27.0 generic iOS build、iPhone 17 Pro / iOS 26.5 full suite **124 / 124**、iPhone 17 Pro / iOS 27.0のPlaybackController以外 **112 / 112**、iPhone 17e / iOS 27.0の3タブ実描画 **1 / 1**は、いずれもfailure 0・skip 0。iOS 27.0 beta Simulatorだけで既存PlaybackController群の同期AVAudioSession初期化が返らないため、その12件はiOS 26.5 full suiteでgreenを確認した。[現在の実描画証跡](evidence/modern-retro-ui/README.md)にDay、丑三つ時、17e、Dynamic Type、波形状態、狐火の帳とhashを集約する。コンセプトは承認済みだが、実装された実機描画は本人の最終確認まで完成扱いにしない。
+
 ## Step 4 唐傘縦切りの現在地
 
 Step 4 では、毎秒15回(15 Hz周期)で読む `AVAudioPlayer.averagePower` から得る単一の `ParadeSignalSnapshot` を、小さな `ReactiveVisualStage` だけが coordinator から購読する。この wrapper が snapshot を夜行絵巻へ、snapshot の `level / activity / levelBand` を円形波形へ渡し、root `ContentView` やライブラリ全体を 15 Hz 更新へ巻き込まない。snapshot は `level / activity / strongPhase / strongSequence` を持ち、停止、meter 利用不可、`quietProxy`、通常状態を区別する。現在トラックの resident は固定 roster による互換割当を保ったまま先導へ移る。
@@ -66,6 +72,22 @@ Step 4 では、毎秒15回(15 Hz周期)で読む `AVAudioPlayer.averagePower` �
 
 ## デザイントークン
 
+画面表層は、2026-07-13承認のDayモード用 `YagyoPrintColor` を使う。既存の `YagyoColor` / `ParadePalette` は音反応、妖怪、丑三つ時の意味色として残し、紙面UIへ一括流用しない。
+
+| 名前 | 用途 | hex |
+|---|---|---|
+| `canvas` | 全画面の明るい紙地 | `#f2e6cb` |
+| `paper` | 主要パネル | `#e8d7b5` |
+| `paperRaised` | 見出し札・入力欄 | `#f5ecd8` |
+| `stage` | 百鬼夜行だけの温かい焦茶舞台 | `#554c46` |
+| `ink` | 本文・外罫 | `#35241e` |
+| `inkMuted` | 補助文字 | `#6b5748` |
+| `vermillion` / `vermillionInk` | 印・注意・選択 | `#c94f35` / `#a43d27` |
+| `persimmon` | 主操作・現在位置 | `#d77a3d` |
+| `teal` / `tealRule` | 狐火の分析値・区切り罫 | `#1b6666` / `#6f8c84` |
+
+以下の画像と表は、音反応・旧夜間面のsemantic token記録であり、現在のDayモード表層配色ではない。
+
 `YagyoColor` / `ParadePalette`（`DesignTokens.swift`）からの抜粋。
 
 ![tokens](design/tokens.png)
@@ -81,7 +103,7 @@ Step 4 では、毎秒15回(15 Hz周期)で読む `AVAudioPlayer.averagePower` �
 | 丑三つ時の月 akaMoon | 丑三つ時アクセント | `#d84040` |
 | dim | 副次テキスト | `#8a8fa8` |
 
-## 過去の新規提案（未承認・未実装）
+## 過去の新規提案
 
 以下は 2026-07-08〜10 に制作したコンセプト記録であり、Step 4 唐傘縦切りのスコープでも、現在の実装でもない。音量入力との対応、追加制作、製品への採用は承認されていない。
 
@@ -97,17 +119,17 @@ Step 4 では、毎秒15回(15 Hz周期)で読む `AVAudioPlayer.averagePower` �
 
 ![gashadokuro](design/gashadokuro-proposal.png)
 
-### モダンレトロ全面適用の参考(2026-07-13受領・未承認)
+### モダンレトロ全面適用の参考（2026-07-13承認・実装へ反映）
 
-灯芯スライダー(PR #19)で確立した明治大正モダンレトロ方向を、画面全体へ適用した場合のビジュアル参考2枚(本人提供のコンセプト画)。Step 2(タブ分け)以降の設計議論の材料であり、採用・実装は未承認。
+灯芯スライダー(PR #19)で確立した明治大正モダンレトロ方向を、画面全体へ適用した場合の本人提供コンセプト画。2026-07-13にDayモード、限定色の配分、狐火の帳の開いた台帳構成が本人承認され、[実装仕様](superpowers/specs/2026-07-13-modern-retro-ui-design.md)の正本へ取り込んだ。画像中の花、人物、英字サンプル等を製品へ直接模写するものではない。
 
 | メイン画面 | 狐火の帳 |
 |---|---|
 | ![full retro main](design/reference-modern-retro/full-retro-main-concept.jpeg) | ![full retro tobari](design/reference-modern-retro/full-retro-tobari-concept.jpeg) |
 
-## 狐火の帳コンセプト（Phase A実装中）
+## 狐火の帳コンセプト（Phase A完了・表層刷新中）
 
-数値が主役の検聴画面として作成した過去のコンセプト。Step 5 Phase A(一画面検聴)は[設計仕様](superpowers/specs/2026-07-12-kitsunebi-no-tobari-design.md)に基づき実装へ進んだが、この画像は当時の構想イメージであり現在のUIそのものではない。Step 3(Core AI / Music Understanding)は iOS 27 正式 SDK の再検証まで引き続き保留中。
+数値が主役の検聴画面として作成した過去のコンセプト。Step 5 Phase A(一画面検聴)は[設計仕様](superpowers/specs/2026-07-12-kitsunebi-no-tobari-design.md)に基づき`main`へ統合済み。この画像は当時の構想イメージであり、現在の開いた台帳UIそのものではない。A/B参照と減衰だけのラウドネスマッチはPhase Bで、今回の表層刷新には含めない。
 
 ![kitsunebi concept](design/kitsunebi-concept.png)
 
@@ -115,7 +137,7 @@ Step 4 では、毎秒15回(15 Hz周期)で読む `AVAudioPlayer.averagePower` �
 
 ## 更新履歴
 
-- 2026-07-13: **UI改善「夜行の間取りと灯り」Step 1完了**。音量の標準Slider(白ノブ+狐火tint)を灯芯 `TomoshibiSlider` へ置換し、本人承認のうえPR #19を`main`へ統合。意匠は明治大正モダンレトロ指向のフィードバックを受け、フラット塗り3案の実描画比較から本人選定のB案「罫と丸紋」(単罫+四半目盛+丸紋ノブ=提灯色+墨の輪+朱の芯、グラデーション・glow不使用)。位置→値はノブ可動域[r, width−r]の逆写像でCopilot/Codex指摘の値跳びを解消。full suite 112/112・skip 0。証跡は[ledger](evidence/ui-madori-akari/README.md)。Step 2(タブ分け: 夜行/行列/巻物+ミニ灯り)は未着手。
+- 2026-07-13: **UI改善「夜行の間取りと灯り」Step 1完了**。音量の標準Slider(白ノブ+狐火tint)を灯芯 `TomoshibiSlider` へ置換し、本人承認のうえPR #19を`main`へ統合。意匠は明治大正モダンレトロ指向のフィードバックを受け、フラット塗り3案の実描画比較から本人選定のB案「罫と丸紋」(単罫+四半目盛+丸紋ノブ=提灯色+墨の輪+朱の芯、グラデーション・glow不使用)。位置→値はノブ可動域[r, width−r]の逆写像でCopilot/Codex指摘の値跳びを解消。full suite 112/112・skip 0。証跡は[ledger](evidence/ui-madori-akari/README.md)。Step 2(タブ分け: 夜行/行列/巻物+ミニ灯り)もPR #21で`main`へ統合済み。
 - 2026-07-12: **Step 5「狐火の帳」Phase A完了**。ユーザー本人がiPhone実機で確認しPR #16を承認、`main`へ統合。full suite 100/100(Xcode 27.0)、EBU基準系-20 LUFS・44.1kHz適合・True Peakオーバーシュート等をテストで固定。独立レビュー4体+Copilot/Codexの指摘(44.1kHz係数の規格不適合、非有限値のJSON汚染、チャンネルレイアウト解決ほか)をすべて検証・反映。実機フィードバック2件(行ボタンの頭出し、フィルタ行の重なり)も修正済み。
 - 2026-07-12(初期記録・superseded): Step 5「狐火の帳」Phase A(一画面検聴)のDSP解析エンジン・検聴キャッシュ・帳UI・既知信号ユニットテストを実装([証跡](evidence/step5-tobari/README.md))。Mastering-AppのDSPコアを仕様の補修2点(Short-termのstreaming化、クリップ疑いの連続ラン化)込みで移植し、期待値はPython参照ミラーで導出。当時未完了だったMac側ビルド・Simulator確認・ユーザー本人の確認は、上の完了エントリのとおりすべて完了済み。
 - 2026-07-12: ユーザー本人が唐傘(PR #13)と残り8体(PR #14)の見た目を承認し、Step 4「夜行絵巻 2.0」を`main`へ統合。行列9体の40×48統一・視覚reducer・resident先導・Reduce Motion/VoiceOver代替が正式にmainの現在地となる。

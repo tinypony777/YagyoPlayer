@@ -11,6 +11,8 @@ extension Color {
     }
 }
 
+/// 音反応・妖怪・夜空がすでに使っている意味色。
+/// Dayモードの画面表層は `YagyoPrintColor` を使い、この契約は一括置換しない。
 enum YagyoColor {
     static let sumi = Color(yagyoHex: 0x0b0c14)          // 墨 — 夜の地
     static let yoiyami = Color(yagyoHex: 0x151726)       // 宵闇 — パネル
@@ -35,7 +37,32 @@ enum YagyoColor {
     static let footerInk = Color(yagyoHex: 0x4a4f66)
 }
 
-/// 夜行絵巻の空模様 — 常夜と丑三つ時。
+/// 生成り紙へ限定色を刷る、画面表層専用のDayモード色。
+enum YagyoPrintColor {
+    static let canvas = Color(yagyoHex: 0xf2e6cb)
+    static let paper = Color(yagyoHex: 0xe8d7b5)
+    static let paperRaised = Color(yagyoHex: 0xf5ecd8)
+    static let paperMuted = Color(yagyoHex: 0xb9a98c)
+    static let stage = Color(yagyoHex: 0x554c46)
+    static let ink = Color(yagyoHex: 0x35241e)
+    static let inkMuted = Color(yagyoHex: 0x6b5748)
+    static let vermillion = Color(yagyoHex: 0xc94f35)
+    static let vermillionInk = Color(yagyoHex: 0xa43d27)
+    static let persimmon = Color(yagyoHex: 0xd77a3d)
+    static let teal = Color(yagyoHex: 0x1b6666)
+    static let tealRule = Color(yagyoHex: 0x6f8c84)
+    static let brass = Color(yagyoHex: 0xb88a45)
+}
+
+enum YagyoPrintMetrics {
+    static let ruleWidth: CGFloat = 1
+    static let innerRuleInset: CGFloat = 4
+    static let panelRadius: CGFloat = 12
+    static let rowRadius: CGFloat = 8
+    static let controlHitTarget: CGFloat = 44
+}
+
+/// 夜行絵巻の舞台色 — 通常の紙面から局所的に夜へ入る。
 struct ParadePalette {
     let skyTop: Color
     let skyBottom: Color
@@ -44,11 +71,11 @@ struct ParadePalette {
     let fog: Color
 
     static let day = ParadePalette(
-        skyTop: Color(yagyoHex: 0x070812),
-        skyBottom: Color(yagyoHex: 0x141830),
-        moon: YagyoColor.geppaku,
-        halo: YagyoColor.geppaku.opacity(0.10),
-        fog: Color(yagyoHex: 0xb2bcdc).opacity(0.05)
+        skyTop: YagyoPrintColor.stage,
+        skyBottom: YagyoPrintColor.stage,
+        moon: YagyoPrintColor.persimmon,
+        halo: YagyoPrintColor.persimmon.opacity(0.14),
+        fog: YagyoPrintColor.paper.opacity(0.05)
     )
 
     static let ushimitsu = ParadePalette(
@@ -60,38 +87,187 @@ struct ParadePalette {
     )
 }
 
-struct RitualPanel: ViewModifier {
-    var radius: CGFloat = 24
+enum ModernRetroPanelTone: Equatable, Sendable {
+    case paper
+    case stage
+
+    fileprivate var fill: Color {
+        switch self {
+        case .paper: YagyoPrintColor.paper
+        case .stage: YagyoPrintColor.stage
+        }
+    }
+
+    fileprivate var outerRule: Color {
+        YagyoPrintColor.ink
+    }
+
+    fileprivate var innerRule: Color {
+        switch self {
+        case .paper: YagyoPrintColor.paperMuted
+        case .stage: YagyoPrintColor.paper
+        }
+    }
+}
+
+/// 単色面と二重罫だけで階層を作る。glass/material/shadowは使わない。
+struct ModernRetroPanel: ViewModifier {
+    var tone: ModernRetroPanelTone = .paper
+    var radius: CGFloat = YagyoPrintMetrics.panelRadius
     var padding: CGFloat = 16
-    var tint: Color = YagyoColor.chochin.opacity(0.12)
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
 
         content
             .padding(padding)
-            .background {
+            .background(tone.fill, in: shape)
+            .overlay {
+                shape.stroke(tone.outerRule, lineWidth: YagyoPrintMetrics.ruleWidth)
                 shape
-                    .fill(YagyoColor.yoiyami.opacity(0.78))
-                    .overlay(shape.stroke(YagyoColor.line.opacity(0.9), lineWidth: 1))
+                    .inset(by: YagyoPrintMetrics.innerRuleInset)
+                    .stroke(tone.innerRule, lineWidth: YagyoPrintMetrics.ruleWidth)
             }
-            .ritualGlass(shape: shape, tint: tint)
     }
 }
 
-private extension View {
-    @ViewBuilder
-    func ritualGlass(shape: RoundedRectangle, tint: Color) -> some View {
-        if #available(iOS 26.0, *) {
-            self.glassEffect(.regular.tint(tint), in: shape)
-        } else {
-            self.background(.ultraThinMaterial, in: shape)
+enum RetroPlaqueTone: Equatable, Sendable {
+    case paper
+    case stage
+    case seal
+
+    fileprivate var fill: Color {
+        switch self {
+        case .paper: YagyoPrintColor.paperRaised
+        case .stage: YagyoPrintColor.stage
+        case .seal: YagyoPrintColor.vermillionInk
+        }
+    }
+
+    fileprivate var foreground: Color {
+        switch self {
+        case .paper: YagyoPrintColor.ink
+        case .stage, .seal: YagyoPrintColor.paperRaised
+        }
+    }
+
+    fileprivate var innerRule: Color {
+        switch self {
+        case .paper: YagyoPrintColor.paperMuted
+        case .stage: YagyoPrintColor.paper
+        case .seal: YagyoPrintColor.paperRaised
         }
     }
 }
 
+/// 画面・主要パネルの見出し札。内容のDynamic Typeサイズを固定しない。
+struct RetroPlaque<Content: View>: View {
+    var tone: RetroPlaqueTone = .paper
+    var horizontalPadding: CGFloat = 16
+    var verticalPadding: CGFloat = 9
+    private let content: () -> Content
+
+    init(
+        tone: RetroPlaqueTone = .paper,
+        horizontalPadding: CGFloat = 16,
+        verticalPadding: CGFloat = 9,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.tone = tone
+        self.horizontalPadding = horizontalPadding
+        self.verticalPadding = verticalPadding
+        self.content = content
+    }
+
+    var body: some View {
+        let radius = YagyoPrintMetrics.rowRadius
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+
+        content()
+            .foregroundStyle(tone.foreground)
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
+            .background(tone.fill, in: shape)
+            .overlay {
+                shape.stroke(YagyoPrintColor.ink, lineWidth: YagyoPrintMetrics.ruleWidth)
+                shape
+                    .inset(by: YagyoPrintMetrics.innerRuleInset)
+                    .stroke(tone.innerRule, lineWidth: YagyoPrintMetrics.ruleWidth)
+            }
+    }
+}
+
+/// 長い情報面だけを区切る、中央丸紋付きの単罫。
+struct RetroDivider: View {
+    var color: Color = YagyoPrintColor.tealRule
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Rectangle()
+                .fill(color)
+                .frame(height: YagyoPrintMetrics.ruleWidth)
+            Circle()
+                .fill(YagyoPrintColor.canvas)
+                .overlay(Circle().stroke(color, lineWidth: YagyoPrintMetrics.ruleWidth))
+                .frame(width: 7, height: 7)
+            Rectangle()
+                .fill(color)
+                .frame(height: YagyoPrintMetrics.ruleWidth)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+enum RetroIconButtonShape: Equatable, Sendable {
+    case circle
+    case seal
+
+    fileprivate var radius: CGFloat {
+        switch self {
+        case .circle: YagyoPrintMetrics.controlHitTarget / 2
+        case .seal: YagyoPrintMetrics.rowRadius
+        }
+    }
+}
+
+/// SF Symbolと44pt操作領域を保った、丸紋／角印の小操作。
+struct RetroIconButton: View {
+    var systemImage: String
+    var accessibilityLabel: String
+    var accent: Color = YagyoPrintColor.ink
+    var shape: RetroIconButtonShape = .circle
+    var action: () -> Void
+
+    var body: some View {
+        let outline = RoundedRectangle(cornerRadius: shape.radius, style: .continuous)
+
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.semibold))
+                .frame(
+                    minWidth: YagyoPrintMetrics.controlHitTarget,
+                    minHeight: YagyoPrintMetrics.controlHitTarget
+                )
+                .foregroundStyle(accent)
+                .background(YagyoPrintColor.paperRaised, in: outline)
+                .overlay {
+                    outline.stroke(accent, lineWidth: YagyoPrintMetrics.ruleWidth)
+                    outline
+                        .inset(by: YagyoPrintMetrics.innerRuleInset)
+                        .stroke(YagyoPrintColor.paperMuted, lineWidth: YagyoPrintMetrics.ruleWidth)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+}
+
 extension View {
-    func ritualPanel(radius: CGFloat = 24, padding: CGFloat = 16, tint: Color = YagyoColor.chochin.opacity(0.12)) -> some View {
-        modifier(RitualPanel(radius: radius, padding: padding, tint: tint))
+    func modernRetroPanel(
+        tone: ModernRetroPanelTone = .paper,
+        radius: CGFloat = YagyoPrintMetrics.panelRadius,
+        padding: CGFloat = 16
+    ) -> some View {
+        modifier(ModernRetroPanel(tone: tone, radius: radius, padding: padding))
     }
 }

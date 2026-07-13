@@ -12,7 +12,8 @@ final class UshimitsuWatch: ObservableObject {
     private var timer: Timer?
     private var announcementTask: Task<Void, Never>?
 
-    init() {
+    init(initiallyForced: Bool = false) {
+        forced = initiallyForced
         refresh(announce: false)
         // 自分が居なくなったら次の刻で自ら止まる — deinit不要のリーク対策
         let timer = Timer(timeInterval: 30, repeats: true) { [weak self] timer in

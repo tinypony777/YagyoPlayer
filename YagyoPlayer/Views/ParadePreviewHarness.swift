@@ -17,7 +17,7 @@ struct ParadePreviewHarness: View {
                     VStack(alignment: .leading, spacing: 18) {
                         Text("夜行絵巻 2.0 表示検証")
                             .font(.system(.title2, design: .serif).weight(.semibold))
-                            .foregroundStyle(YagyoColor.geppaku)
+                            .foregroundStyle(YagyoPrintColor.ink)
 
                         YagyoParadeView(
                             signal: scenario.snapshot,
@@ -36,7 +36,7 @@ struct ParadePreviewHarness: View {
                             )
                         )
                         .font(.footnote)
-                        .foregroundStyle(YagyoColor.dim)
+                        .foregroundStyle(YagyoPrintColor.inkMuted)
                         .accessibilityHidden(true)
                     }
                     .padding(18)
@@ -45,7 +45,7 @@ struct ParadePreviewHarness: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 
     private var controls: some View {
@@ -71,9 +71,9 @@ struct ParadePreviewHarness: View {
                 .accessibilityIdentifier("step4.preview.reduce-motion")
         }
         .pickerStyle(.menu)
-        .tint(YagyoColor.chochin)
-        .foregroundStyle(YagyoColor.geppaku)
-        .ritualPanel(radius: 20, padding: 16)
+        .tint(YagyoPrintColor.vermillionInk)
+        .foregroundStyle(YagyoPrintColor.ink)
+        .modernRetroPanel(tone: .paper, padding: 16)
     }
 
     private var residentName: String? {
