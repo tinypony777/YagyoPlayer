@@ -23,11 +23,15 @@ final class PlaybackControllerTests: XCTestCase {
     }
 
     /// 実際にデコード・再生できる無音WAVを取り込み、本物の AVAudioPlayer ロード経路を通す。
-    private func importPlayableTrack(named name: String = "clip.wav", into store: AudioLibraryStore) async throws -> AudioTrack {
+    private func importPlayableTrack(
+        named name: String = "clip.wav",
+        sampleCount: Int = 4000,
+        into store: AudioLibraryStore
+    ) async throws -> AudioTrack {
         let url = temporaryDirectory.appending(path: name, directoryHint: .notDirectory)
-        try Self.makeSilentWAVData().write(to: url)
+        try Self.makeSilentWAVData(sampleCount: sampleCount).write(to: url)
         await store.importAudioFiles(from: [url])
-        return try XCTUnwrap(store.tracks.first)
+        return try XCTUnwrap(store.tracks.first { $0.originalFilename == name })
     }
 
     /// NotificationCenter の投稿から生まれる `Task { @MainActor in ... }` の実行を待つ。
@@ -85,13 +89,19 @@ final class PlaybackControllerTests: XCTestCase {
     func testLoadingAnotherTrackClearsLoudnessMatchWithoutChangingBaseVolume() async throws {
         let store = makeStore()
         store.load()
-        let track = try await importPlayableTrack(into: store)
+        let firstTrack = try await importPlayableTrack(named: "first.wav", into: store)
+        let nextTrack = try await importPlayableTrack(named: "next.wav", sampleCount: 4001, into: store)
         let player = PlaybackController()
         player.volume = 0.72
+        player.load(firstTrack, from: store)
+        player.play()
+        XCTAssertTrue(player.isPlaying)
         player.setLoudnessMatchMultiplier(0.4)
 
-        player.load(track, from: store)
+        player.load(nextTrack, from: store)
 
+        XCTAssertEqual(player.currentTrack?.id, nextTrack.id)
+        XCTAssertFalse(player.isPlaying)
         XCTAssertEqual(player.volume, 0.72, accuracy: 1e-6)
         XCTAssertEqual(player.loudnessMatchMultiplier, 1, accuracy: 1e-6)
         XCTAssertFalse(player.isLoudnessMatchActive)
@@ -104,11 +114,14 @@ final class PlaybackControllerTests: XCTestCase {
         let track = try await importPlayableTrack(into: store)
         let player = PlaybackController()
         player.load(track, from: store)
+        player.play()
+        XCTAssertTrue(player.isPlaying)
         player.setLoudnessMatchMultiplier(0.4)
 
         player.load(track, from: store)
 
         XCTAssertEqual(player.currentTrack?.id, track.id)
+        XCTAssertFalse(player.isPlaying)
         XCTAssertEqual(player.loudnessMatchMultiplier, 1, accuracy: 1e-6)
         XCTAssertFalse(player.isLoudnessMatchActive)
     }
@@ -119,6 +132,8 @@ final class PlaybackControllerTests: XCTestCase {
         let track = try await importPlayableTrack(into: store)
         let player = PlaybackController()
         player.load(track, from: store)
+        player.play()
+        XCTAssertTrue(player.isPlaying)
         player.setLoudnessMatchMultiplier(0.4)
         let missing = AudioTrack(
             title: "参照なし",
@@ -129,6 +144,7 @@ final class PlaybackControllerTests: XCTestCase {
         player.load(missing, from: store)
 
         XCTAssertEqual(player.currentTrack?.id, track.id)
+        XCTAssertFalse(player.isPlaying)
         XCTAssertEqual(player.loudnessMatchMultiplier, 1, accuracy: 1e-6)
         XCTAssertFalse(player.isLoudnessMatchActive)
         XCTAssertNotNil(player.playbackErrorMessage)

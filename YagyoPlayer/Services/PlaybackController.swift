@@ -230,7 +230,9 @@ final class PlaybackController: ObservableObject {
         autoplay: Bool = false,
         context: PlaybackContext? = nil
     ) {
-        // Phase Bの減衰はトラックをまたいで持ち越さない。A/B側はload後に対象側の値を明示適用する。
+        // 比較中の旧playerを先に無音化してから基準音量へ戻す。
+        // file初期化中だけ旧音源が大きくなる過渡を作らず、A/B側はload後に対象側の値を明示適用する。
+        audioPlayer?.pause()
         clearLoudnessMatch()
         resetParadeSignal(reason: .trackLoadStarted, isPlaying: false)
         remoteLibrary = library
