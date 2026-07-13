@@ -23,6 +23,9 @@ final class PlaybackController: ObservableObject {
     @Published private(set) var loudnessMatchMultiplier: Float = 1
     /// 0 dB側も「適用中」と区別できるよう、乗数とは別に比較セッションの有効状態を持つ。
     @Published private(set) var isLoudnessMatchActive = false
+    /// 同一トラック上のFixed EQ試聴。狐火の帳の二曲比較・音量乗数とは独立させる。
+    @Published private(set) var fixedEQAuditionState: FixedEQAuditionState = .unsupported
+    @Published private(set) var fixedEQAuditionErrorMessage: String?
 
     let paradeSignals = ParadeSignalCoordinator()
     private var smoothedAudioLevel = 0.0
@@ -33,7 +36,9 @@ final class PlaybackController: ObservableObject {
     /// 読み込み・再生に失敗したとき、無言で止まらずユーザーに伝えるためのメッセージ。
     @Published var playbackErrorMessage: String?
 
-    private var audioPlayer: AVAudioPlayer?
+    private var backend: any AudioPlaybackBackend
+    private var committedSchedule: PlaybackScheduleIdentity?
+    private let activateAudioSession: @MainActor () throws -> Void
     // deinit は nonisolated かつ Timer/観測トークンは Sendable ではないため、
     // 後始末を安全に行うために nonisolated(unsafe) にする(実際のアクセスは常に MainActor 上、
     // deinit 時点では他に参照が無く競合しない)。
@@ -50,7 +55,14 @@ final class PlaybackController: ObservableObject {
     private var interruptionDepth = 0
     private nonisolated(unsafe) var notificationObserverTokens: [NSObjectProtocol] = []
 
-    init() {
+    init(
+        backend: (any AudioPlaybackBackend)? = nil,
+        activateAudioSession: @escaping @MainActor () throws -> Void = PlaybackController.activateSystemAudioSession
+    ) {
+        self.backend = backend ?? LegacyAudioPlayerPlaybackBackend()
+        self.activateAudioSession = activateAudioSession
+        self.backend.outputVolume = effectiveVolume
+        syncFixedEQAuditionState()
         installAudioSessionObservers()
     }
 
@@ -75,12 +87,20 @@ final class PlaybackController: ObservableObject {
         Self.timeText(duration)
     }
 
-    /// A/B切替直前に読むbackendの現在位置。0.35秒周期のUI表示値を比較位置へ流用しない。
-    var currentPlaybackTime: TimeInterval {
-        audioPlayer?.currentTime ?? elapsedTime
+    var supportsFixedEQAudition: Bool {
+        fixedEQAuditionState.availability != .unsupported
     }
 
-    /// AVAudioPlayerへ渡す実効音量。Phase Bは基準音量を上書きせず、この積だけを変更する。
+    var fixedEQAuditionMessage: String? {
+        fixedEQAuditionErrorMessage ?? fixedEQAuditionState.failureMessage
+    }
+
+    /// A/B切替直前に読むbackendの現在位置。0.35秒周期のUI表示値を比較位置へ流用しない。
+    var currentPlaybackTime: TimeInterval {
+        hasAlignedBackendSchedule ? backend.position : elapsedTime
+    }
+
+    /// 再生backendへ渡す実効音量。Phase Bは基準音量を上書きせず、この積だけを変更する。
     var effectiveVolume: Float {
         let baseVolume = volume.isFinite ? volume : 0
         let matchMultiplier = loudnessMatchMultiplier.isFinite ? loudnessMatchMultiplier : 1
@@ -103,6 +123,23 @@ final class PlaybackController: ObservableObject {
         loudnessMatchMultiplier = 1
         isLoudnessMatchActive = false
         applyEffectiveVolume()
+    }
+
+    /// 同じ再生グラフのOriginal / Fixed EQだけを切り替える。
+    /// 狐火の帳のA/Bセッションやラウドネスマッチには触れない。
+    func selectFixedEQAuditionMode(_ mode: FixedEQAuditionMode) {
+        guard let auditionBackend = backend as? any FixedEQAuditionControlling else {
+            syncFixedEQAuditionState()
+            return
+        }
+
+        do {
+            try auditionBackend.requestFixedEQAuditionMode(mode)
+            fixedEQAuditionErrorMessage = nil
+        } catch {
+            fixedEQAuditionErrorMessage = "Fixed EQ preview could not switch: \(error.localizedDescription)"
+        }
+        syncFixedEQAuditionState()
     }
 
     /// 参照Bの差し替え時、旧Bまたは新Bが鳴っていれば先に止めてから無効になったmatchを解除する。
@@ -167,7 +204,7 @@ final class PlaybackController: ObservableObject {
             let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue ?? 0)
             guard options.contains(.shouldResume) else { return }
             do {
-                try AVAudioSession.sharedInstance().setActive(true)
+                try activateAudioSession()
                 play()
             } catch {
                 playbackErrorMessage = "Playback could not resume after the interruption: \(error.localizedDescription)"
@@ -178,14 +215,17 @@ final class PlaybackController: ObservableObject {
         }
     }
 
-    /// イヤホン・Bluetoothが外れたら一時停止する。スピーカーで自動継続しない — 音を意図せず外に出さないための約束。
-    /// 割り込み中に出力先を失った場合は、割り込みが終わってもスピーカーへ自動再開しない。
+    /// Fixed EQは出力先・Bluetooth profileを含む全route changeで、最大256 framesの
+    /// click-safe遷移を使ってOriginalへ戻す。イヤホン等を失った場合はさらに一時停止し、
+    /// スピーカーへ自動継続しない。
     private func handleRouteChange(reasonValue: UInt?) {
         guard let reasonValue,
-              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue),
-              reason == .oldDeviceUnavailable else { return }
-        wasPlayingBeforeInterruption = false
-        pause()
+              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else { return }
+        if reason == .oldDeviceUnavailable {
+            wasPlayingBeforeInterruption = false
+            pause()
+        }
+        resetFixedEQAuditionForSafety()
     }
 
     func installRemoteCommands(library: AudioLibraryStore) {
@@ -242,9 +282,10 @@ final class PlaybackController: ObservableObject {
         autoplay: Bool = false,
         context: PlaybackContext? = nil
     ) {
-        // 比較中の旧playerを先に無音化してから基準音量へ戻す。
+        // 比較中の旧backendを先に無音化してから基準音量へ戻す。
         // file初期化中だけ旧音源が大きくなる過渡を作らず、A/B側はload後に対象側の値を明示適用する。
-        audioPlayer?.pause()
+        backend.pause()
+        resetFixedEQAuditionForSafety()
         clearLoudnessMatch()
         resetParadeSignal(reason: .trackLoadStarted, isPlaying: false)
         remoteLibrary = library
@@ -257,23 +298,30 @@ final class PlaybackController: ObservableObject {
             }
         }
 
+        var backendReturnedFromLoad = false
         do {
             try configureAudioSession()
             let fileURL = library.fileURL(for: track)
-            let player = try AVAudioPlayer(contentsOf: fileURL)
-            player.volume = effectiveVolume
-            player.isMeteringEnabled = true
-            player.prepareToPlay()
-
-            audioPlayer = player
+            let priorSchedule = backend.currentSchedule
+            try backend.load(url: fileURL, trackID: track.id)
+            backendReturnedFromLoad = true
+            guard let newSchedule = backend.currentSchedule,
+                  newSchedule.trackID == track.id,
+                  newSchedule != priorSchedule else {
+                throw AudioPlaybackBackendError.scheduleIdentityMismatch
+            }
+            committedSchedule = newSchedule
+            backend.outputVolume = effectiveVolume
             currentTrack = track
-            duration = player.duration
-            elapsedTime = 0
+            duration = backend.duration
+            elapsedTime = backend.position
             hasRecordedPlaybackEvent = false
             playbackErrorMessage = nil
             wasPlayingBeforeInterruption = false
             interruptionDepth = 0
             library.select(track)
+            fixedEQAuditionErrorMessage = nil
+            syncFixedEQAuditionState()
             updateNowPlaying()
 
             if autoplay {
@@ -282,8 +330,18 @@ final class PlaybackController: ObservableObject {
                 transitionToPausedStateAfterLoad()
             }
         } catch {
-            pause()
+            backend.pause()
+            isPlaying = false
+            stopTimer()
+            stopMetering()
+            if !backendReturnedFromLoad, hasAlignedBackendSchedule {
+                syncProgress()
+                updateNowPlaying()
+            } else {
+                invalidatePlaybackStateForScheduleMismatch(reason: .loadFailure)
+            }
             playbackErrorMessage = "\(track.title) could not be played: \(error.localizedDescription)"
+            syncFixedEQAuditionState()
             resetParadeSignal(reason: .loadFailure, isPlaying: false)
         }
     }
@@ -306,43 +364,71 @@ final class PlaybackController: ObservableObject {
     }
 
     func play() {
-        guard let audioPlayer else {
+        guard hasAlignedBackendSchedule else {
+            invalidatePlaybackStateForScheduleMismatch(reason: .playFailure)
             playbackErrorMessage = "No track is loaded yet."
-            resetParadeSignal(reason: .playFailure, isPlaying: false)
             return
         }
-        guard audioPlayer.play() else {
-            playbackErrorMessage = "Playback could not start."
+
+        do {
+            try backend.play()
+        } catch {
+            playbackErrorMessage = error.localizedDescription
             isPlaying = false
             stopTimer()
             stopMetering()
             resetParadeSignal(reason: .playFailure, isPlaying: false)
+            syncFixedEQAuditionState()
             updateNowPlaying()
             return
         }
         playbackErrorMessage = nil
+        fixedEQAuditionErrorMessage = nil
         isPlaying = true
         startTimer()
         startMetering()
+        syncFixedEQAuditionState()
         updateNowPlaying()
     }
 
     func pause() {
-        audioPlayer?.pause()
+        backend.pause()
         isPlaying = false
         stopTimer()
         stopMetering()
         resetParadeSignal(reason: .pause, isPlaying: false)
         syncProgress()
+        syncFixedEQAuditionState()
         updateNowPlaying()
     }
 
     func seek(to time: TimeInterval) {
-        guard let audioPlayer else { return }
+        guard hasAlignedBackendSchedule else {
+            invalidatePlaybackStateForScheduleMismatch(reason: .seek)
+            return
+        }
         resetParadeSignal(reason: .seek, isPlaying: isPlaying)
-        audioPlayer.currentTime = min(max(time, 0), audioPlayer.duration)
-        syncProgress()
-        updateNowPlaying()
+        var backendReturnedFromSeek = false
+        do {
+            let priorSchedule = committedSchedule
+            try backend.seek(to: min(max(time, 0), backend.duration))
+            backendReturnedFromSeek = true
+            guard let newSchedule = backend.currentSchedule,
+                  newSchedule.trackID == currentTrack?.id,
+                  newSchedule != priorSchedule else {
+                throw AudioPlaybackBackendError.scheduleIdentityMismatch
+            }
+            committedSchedule = newSchedule
+            syncProgress()
+            syncFixedEQAuditionState()
+            updateNowPlaying()
+        } catch {
+            if backendReturnedFromSeek || !hasAlignedBackendSchedule {
+                invalidatePlaybackStateForScheduleMismatch(reason: .seek)
+            }
+            playbackErrorMessage = "Playback could not seek: \(error.localizedDescription)"
+            syncFixedEQAuditionState()
+        }
     }
 
     func playNext() {
@@ -363,18 +449,20 @@ final class PlaybackController: ObservableObject {
     func stopForDeletedTrack(_ track: AudioTrack) {
         guard currentTrack?.id == track.id else { return }
         clearLoudnessMatch()
-        audioPlayer?.stop()
-        audioPlayer = nil
+        backend.stop()
+        committedSchedule = nil
         currentTrack = nil
         isPlaying = false
         elapsedTime = 0
         duration = 0
         playbackErrorMessage = nil
+        fixedEQAuditionErrorMessage = nil
         wasPlayingBeforeInterruption = false
         interruptionDepth = 0
         stopTimer()
         stopMetering()
         resetParadeSignal(reason: .stop, isPlaying: false)
+        syncFixedEQAuditionState()
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 
@@ -385,13 +473,70 @@ final class PlaybackController: ObservableObject {
     }
 
     private func configureAudioSession() throws {
+        try activateAudioSession()
+    }
+
+    static func activateSystemAudioSession() throws {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playback, mode: .default)
         try session.setActive(true)
     }
 
     private func applyEffectiveVolume() {
-        audioPlayer?.volume = effectiveVolume
+        backend.outputVolume = effectiveVolume
+    }
+
+    private func syncFixedEQAuditionState() {
+        let nextState = (backend as? any FixedEQAuditionControlling)?.fixedEQAuditionState
+            ?? .unsupported
+        if fixedEQAuditionState != nextState {
+            fixedEQAuditionState = nextState
+        }
+    }
+
+    /// 出力先喪失やトラック差し替えではOriginalを最新要求にする。再生中は最大256 framesで
+    /// 遷移し、停止中は次の明示再生より前に要求を投入する。投入失敗時はFixed EQを鳴らし続けない。
+    private func resetFixedEQAuditionForSafety() {
+        guard let auditionBackend = backend as? any FixedEQAuditionControlling else {
+            syncFixedEQAuditionState()
+            return
+        }
+        do {
+            try auditionBackend.resetFixedEQAudition()
+            fixedEQAuditionErrorMessage = nil
+        } catch {
+            pause()
+            fixedEQAuditionErrorMessage = "Fixed EQ preview could not return to Original: \(error.localizedDescription)"
+        }
+        syncFixedEQAuditionState()
+    }
+
+    private var hasAlignedBackendSchedule: Bool {
+        guard let currentTrackID = currentTrack?.id else { return false }
+        guard let committedSchedule else { return false }
+        return committedSchedule.trackID == currentTrackID
+            && backend.currentSchedule == committedSchedule
+    }
+
+    /// A backend is required to load transactionally, but this fail-closed guard keeps
+    /// stale metadata from controlling a missing or different render schedule.
+    private func invalidatePlaybackStateForScheduleMismatch(reason: ParadeSignalResetReason) {
+        backend.stop()
+        committedSchedule = nil
+        currentTrack = nil
+        isPlaying = false
+        elapsedTime = 0
+        duration = 0
+        hasRecordedPlaybackEvent = false
+        wasPlayingBeforeInterruption = false
+        interruptionDepth = 0
+        stopTimer()
+        stopMetering()
+        clearLoudnessMatch()
+        resetParadeSignal(reason: reason, isPlaying: false)
+        fixedEQAuditionErrorMessage = nil
+        syncFixedEQAuditionState()
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 
     private func startTimer() {
@@ -429,24 +574,14 @@ final class PlaybackController: ObservableObject {
     }
 
     private func updateMeter() {
+        syncFixedEQAuditionState()
         guard isPlaying else { return }
         let sampledAt = ProcessInfo.processInfo.systemUptime
-        guard let audioPlayer, audioPlayer.numberOfChannels > 0 else {
+        guard let meterLevel = backend.normalizedMeterLevel(), meterLevel.isFinite else {
             paradeSignals.ingest(level: nil, isPlaying: isPlaying, sampledAt: sampledAt)
             return
         }
-        audioPlayer.updateMeters()
-        // 片チャンネルが無音のステレオ音源でも反応するよう、全チャンネルの最大値を取る
-        var decibels = -160.0
-        for channel in 0..<audioPlayer.numberOfChannels {
-            let channelPower = Double(audioPlayer.averagePower(forChannel: channel))
-            guard channelPower.isFinite else {
-                paradeSignals.ingest(level: nil, isPlaying: isPlaying, sampledAt: sampledAt)
-                return
-            }
-            decibels = max(decibels, channelPower)
-        }
-        let normalized = min(max((decibels + 48) / 48, 0), 1)
+        let normalized = min(max(meterLevel, 0), 1)
         // 立ち上がりは速く、引きはゆっくり — 提灯の火のように
         if normalized > smoothedAudioLevel {
             smoothedAudioLevel = smoothedAudioLevel * 0.35 + normalized * 0.65
@@ -463,8 +598,9 @@ final class PlaybackController: ObservableObject {
 
     private func tick() {
         syncProgress()
+        syncFixedEQAuditionState()
         recordPlaybackEventIfNeeded()
-        if let audioPlayer, !audioPlayer.isPlaying, isPlaying {
+        if !backend.isPlaying, isPlaying {
             if elapsedTime >= max(duration - 0.25, 0) {
                 recordPlaybackEventIfNeeded(didFinish: true)
                 playNext()
@@ -484,16 +620,18 @@ final class PlaybackController: ObservableObject {
     }
 
     private func syncProgress() {
-        elapsedTime = audioPlayer?.currentTime ?? 0
-        duration = audioPlayer?.duration ?? duration
+        guard hasAlignedBackendSchedule else { return }
+        elapsedTime = backend.position
+        duration = backend.duration
     }
 
     private func transitionToPausedStateAfterLoad() {
-        audioPlayer?.pause()
+        backend.pause()
         isPlaying = false
         stopTimer()
         stopMetering()
         syncProgress()
+        syncFixedEQAuditionState()
         updateNowPlaying()
     }
 

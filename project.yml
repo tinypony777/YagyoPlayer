@@ -20,6 +20,7 @@ targets:
       - path: YagyoPlayer/Resources
     dependencies:
       - sdk: AVFoundation.framework
+      - sdk: AudioToolbox.framework
       - sdk: MediaPlayer.framework
       - sdk: MusicKit.framework
       - sdk: AppIntents.framework

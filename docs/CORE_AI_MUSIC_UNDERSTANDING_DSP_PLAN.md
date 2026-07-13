@@ -1,8 +1,8 @@
-# Core AI / Music Understanding / DSP 仮計画
+# Core AI / Music Understanding / DSP 実装計画
 
-> Status: **Provisional architecture — runtime implementation is not authorized.**
+> Status: **Active — Phase 0 capability verified; Phase 1 has an iOS 27 Debug audition vertical slice under device verification.**
 >
-> 対象は iOS 27 正式版 SDK での再検証後に着手可否を判断する将来構想である。現時点の YagyoPlayer の再生経路は Music Understanding、Core AI、DSP のいずれにも依存しない。
+> 2026-07-14、ユーザーの明示承認により iOS 27 beta SDK で Step 3 を再開した。正式版 SDK での再検証はリリースゲートとして残す。Release／iOS 26 の既定再生経路は Music Understanding、Core AI、Listening Profile DSP のいずれにも依存しない。iOS 27 Debug だけが、明示試聴用の固定EQ preview backendを使う。
 
 ## 1. 目的とプロダクト境界
 
@@ -14,7 +14,7 @@ YagyoPlayer は音楽プレイヤーであり、自動マスタリング製品�
 - 再生時に動くのは、版を固定した決定論的 DSP だけである。
 - 未対応、解析失敗、モデル失敗、検証失敗、ルート変更時の既定値は常に Original とする。
 
-この文書は実装可能性と安全境界を定義するものであり、ランタイム実装、モデル学習、配布物への `.aimodel` 追加、再生グラフ変更を承認しない。
+この文書は実装可能性と安全境界を定義する。各 phase は独立して検証し、`.aimodel` 追加と再生グラフ変更は対応 phase の gate を通るまで行わない。
 
 ## 2. Evidence labels
 
@@ -28,12 +28,23 @@ YagyoPlayer は音楽プレイヤーであり、自動マスタリング製品�
    - instrument activity の分類は bass、drum、vocal、other である。structure は時間境界であり、verse／chorus の意味ラベルではない。
    - これらの境界は、任意のローカルファイル形式、結果の永続化可否、端末条件まで保証しない。
 3. Core AI は、開発者が用意する `.aimodel` を使った汎用オンデバイス推論フレームワークであり、名前付きの NDArray／pixel-buffer 値をモデル入出力として扱う。DSP レシピ提案器は内蔵されていないため、YagyoPlayer 用モデル、schema、学習・評価、版管理は開発側で用意する。
-4. 現在の YagyoPlayer に Music Understanding、Core AI、Listening Profile DSP の実行時依存はない。
+4. Phase 0 の作業ブランチには availability-gated `MusicUnderstandingAdapter` があるが、UI、キャッシュ、再生開始、render callback からは未接続である。Core AI と Listening Profile DSP の実行時依存はない。
 
 Apple reference:
 
 - [Music Understanding](https://developer.apple.com/documentation/musicunderstanding)
 - [Core AI](https://developer.apple.com/documentation/coreai)
+
+### Verified capability evidence（2026-07-14、Xcode 27 beta）
+
+- Xcode 27.0 build `27A5194q` / iOS 27.0 SDK の Swift interface で、`MusicUnderstandingSession` の `AVAsset` 入力、六つの集約結果、cancellation、loudness stream を確認した。
+- iOS 26 deployment target のアプリへ adapter を追加し、生成バイナリが `MusicUnderstanding.framework` を weak link することを `otool -L` で確認した。iOS 26.5 Simulator では framework をロードせず `.requiresIOS27` を返して test host が正常起動した。
+- iOS 27 Simulator で、24秒・44.1 kHz・stereo のローカル CAF を `AVURLAsset` から解析し、全結果を Apple 型から版付き Codable 型へ変換した。解析テストは約2.4秒で完了した。
+- 合成素材の integrated loudness は Music Understanding `-22.8568916 LUFS`、現行 `KitsunebiAnalyzer` `-22.8568924 LUFS`（差 約 `0.0000008 LU`）。120 BPM、49 beats、13 bars、2 sections、3 segments、6 phrases と楽器 activity も返った。
+- Apple `peak` は同素材の sample peak と一致した。API も true peak と明記しないため、True Peak、clip run、stereo correlation は引き続き `KitsunebiAnalyzer` を正本とする。
+- momentary loudness用の純粋reducerは `<= -70 LUFS` で無音へ入り、`> -65 LUFS` で抜ける。デジタル無音の `-∞` と未取得を別のapp-owned値として保持し、JSONへ非有限値を保存しない。
+- capability lane は六次元の結果、task cancellation、存在しないassetのerror境界を含め `7 / 7`、通常suiteは `151 / 151`、skip 0。framework由来errorはapp-owned failureへ変換し、cancel時は `CancellationError` を優先する。
+- Simulator では Core ML / MPSGraph の互換性 warning が記録されたが解析は成功した。性能、警告の有無、対応端末、保護コンテンツ、実曲精度は iOS 27 実機で未確認であり、Phase 0 の残件とする。
 
 ### Design inferences（確認済み事実から導く設計判断）
 
@@ -191,7 +202,9 @@ recipe ID の意味を版の途中で変更しない。削除・調整時は cat
 再生スレッドが受け取るのは、検証済み recipe から control thread 上で作った immutable parameter snapshot だけである。
 
 - render callback 内で Music Understanding、Core AI、キャッシュ、永続化、ログ、ロック、割り当てを呼ばない。
-- snapshot は buffer boundary で原子的に交換する。
+- snapshot は固定容量SPSC mailboxを介し、buffer boundaryの先頭で完成済みの最新1件だけを交換する。mailboxが満杯ならcontrol側の新規投入を拒否し、render側が読んでいるslotを上書きしない。producer／consumer endpointはone-shot builderから各1つだけ取得でき、noncopyableかつmutating APIとして同一endpointの安全でない共有を型で防ぐ。
+- 試聴切替は事前設定した固定frame数のallocation-free dry／wet rampとする。同じprocessed payloadへの反転ではIIR stateを維持し、異なるprocessed payloadは旧処理をdryまで落として次のbuffer boundaryでだけ係数を交換する。
+- `appliedGeneration` は係数を読み取った世代ではなく、要求したtargetがsteadyかつ次sampleから完全に可聴となった世代を示す。Originalへのfade-outはdry到達後の次buffer boundaryでOriginalを適用してackする。
 - bypass／Original は恒久的な first-class path とし、DSP 障害時にも再生を継続する。
 - 出力が非有限になった場合は診断をレート制限し、そのバッファを安全化したうえで Original へ latch する。
 - interruption、seek、background、route change は解析や推論より再生状態機械を優先する。
@@ -257,6 +270,19 @@ YagyoPlayer は **NaN/Infinity を clamp より前に拒否**し、AI 応答、F
 
 これらは YagyoPlayer の「少数の聴き方を明示選択する音楽プレイヤー」という境界を越え、複雑性、故障面、検証コストを増やすため採用しない。
 
+### 6.3 提供された Swift DSP Reference の監査差分
+
+2026-07-14 に提供された `DSP_Reference` は、完成品として直接移植せず設計資料として監査した。`ParamEQKernel.process` は `min(frameCount, maxFrames)` までしか処理せず超過tailを残すこと、snapshotの二面swapはconsumerが旧面をコピー中に次のwriterが上書きできること、previewのoutput gainがユーザー音量と同じmixer経路で正値も許すことを確認した。
+
+YagyoPlayer は次だけを縮小して独自実装する。
+
+- RBJ peaking EQの係数設計をcontrol側で行い、Float化後にもfinite／安定性を再検証する。
+- 3〜5 bandの完成済み係数、input headroom、非正output trimを一つのimmutable snapshotにする。
+- render側は要求frameを全量処理するか明示失敗し、部分処理しない。
+- pure kernelの`invalidBuffers`は未処理outputを変更しない。AVAudioUnit adapter接続時はこの結果を受けて要求frame全体をzero-clearする契約と回帰テストを必須にする。
+- Original、DSP safety trim、ユーザー音量、将来のラウドネスマッチ乗数を別の責務として保持する。
+- snapshot handoffは二面swapをコピーせず、所有権が明確なcapacity 4のbounded SPSC mailboxとして実装する。noncopyableなproducer／consumerは各1つに限定し、release／acquireでslot公開を同期する。consumerは公開済みbatchの最新snapshotだけを定数時間で取り出す。
+
 ## 7. Availability, privacy, and fallback
 
 ### Availability
@@ -293,26 +319,38 @@ YagyoPlayer は **NaN/Infinity を clamp より前に拒否**し、AI 応答、F
 
 各 phase は独立したレビューと合格証拠を必要とする。前 phase の合格は次 phase の自動承認ではない。
 
-### Phase 0 — Release-SDK capability spike
+### Phase 0 — SDK capability spike（進行中）
 
-- 正式版 Xcode／iOS SDK で `MusicUnderstandingSession` と Core AI を最小アプリにコンパイルする。
+- iOS 27 beta SDK で `MusicUnderstandingSession` の境界を先行実証し、正式版 Xcode／iOS SDK で差分を再検証する。
 - ローカル音源の入力、結果型、cancellation、availability、対応端末、保護コンテンツ、オンデバイス条件を実機で記録する。
 - 最小の開発者提供 `.aimodel` を読み込み、既知入力に対する型付き出力、レイテンシ、メモリ、電力を測る。
-- 仮定が成立しなければ、本計画を更新して停止する。YagyoPlayer の runtime code へは統合しない。
+- Phase 0 では adapter の弱リンクと app-owned 型への正規化までを許可し、UI、キャッシュ、再生グラフへは接続しない。仮定が成立しなければ本計画を更新し、通常再生を維持する。
 
 **Gate:** API boundary と端末条件をテストで再現でき、Apple beta 前提との差分が文書化されていること。
 
-### Phase 1 — Deterministic DSP catalog and preview without AI
+### Phase 1 — Deterministic DSP catalog and preview without AI（iOS 27実機試聴へ進行中）
 
 - 固定 EQ chain、Original/bypass、`DSPRecipeCatalog`、snapshot、プレビュー UI を fixture recipe だけで作る。
 - 正のゲインを使わないラウドネスマッチと明示選択フローを検証する。
 - AI がなくても安全性、音切れ、比較可能性、アクセシビリティを評価できるようにする。
 
+2026-07-14 時点で、3〜5 band peaking EQ、±3 dB、Q `0.5...2.0`、`20 Hz...min(20 kHz, Nyquist × 0.95)`、非正input headroom／output trimを検証してimmutable snapshotへ変換するpure coreを追加した。input headroomは各bandの正boost合計以上の減衰を必須とし、output trimで内部余裕を代用しない。render kernelはmono/stereo、44.1/48/96 kHz、可変chunk、有限入力に対するOriginalのbit transparency、非有限入力のzero化、impulse、中心周波数応答、DC、決定論的noise、denormal、channel独立、全buffer alias、buffer境界適用、invalid state時Original latch、無効frameの非部分処理、同一周波数5-band最大boostをfocused test `16 / 16` で確認した。さらにcapacity 4のSPSC mailboxとrender-owned processorを追加し、one-shot endpoint所有権、満杯時no-overwrite、stale snapshotの定数時間破棄、buffer先頭での最新世代適用、20,000世代のring wrapとpayload整合性をfocused test `3 / 3` とThread Sanitizerで確認した。合同focused testは `19 / 19`。PlaybackControllerにはfailure-atomic load/seek契約とexact schedule identity照合を持つ再生backend境界を追加し、既存controller 22件＋seam 8件を `30 / 30` で確認した。
+
+同日、pure coreを最小のin-process `AUAudioUnit`へ載せるrender境界を追加した。render state、入力scratch、`mData == nil`時のAU所有output fallbackはresource allocation時に確保し、snapshotはbuffer先頭だけで適用する。pull／DSP失敗は要求bufferをzero化して`OutputIsSilence + noErr`で閉じ、frame超過・不正bus・不正ABLなどhost contract違反だけを非zero statusにする。Original bit transparency、先頭sampleからの世代適用、nil output、pullによるinput pointer差し替えと次回復元、非有限値latch、pull失敗、未allocate、frame超過、undersized／alias buffer、reset・再allocate、render/control並行2,000世代のcoherent telemetryをdirect test `15 / 15`、44.1/48/96 kHz × mono/stereo × `64 + 64 + 3` frameの`AVAudioEngine` offline graphを `1 / 1`、app full suiteを `194 / 194`、skip 0で確認した。これはoffline／Simulator証跡であり、実機Release buildでのrender-thread allocation、lock、underrun、route／interruption、CPU／thermalは未検証である。既定は従来のAVAudioPlayer adapterのままで、productionのAVAudioEngine playback backend、Fixed EQ選択UI、Core AIは未接続なので現在の再生音は変わらない。
+
+さらに実機試聴へ進む前段として、0〜8192 frameで設定できるsample-accurate dry／wet transitionをrender processorとAU telemetryへ追加した。低レベルAUの既定値は0 frameの即時適用を維持し、preview backendだけがinstantiate直後・render resource確保前に256 frameを必須設定する。設定失敗時はgraphを開始せずOriginalへfail closedとし、0 frameへの暗黙fallbackは行わない。同一recipeの途中反転とIIR history維持、Original往復、異なるrecipeのdry経由交換、dry境界での最新request優先、render chunk不変性、alias／non-finite latch後の明示snapshot recovery、target完了世代ackをfocused test `29 / 29`、app full suite `204 / 204`、skip 0で確認した。
+
+同日、iOS 27 Debug限定の `AVAudioEngineFixedEQPlaybackBackend` と「一本の耳」試聴sheetを追加した。graphは `AVAudioPlayerNode -> FixedEQAudioUnit -> main mixer -> output` で固定し、同一トラック／同一render scheduleのままOriginalと固定3-band fixtureを切り替える。切替は音量差補正を行わず、狐火の帳の二曲A/Bと減衰専用ラウドネス乗数から独立している。新規track、出力route変更、Bluetooth profile変更ではOriginalを最新要求とし、再生中は最大256 framesで遷移する。Original要求をmailboxへ投入できない場合はFixed EQを鳴らし続けず一時停止する。ReleaseおよびiOS 26は従来backendのままである。実graph、controller seam、route失敗を含むfocused testは `19 / 19`、app full suiteは `215 / 215`、いずれもskip 0で通過した。Simulatorでは同期的な `AVAudioSession` activate/deactivateにUI hang-risk warningが出るため、実機での操作応答、underrun、CPU／thermal、route／interruptionは未確認のrelease gateとして残す。
+
+**UNMET REQUIREMENT / WHY NOT / ALTERNATIVE / IMPACT / FOLLOW-UP:** seek直後の最初のsampleでIIR stateまで厳密にresetする要件は未達である。実行中のAUへcontrol側から同期 `reset()` を呼ぶとrender callbackと競合し、通常snapshotだけでは「新scheduleの最初のbuffer」へresetを結び付けられない。現段階ではexact schedule identityと再生位置を壊さず、render所有のIIR historyを連続させる。seek後の短い区間ではseek前のfilter historyが残り得るが、位置の巻き戻り、二重再生、control/render data raceは作らない。将来の再生engine移行でsource token付き非同期render barrierを設けてから実装する。
+
+Music Understandingによる曲別候補、feature cache、Core AI ranker、Listening Profile永続化、候補間ラウドネスマッチは未実装である。この縦切りは固定fixtureを耳で評価するためのもので、Phase 1全体またはStep 3完了を意味しない。
+
 **Gate:** DSP と UX の価値が AI 抜きで成立し、bypass、切替、リアルタイム制約に合格すること。
 
 ### Phase 2 — Music Understanding adapter and cache
 
-- adapter、bounded extractor、`FeatureSnapshot`、app-owned cache を追加する。
+- Phase 0 adapter を production contract へ昇格し、bounded extractor、`FeatureSnapshot`、app-owned cache を追加する。
 - キャッシュ invalidation、キャンセル、非対応音源、破損値、offline を試験する。
 - 特徴抽出が再生開始や render callback をブロックしないことを測る。
 
@@ -411,4 +449,4 @@ YagyoPlayer は **NaN/Infinity を clamp より前に拒否**し、AI 応答、F
 - [WWDC26 Music notes](WWDC26-Music-notes.md)
 - [Archived Step 3 DSP draft](../Draft/Step3-One-Ear/README.md)
 
-この仮計画を runtime implementation の仕様へ昇格させるには、Phase 0 の正式版 SDK 証拠、Phase 1 の DSP/UX 証拠、更新された正本仕様、別途の明示承認が必要である。
+Listening Profile を production runtime へ接続するには、Phase 0 の実機／正式版 SDK 証拠、Phase 1 の DSP/UX 証拠、更新された正本仕様が必要である。
