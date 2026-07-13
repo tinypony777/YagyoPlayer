@@ -73,7 +73,7 @@ North Star は次の 3 条件。確認の物差しは市場指標ではなく、
 - 音源は外へ送らず、元ファイルも書き換えない。利用条件が local-first の約束を満たさない端末では、この機能自体を使わない。
 - Core AI が任意のエフェクトや並び順を作ることはない。選べるのは、人が測定・試聴して版を管理したレシピだけである。
 - これは将来の**再生音の Listening Profile**構想であり、Step 4 の `averagePower` 由来の視覚信号とは別の仕事として扱う。一つの巨大な解析経路へ結びつけることを前提にしない。
-- **現在地(正直に)**: iOS 27 の `MusicUnderstandingSession` を availability gate の内側でローカル `AVAsset` 解析へ接続し、六つの結果を app-owned Codable 型へ正規化する Phase 0 adapterを実装した。Phase 1では、AI非依存の3〜5 band固定EQ pure core、Original latch、固定容量SPSC snapshot境界、in-process `AUAudioUnit`、allocation-free dry／wet ramp、target完了世代ackを実装した。さらにiOS 27 Debug限定で `AVAudioPlayerNode -> FixedEQAudioUnit` のpreview backendと「一本の耳」sheetを接続し、固定3-band fixtureをOriginalと最大256 framesで切り替えられる。Release／iOS 26は従来backendのままで、選択は保存せず、狐火の帳の二曲A/B・音量乗数とも独立している。route変更ではOriginalへ戻し、要求投入失敗時はFixed EQを鳴らし続けず停止する。実graphとcontrollerのfocused testは19 / 19、app full suiteは215 / 215、いずれもskip 0。実機realtime性能と音質、Music Understandingによる曲別候補、キャッシュ、Core AI、Listening Profile保存、候補間ラウドネスマッチは未検証・未実装である。seek時の厳密なIIR resetもrender barrier導入まで保留し、現状は位置とscheduleを壊さずfilter historyを連続させる。
+- **現在地(正直に)**: iOS 27 の `MusicUnderstandingSession` を availability gate の内側でローカル `AVAsset` 解析へ接続し、六つの結果を app-owned Codable 型へ正規化する Phase 0 adapterを実装した。Phase 1では、AI非依存の3〜5 band固定EQ pure core、Original latch、固定容量SPSC snapshot境界、in-process `AUAudioUnit`、allocation-free dry／wet ramp、target完了世代ackを実装した。さらにiOS 27 Debug限定で `AVAudioPlayerNode -> FixedEQAudioUnit` のpreview backendと「一本の耳」sheetを接続し、固定3-band fixtureをOriginalと最大256 framesで切り替えられる。Release／iOS 26は従来backendのままで、選択は保存せず、狐火の帳の二曲A/B・音量乗数とも独立している。route変更ではOriginalへ戻し、要求投入失敗時はFixed EQを鳴らし続けず停止する。Phase 2では、Music Understanding要約と現行Kitsunebi安全計測を厳格なSHA／版／有限値契約を持つ固定上限`FeatureSnapshot`へ一本化し、purge可能なoffline cache actor、旧版／破損entryの無効化、解析とfile-read chunk間のcancellationを実装した。snapshot/cache focused testは8 / 8、マージ後レビューの安全補修は2 / 2、app full suiteは225 / 225、いずれもskip 0、generic iOS Release buildも成功した。実機realtime性能と音質、実曲のoffline解析性能、Music Understandingによる曲別候補、cacheのruntime接続、Core AI、Listening Profile保存、候補間ラウドネスマッチは未検証・未実装である。seek時の厳密なIIR resetもrender barrier導入まで保留し、現状は位置とscheduleを壊さずfilter historyを連続させる。
 
 ### 4.3 住み着きの夜 — 聴いた時間が世界を深める
 
@@ -130,9 +130,9 @@ Release criteria:
 - 検索・並び替え(追加日、タイトル、長さ、巻物。**妖怪起点の並び替えは作らない** — §6 の線引き)。
 - メタデータ編集(title / artist / artwork / notes)。
 
-### Step 3 — 狐火の調律(§4.2、Phase 0 / 1 進行中)
+### Step 3 — 狐火の調律(§4.2、Phase 0 / 1 / 2 進行中)
 
-状態: **2026-07-14に保留解除。iOS 27 betaのMusic Understanding境界、AI非依存の固定EQ core／AU／snapshot handoffを実装し、iOS 27 Debugでは「一本の耳」から固定fixtureを実音声graphで試聴できる縦切りまで接続。Release経路、Core AI、曲別候補、永続化は未接続。**
+状態: **2026-07-14に保留解除。iOS 27 betaのMusic Understanding境界、AI非依存の固定EQ core／AU／snapshot handoff、版付きoffline FeatureSnapshot／cache境界を実装した。iOS 27 Debugでは「一本の耳」から固定fixtureを実音声graphで試聴できる。FeatureSnapshotはまだimport／UI／再生経路から呼ばず、Release経路、Core AI、曲別候補、Listening Profile永続化も未接続。**
 
 Phase 0 の残り条件:
 - iOS 27 実機でローカル実曲、cancellation、オンデバイス実行条件、対応端末、性能を確認する。
@@ -209,4 +209,4 @@ Release criteria:
 |---|---|
 | v2 | 機能とロードマップの宣言([archive/PRODUCT_DIRECTION_v2.md](archive/PRODUCT_DIRECTION_v2.md)) |
 | v3 競合分析ドラフト | 市場調査と「永続的優位の台帳」を軸にした差別化戦略として起草。作者の判断で見送り — この製品は市場から逆算しないため(PR #5 の履歴に全文が残っている) |
-| v3 作者の憲章(この文書) | 競合の文脈を外し、「作者が楽しめること」「好きな要素への忠実さ」「再生の信頼」を軸に再構成。当時確認した重複取込と取込結果未表示は、その後 Step 0 で解消済み。本文の現在地は、統計、Step 3 Phase 0 / 1、Step 4 完了を含む実装事実へ随時同期する |
+| v3 作者の憲章(この文書) | 競合の文脈を外し、「作者が楽しめること」「好きな要素への忠実さ」「再生の信頼」を軸に再構成。当時確認した重複取込と取込結果未表示は、その後 Step 0 で解消済み。本文の現在地は、統計、Step 3 Phase 0 / 1 / 2、Step 4 完了を含む実装事実へ随時同期する |

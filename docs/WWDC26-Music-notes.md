@@ -26,7 +26,7 @@ Apple's Music Understanding and Core AI documentation describe iOS 27 beta APIs.
 - The feature remains optional and local-first. Unsupported devices, unavailable models, invalid results, or failed validation return to unchanged `Original` playback.
 - Listening Profile processing and parade-reaction analysis are separate contracts. Music Understanding may inform either where the release API fits, but selected playback DSP is not treated as the parade's analysis engine.
 
-The app target now contains a weak-linked adapter and app-owned result model, but import, UI, cache, playback, and render callbacks do not invoke it yet. API names, packaging, supported formats, and performance assumptions must still be revalidated against Apple's iOS 27 release SDK.
+The app target now contains a weak-linked adapter, an app-owned result model, and a bounded offline `FeatureSnapshot`/cache service that reuses the existing Kitsunebi safety metrics. Import, UI, playback, and render callbacks do not invoke that service yet. API names, packaging, supported formats, device performance, and permission to persist derived Music Understanding summaries must still be revalidated against Apple's iOS 27 release SDK and terms.
 
 ## Apple References Checked
 
