@@ -70,7 +70,7 @@ Phase BはA/B札、参照選択、再生、候補gainを先に読める位置へ
 - 追加reviewで見つかった「巻物再生中のA/B loadが古いplaylist文脈を残す」経路は、帳の2つのload入口へ`.library`を明示して修正した。参照Bが巻物外でも次曲がライブラリ順へ進む回帰を含む最終focused runは **25 / 25 PASS**。xcresultは同SSDの`/Volumes/MacBook_Data_Add/CodexDerivedData/YagyoPlayer/dsp-phase-b-context-review-20260713/focused.xcresult`。
 - iPhone 17 Pro / iOS 26.5の最終全回帰は **140 / 140 PASS、failure 0、skip 0**。解析、再生、取込、行列、巻物、3タブと全実描画artifactを含む。xcresultは同SSDの`/Volumes/MacBook_Data_Add/CodexDerivedData/YagyoPlayer/dsp-phase-b-context-review-20260713/full.xcresult`。
 - ネイティブ再監査は **Blocker 0 / Major 0**。対象track境界、player/UI同期、切替位置、数値防御、一時停止／true stopの5契約と、render callbackへ処理を増やしていないことを確認した。独立focused runも **24 / 24 PASS**、`git diff --check` PASS。xcresultは同SSDの`/Volumes/MacBook_Data_Add/CodexDerivedData/YagyoPlayer/dsp-phase-b-reaudit/DerivedData/Logs/Test/Test-YagyoPlayer-2026.07.13_23-04-43-+0900.xcresult`。
-- iPhone 17 Pro Max / iOS 27.0実機は、同SSDの`dsp-phase-b-device-20260713/device-build.xcresult`で署名付きDebug build PASS、署名検証PASS、ワイヤレス上書きinstall PASS。端末ロック中だったためCodexからの自動launchだけ未確認で、インストール自体は完了している。
+- iPhone 17 Pro Max / iOS 27.0実機は、最終runtime commit `da077d5`を同SSDの`dsp-phase-b-device-context-final-20260713/device-build.xcresult`で署名付きDebug build PASS、署名検証PASS、ワイヤレス上書きinstall PASS、bundle ID `com.codex.yagyoplayer`のlaunch PASS。
 
 ## 完了記録
 
