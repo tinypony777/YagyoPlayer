@@ -162,6 +162,33 @@ final class PlaybackControllerTests: XCTestCase {
         XCTAssertEqual(player.currentPlaybackTime, 0.3, accuracy: 0.01)
     }
 
+    func testLibraryContextClearsStalePlaylistBeforeComparisonReferenceLoad() async throws {
+        let store = makeStore()
+        store.load()
+        let libraryNext = try await importPlayableTrack(
+            named: "library-next.wav",
+            sampleCount: 4002,
+            into: store
+        )
+        let reference = try await importPlayableTrack(
+            named: "reference.wav",
+            sampleCount: 4001,
+            into: store
+        )
+        let subject = try await importPlayableTrack(named: "subject.wav", into: store)
+        let playlist = try XCTUnwrap(store.createPlaylist(named: "比較前の巻物"))
+        store.addTrack(subject, to: playlist)
+        let player = PlaybackController()
+        player.load(subject, from: store, context: .playlist(playlist.id))
+        XCTAssertEqual(store.activePlaylistID, playlist.id)
+
+        player.load(reference, from: store, context: .library)
+
+        XCTAssertNil(store.activePlaylistID)
+        XCTAssertEqual(player.currentTrack?.id, reference.id)
+        XCTAssertEqual(store.nextTrack(after: reference)?.id, libraryNext.id)
+    }
+
     func testPauseKeepsMatchForResumeButTrueStopClearsIt() async throws {
         let store = makeStore()
         store.load()

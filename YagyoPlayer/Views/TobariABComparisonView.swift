@@ -408,7 +408,7 @@ private struct TobariABPairView: View {
 
         // loadは乗数を必ず解除する。再生前に選択側の乗数を再適用し、
         // 音量が一瞬だけ跳ねることを避ける。
-        player.load(target, from: library, autoplay: false)
+        player.load(target, from: library, autoplay: false, context: .library)
         guard player.currentTrack?.id == target.id else { return }
         if resumeTime > 0 {
             player.seek(to: resumeTime)
@@ -430,7 +430,7 @@ private struct TobariABPairView: View {
             return
         }
 
-        player.load(target, from: library, autoplay: false)
+        player.load(target, from: library, autoplay: false, context: .library)
         guard player.currentTrack?.id == target.id else { return }
         player.play()
     }

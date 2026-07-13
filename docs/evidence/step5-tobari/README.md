@@ -65,9 +65,10 @@ Phase BはA/B札、参照選択、再生、候補gainを先に読める位置へ
 
 - `tobari-phase-b.png`: SHA-256 `91341bdd4305374653a5f14db63e178458b2f35e47dc4b5c14ec3fe5e994cbd5`
 - `tobari-phase-b-accessibility-large.png`: SHA-256 `4acb31097229f58328af7f80d7943d6c03e2df3d55422beaa680290482868b64`
-- iPhone 17 Pro / iOS 26.5の最終focused run: `TobariLoudnessMatchTests` 5、`PlaybackControllerTests` 19、実描画1の計 **25 / 25 PASS**。比較対象外trackの遮断、同一ID再読込／読込失敗時の解除、backend実時刻、極端な有限値、一時停止とtrue stopの境界を含む。xcresultは外付けSSDの`/Volumes/MacBook_Data_Add/CodexDerivedData/YagyoPlayer/dsp-phase-b-review-fixes-20260713/focused.xcresult`。
+- iPhone 17 Pro / iOS 26.5のPhase B UI統合時focused run: `TobariLoudnessMatchTests` 5、`PlaybackControllerTests` 19、実描画1の計 **25 / 25 PASS**。比較対象外trackの遮断、同一ID再読込／読込失敗時の解除、backend実時刻、極端な有限値、一時停止とtrue stopの境界を含む。xcresultは外付けSSDの`/Volumes/MacBook_Data_Add/CodexDerivedData/YagyoPlayer/dsp-phase-b-review-fixes-20260713/focused.xcresult`。
 - reviewで見つかった「track load開始時に旧playerのmatchを先に解除すると、file初期化中だけ旧音源が基準音量へ跳ねる」経路は、旧playerを先にpauseしてから解除する順序へ修正した。再生中の別track切替／同一track再読込／読込失敗を含むfocused runは **24 / 24 PASS**。xcresultは同SSDの`/Volumes/MacBook_Data_Add/CodexDerivedData/YagyoPlayer/dsp-phase-b-review-comment-green-20260713/focused.xcresult`。
-- iPhone 17 Pro / iOS 26.5の全回帰は **139 / 139 PASS、failure 0、skip 0**。解析、再生、取込、行列、巻物、3タブと全実描画artifactを含む。最終xcresultは外付けSSDの`/Volumes/MacBook_Data_Add/CodexDerivedData/YagyoPlayer/dsp-phase-b-review-final-full-20260713/full.xcresult`。
+- 追加reviewで見つかった「巻物再生中のA/B loadが古いplaylist文脈を残す」経路は、帳の2つのload入口へ`.library`を明示して修正した。参照Bが巻物外でも次曲がライブラリ順へ進む回帰を含む最終focused runは **25 / 25 PASS**。xcresultは同SSDの`/Volumes/MacBook_Data_Add/CodexDerivedData/YagyoPlayer/dsp-phase-b-context-review-20260713/focused.xcresult`。
+- iPhone 17 Pro / iOS 26.5の最終全回帰は **140 / 140 PASS、failure 0、skip 0**。解析、再生、取込、行列、巻物、3タブと全実描画artifactを含む。xcresultは同SSDの`/Volumes/MacBook_Data_Add/CodexDerivedData/YagyoPlayer/dsp-phase-b-context-review-20260713/full.xcresult`。
 - ネイティブ再監査は **Blocker 0 / Major 0**。対象track境界、player/UI同期、切替位置、数値防御、一時停止／true stopの5契約と、render callbackへ処理を増やしていないことを確認した。独立focused runも **24 / 24 PASS**、`git diff --check` PASS。xcresultは同SSDの`/Volumes/MacBook_Data_Add/CodexDerivedData/YagyoPlayer/dsp-phase-b-reaudit/DerivedData/Logs/Test/Test-YagyoPlayer-2026.07.13_23-04-43-+0900.xcresult`。
 - iPhone 17 Pro Max / iOS 27.0実機は、同SSDの`dsp-phase-b-device-20260713/device-build.xcresult`で署名付きDebug build PASS、署名検証PASS、ワイヤレス上書きinstall PASS。端末ロック中だったためCodexからの自動launchだけ未確認で、インストール自体は完了している。
 
