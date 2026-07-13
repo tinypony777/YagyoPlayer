@@ -11,6 +11,10 @@ struct PlaylistSection: View {
     @State private var renameText = ""
     @State private var expandedPlaylistID: Playlist.ID?
 
+    init(initiallyExpandedPlaylistID: Playlist.ID? = nil) {
+        _expandedPlaylistID = State(initialValue: initiallyExpandedPlaylistID)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
@@ -37,7 +41,7 @@ struct PlaylistSection: View {
                 }
             }
         }
-        .ritualPanel(radius: 24, padding: 16, tint: YagyoColor.kitsunebi.opacity(0.08))
+        .modernRetroPanel(tone: .paper, radius: 12, padding: 16)
         .alert("新しい巻物", isPresented: $isCreatePresented) {
             TextField("Playlist name", text: $newPlaylistName)
             Button("Create") {
@@ -72,21 +76,25 @@ struct PlaylistSection: View {
                 Text("巻物")
                     .font(.system(.headline, design: .serif))
                     .tracking(4)
-                    .foregroundStyle(YagyoColor.geppaku)
+                    .foregroundStyle(YagyoPrintColor.ink)
                 Text("Playlists · Organize tracks your way")
                     .font(.caption)
-                    .foregroundStyle(YagyoColor.dim)
+                    .foregroundStyle(YagyoPrintColor.inkMuted)
             }
             Spacer()
             Button {
                 isCreatePresented = true
             } label: {
                 Image(systemName: "plus")
-                    .frame(width: 36, height: 36)
+                    .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(YagyoColor.chochin)
-            .background(YagyoColor.yoiyami2, in: Circle())
+            .foregroundStyle(YagyoPrintColor.ink)
+            .background(YagyoPrintColor.paperRaised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(YagyoPrintColor.ink, lineWidth: 1)
+            }
             .accessibilityLabel("Create playlist")
         }
     }
@@ -96,10 +104,10 @@ struct PlaylistSection: View {
             Text("巻物はまだ白紙")
                 .font(.system(.subheadline, design: .serif))
                 .tracking(2)
-                .foregroundStyle(YagyoColor.geppaku)
+                .foregroundStyle(YagyoPrintColor.ink)
             Text("Create a playlist, then add tracks from the library via long press.")
                 .font(.footnote)
-                .foregroundStyle(YagyoColor.dim)
+                .foregroundStyle(YagyoPrintColor.inkMuted)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
@@ -136,27 +144,35 @@ private struct PlaylistRow: View {
                 HStack(spacing: 12) {
                     Image(systemName: "scroll")
                         .font(.title3)
-                        .foregroundStyle(isActive ? YagyoColor.chochin : YagyoColor.dim)
-                        .frame(width: 36, height: 36)
-                        .background(YagyoColor.yoiyami2.opacity(0.7), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .foregroundStyle(isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.inkMuted)
+                        .frame(width: 44, height: 44)
+                        .background(YagyoPrintColor.paper, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.paperMuted, lineWidth: 1)
+                        }
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text(playlist.name)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(YagyoColor.geppaku)
+                            .foregroundStyle(isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.ink)
                             .lineLimit(1)
                         Text("\(playlist.trackCount) track\(playlist.trackCount == 1 ? "" : "s")")
                             .font(.caption)
-                            .foregroundStyle(isActive ? YagyoColor.chochin : YagyoColor.dim)
+                            .foregroundStyle(YagyoPrintColor.inkMuted)
                     }
 
                     Spacer()
 
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(YagyoColor.dim)
+                        .foregroundStyle(YagyoPrintColor.inkMuted)
+                        .frame(width: 44, height: 44)
                 }
-                .padding(10)
+                .padding(.leading, 10)
+                .padding(.trailing, 4)
+                .padding(.vertical, 6)
+                .frame(minHeight: 64)
             }
             .buttonStyle(.plain)
             .contextMenu {
@@ -182,10 +198,10 @@ private struct PlaylistRow: View {
                 expandedContent
             }
         }
-        .background(YagyoColor.sumi.opacity(isActive ? 0.54 : 0.28), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(isActive ? YagyoPrintColor.paperRaised : YagyoPrintColor.paper, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(isActive ? YagyoColor.chochin.opacity(0.45) : YagyoColor.line.opacity(0.65), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.paperMuted, lineWidth: 1)
         }
     }
 
@@ -197,7 +213,7 @@ private struct PlaylistRow: View {
             if playlistTracks.isEmpty {
                 Text("Long press a library track to add it here.")
                     .font(.caption)
-                    .foregroundStyle(YagyoColor.dim)
+                    .foregroundStyle(YagyoPrintColor.inkMuted)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
             } else {
@@ -211,6 +227,7 @@ private struct PlaylistRow: View {
                 }
             }
         }
+        .padding(.top, 2)
         .padding(.horizontal, 10)
         .padding(.bottom, 10)
     }
@@ -253,28 +270,34 @@ private struct PlaylistTrackRow: View {
             HStack(spacing: 10) {
                 Text("\(position + 1)")
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(YagyoColor.dim)
+                    .foregroundStyle(YagyoPrintColor.inkMuted)
                     .frame(width: 20, alignment: .trailing)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(track.title)
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(isCurrent ? YagyoColor.chochin : YagyoColor.geppaku)
+                        .foregroundStyle(isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.ink)
                         .lineLimit(1)
                     Text(track.durationText)
                         .font(.caption2)
-                        .foregroundStyle(YagyoColor.dim)
+                        .foregroundStyle(YagyoPrintColor.inkMuted)
                 }
 
                 Spacer()
 
                 Image(systemName: isCurrent && player.isPlaying ? "pause.circle.fill" : "play.circle")
                     .font(.subheadline)
-                    .foregroundStyle(isCurrent ? YagyoColor.chochin : YagyoColor.dim)
+                    .foregroundStyle(isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.inkMuted)
+                    .frame(width: 36, height: 36)
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 7)
-            .background(YagyoColor.yoiyami.opacity(isCurrent ? 0.85 : 0.5), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .padding(.vertical, 4)
+            .frame(minHeight: 44)
+            .background(isCurrent ? YagyoPrintColor.paperRaised : YagyoPrintColor.paper, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.paperMuted, lineWidth: 1)
+            }
         }
         .buttonStyle(.plain)
         .contextMenu {

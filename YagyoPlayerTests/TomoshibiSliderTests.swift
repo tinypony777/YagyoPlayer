@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 import XCTest
 @testable import YagyoPlayer
 
+@MainActor
 final class TomoshibiSliderTests: XCTestCase {
     // MARK: - タップ/ドラッグ位置 → 値の写像
 
@@ -56,7 +57,6 @@ final class TomoshibiSliderTests: XCTestCase {
 
     // MARK: - QA artifact(灯芯の実描画)
 
-    @MainActor
     func testExportsTomoshibiSliderArtifact() throws {
         // ContentViewの音量行と同じ構成を代表値3つで描き、PNGをxcresultへ添付する
         // (帳のtestExportsTobariScreenArtifactと同じ証跡パターン)。
@@ -65,31 +65,32 @@ final class TomoshibiSliderTests: XCTestCase {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("音量 \(Int(volume * 100))%")
                         .font(.caption)
-                        .foregroundStyle(YagyoColor.dim)
+                        .foregroundStyle(YagyoPrintColor.inkMuted)
                     HStack(spacing: 10) {
                         Image(systemName: "speaker.wave.1.fill")
-                            .foregroundStyle(YagyoColor.dim)
+                            .foregroundStyle(YagyoPrintColor.inkMuted)
                         TomoshibiSlider(value: .constant(volume))
                         Image(systemName: "speaker.wave.3.fill")
-                            .foregroundStyle(YagyoColor.dim)
+                            .foregroundStyle(YagyoPrintColor.inkMuted)
                     }
                     .font(.caption)
                 }
             }
         }
-        .ritualPanel(radius: 24, padding: 16)
+        .modernRetroPanel(tone: .paper, padding: 16)
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background { YagyoBackdrop(isUshimitsu: false) }
 
         try exportWindowArtifact(
             rootView: view,
-            windowHeight: 852,
+            windowWidth: 402,
+            windowHeight: 874,
+            interfaceStyle: .light,
             attachmentName: "tomoshibi-slider.png"
         )
     }
 
-    @MainActor
     func testExportsContentViewWithTomoshibiSliderArtifact() throws {
         // 実際のContentView(空ライブラリ)を実寸ウィンドウで描き、音量行が
         // 標準Sliderから灯芯へ置き換わった統合後の姿を写す。タブ化で夜行は
@@ -105,7 +106,9 @@ final class TomoshibiSliderTests: XCTestCase {
 
         try exportWindowArtifact(
             rootView: view,
-            windowHeight: 852,
+            windowWidth: 402,
+            windowHeight: 874,
+            interfaceStyle: .light,
             attachmentName: "tomoshibi-contentview.png"
         )
     }

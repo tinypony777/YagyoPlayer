@@ -15,6 +15,13 @@ struct ParadeSignalConfiguration: Equatable, Sendable {
     let recoverDuration: TimeInterval
     let warmupDuration: TimeInterval
     let maximumSampleGap: TimeInterval
+    let waveformMinimumSpan: Double
+    let waveformRangeTimeConstant: TimeInterval
+    let waveformLowEnterLevel: Double
+    let waveformLowExitLevel: Double
+    let waveformHighExitLevel: Double
+    let waveformHighEnterLevel: Double
+    let waveformBandHold: TimeInterval
 
     static let production = Self(
         quietEnterLevel: 0.08, quietExitLevel: 0.14, quietDwell: 0.70,
@@ -23,7 +30,11 @@ struct ParadeSignalConfiguration: Equatable, Sendable {
         strongRearmLevel: 0.32, strongRearmDelta: 0.06,
         anticipateDuration: 0.07, openDuration: 0.27,
         recoverDuration: 0.20, warmupDuration: 0.30,
-        maximumSampleGap: 0.50
+        maximumSampleGap: 0.50,
+        waveformMinimumSpan: 0.05, waveformRangeTimeConstant: 8.0,
+        waveformLowEnterLevel: 0.30, waveformLowExitLevel: 0.42,
+        waveformHighExitLevel: 0.58, waveformHighEnterLevel: 0.70,
+        waveformBandHold: 0.55
     )
 }
 
@@ -42,6 +53,10 @@ struct ParadeSignalSnapshot: Equatable, Sendable {
     fileprivate(set) var activity: Activity = .stopped
     fileprivate(set) var strongPhase: StrongPhase = .inactive
     fileprivate(set) var strongSequence: UInt64 = 0
+    /// 円形波形だけに使う、曲中の局所的な強弱へ正規化した表示値。
+    /// 妖怪の振付とVoiceOverは既存の `level` / `levelBand` 契約を維持する。
+    fileprivate(set) var waveformLevel: Double = 0
+    fileprivate(set) var waveformLevelBand: LevelBand = .low
 
     static func preview(
         activity: Activity,
@@ -60,11 +75,29 @@ struct ParadeSignalSnapshot: Equatable, Sendable {
         }
 
         let resolvedLevel = level.flatMap { $0.isFinite ? min(max($0, 0), 1) : nil } ?? defaultLevel
+        let previewWaveformBand: LevelBand
+        switch activity {
+        case .stopped:
+            previewWaveformBand = .low
+        case .unavailable:
+            previewWaveformBand = .unavailable
+        case .quietProxy:
+            previewWaveformBand = .low
+        case .normal where resolvedLevel < 0.20:
+            previewWaveformBand = .low
+        case .normal where resolvedLevel < 0.65:
+            previewWaveformBand = .medium
+        case .normal:
+            previewWaveformBand = .high
+        }
+
         return Self(
             level: resolvedLevel,
             activity: activity,
             strongPhase: strongPhase,
-            strongSequence: strongSequence
+            strongSequence: strongSequence,
+            waveformLevel: resolvedLevel,
+            waveformLevelBand: previewWaveformBand
         )
     }
 
@@ -121,6 +154,9 @@ struct ParadeSignalReducer: Sendable {
     private var strongStartedAt: TimeInterval?
     private var lastStrongAt: TimeInterval?
     private var strongArmed = false
+    private var waveformFloor: Double?
+    private var waveformCeiling: Double?
+    private var waveformBandChangedAt: TimeInterval?
 
     init(configuration: ParadeSignalConfiguration = .production) {
         self.configuration = configuration
@@ -149,6 +185,7 @@ struct ParadeSignalReducer: Sendable {
 
         snapshot.level = level
         updateQuietActivity(level: level, sampledAt: now)
+        updateWaveformDynamics(level: level, sampledAt: now, deltaTime: deltaTime)
 
         let baselineDelta = level - baseline
         updateStrongState(level: level, baselineDelta: baselineDelta, sampledAt: now)
@@ -165,6 +202,8 @@ struct ParadeSignalReducer: Sendable {
         snapshot.level = 0
         snapshot.activity = isPlaying ? .unavailable : .stopped
         snapshot.strongPhase = .inactive
+        snapshot.waveformLevel = 0
+        snapshot.waveformLevelBand = isPlaying ? .unavailable : .low
         return snapshot
     }
 
@@ -178,7 +217,91 @@ struct ParadeSignalReducer: Sendable {
         snapshot.level = level
         snapshot.activity = .normal
         snapshot.strongPhase = .inactive
+        snapshot.waveformLevel = level <= configuration.quietEnterLevel ? 0.15 : 0.5
+        snapshot.waveformLevelBand = level <= configuration.quietEnterLevel ? .low : .medium
+        waveformFloor = level
+        waveformCeiling = level
+        waveformBandChangedAt = now
         return snapshot
+    }
+
+    /// 絶対音量とは別に、曲中で観測した局所floor/ceilingへ表示だけを正規化する。
+    /// floorは上がる方向、ceilingは下がる方向へゆっくり追従させることで、
+    /// 小さいセクション差を残しつつ定常音は中央へ戻す。
+    private mutating func updateWaveformDynamics(
+        level: Double,
+        sampledAt now: TimeInterval,
+        deltaTime: TimeInterval
+    ) {
+        let alpha = 1 - exp(-deltaTime / configuration.waveformRangeTimeConstant)
+        let previousFloor = waveformFloor ?? level
+        let previousCeiling = waveformCeiling ?? level
+
+        let nextFloor = level < previousFloor
+            ? level
+            : previousFloor + alpha * (level - previousFloor)
+        let nextCeiling = level > previousCeiling
+            ? level
+            : previousCeiling + alpha * (level - previousCeiling)
+
+        waveformFloor = nextFloor
+        waveformCeiling = nextCeiling
+
+        let midpoint = (nextFloor + nextCeiling) / 2
+        let span = max(nextCeiling - nextFloor, configuration.waveformMinimumSpan)
+        let relativeLevel = min(max(0.5 + (level - midpoint) / span, 0), 1)
+        snapshot.waveformLevel = snapshot.activity == .quietProxy
+            ? min(relativeLevel, configuration.waveformLowEnterLevel)
+            : relativeLevel
+
+        if snapshot.activity == .quietProxy {
+            setWaveformBand(.low, sampledAt: now)
+            return
+        }
+
+        let changedAt = waveformBandChangedAt ?? now
+        guard now - changedAt >= configuration.waveformBandHold else { return }
+
+        let nextBand: ParadeSignalSnapshot.LevelBand
+        switch snapshot.waveformLevelBand {
+        case .unavailable:
+            nextBand = .medium
+        case .low:
+            if relativeLevel >= configuration.waveformHighEnterLevel {
+                nextBand = .high
+            } else if relativeLevel >= configuration.waveformLowExitLevel {
+                nextBand = .medium
+            } else {
+                nextBand = .low
+            }
+        case .medium:
+            if relativeLevel <= configuration.waveformLowEnterLevel {
+                nextBand = .low
+            } else if relativeLevel >= configuration.waveformHighEnterLevel {
+                nextBand = .high
+            } else {
+                nextBand = .medium
+            }
+        case .high:
+            if relativeLevel <= configuration.waveformLowEnterLevel {
+                nextBand = .low
+            } else if relativeLevel <= configuration.waveformHighExitLevel {
+                nextBand = .medium
+            } else {
+                nextBand = .high
+            }
+        }
+
+        setWaveformBand(nextBand, sampledAt: now)
+    }
+
+    private mutating func setWaveformBand(
+        _ band: ParadeSignalSnapshot.LevelBand,
+        sampledAt now: TimeInterval
+    ) {
+        guard snapshot.waveformLevelBand != band else { return }
+        snapshot.waveformLevelBand = band
+        waveformBandChangedAt = now
     }
 
     private mutating func updateQuietActivity(level: Double, sampledAt now: TimeInterval) {
@@ -262,5 +385,8 @@ struct ParadeSignalReducer: Sendable {
         strongStartedAt = nil
         lastStrongAt = nil
         strongArmed = false
+        waveformFloor = nil
+        waveformCeiling = nil
+        waveformBandChangedAt = nil
     }
 }

@@ -397,11 +397,29 @@ final class KitsunebiAnalyzerTests: XCTestCase {
             documentsDirectory: FileManager.default.temporaryDirectory
                 .appendingPathComponent("tobari-artifact-\(UUID().uuidString)", isDirectory: true)
         )
-        let view = TobariView(track: track, presetMetrics: metrics)
+        let standardView = TobariView(track: track, presetMetrics: metrics)
             .environmentObject(store)
 
-        // 撮影は共通ヘルパー(WindowArtifactExporter)で行う。
-        try exportWindowArtifact(rootView: view, attachmentName: "tobari-screen.png")
+        // 撮影は共通ヘルパー(WindowArtifactExporter)で行う。Dayモードを
+        // 明示し、iPhone 17 Proの402×874 ptを標準サイズの比較正本にする。
+        try exportWindowArtifact(
+            rootView: standardView,
+            windowWidth: 402,
+            windowHeight: 874,
+            interfaceStyle: .light,
+            attachmentName: "tobari-screen.png"
+        )
+
+        let accessibilityLargeView = TobariView(track: track, presetMetrics: metrics)
+            .environmentObject(store)
+        try exportWindowArtifact(
+            rootView: accessibilityLargeView,
+            windowWidth: 390,
+            windowHeight: 844,
+            interfaceStyle: .light,
+            dynamicTypeSize: .accessibility2,
+            attachmentName: "tobari-screen-17e-accessibility-large.png"
+        )
     }
 
     // MARK: - キャッシュ契約

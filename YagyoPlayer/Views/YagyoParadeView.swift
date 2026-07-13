@@ -75,11 +75,17 @@ struct YagyoParadeView: View {
             }
         }
         .frame(height: 158)
-        .background(Color(yagyoHex: 0x05060d))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(YagyoPrintColor.stage)
+        .clipShape(RoundedRectangle(cornerRadius: YagyoPrintMetrics.panelRadius, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color(yagyoHex: 0x3a3524).opacity(0.9), lineWidth: 1)
+            let shape = RoundedRectangle(
+                cornerRadius: YagyoPrintMetrics.panelRadius,
+                style: .continuous
+            )
+            shape.stroke(YagyoPrintColor.ink, lineWidth: YagyoPrintMetrics.ruleWidth)
+            shape
+                .inset(by: YagyoPrintMetrics.innerRuleInset)
+                .stroke(YagyoPrintColor.paper, lineWidth: YagyoPrintMetrics.ruleWidth)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("妖怪の夜行絵巻")
@@ -169,7 +175,7 @@ struct YagyoParadeView: View {
             let side: Double = big ? 2 : 1
             context.fill(
                 Path(CGRect(x: x, y: y, width: side, height: side)),
-                with: .color(Color(yagyoHex: 0xcdd6ea).opacity(alpha))
+                with: .color(YagyoPrintColor.paperRaised.opacity(alpha))
             )
         }
     }

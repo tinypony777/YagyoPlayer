@@ -1,3 +1,4 @@
+import SwiftUI
 import XCTest
 @testable import YagyoPlayer
 
@@ -64,6 +65,71 @@ final class ParadeSignalReducerTests: XCTestCase {
         XCTAssertEqual(ParadeSignalSnapshot.preview(activity: .normal, level: 0.20).levelBand, .medium)
         XCTAssertEqual(ParadeSignalSnapshot.preview(activity: .normal, level: 0.649).levelBand, .medium)
         XCTAssertEqual(ParadeSignalSnapshot.preview(activity: .normal, level: 0.65).levelBand, .high)
+    }
+
+    func testWaveformBandCentersAConsistentlyLoudCompressedTrack() {
+        var reducer = ParadeSignalReducer(configuration: configuration)
+
+        var snapshot = reducer.ingest(input(0, 0.82))
+        XCTAssertEqual(snapshot.levelBand, .high)
+        XCTAssertEqual(snapshot.waveformLevelBand, .medium)
+        XCTAssertEqual(snapshot.waveformLevel, 0.5, accuracy: 0.000_1)
+
+        for sample in 1...20 {
+            snapshot = reducer.ingest(input(Double(sample) * 0.10, 0.82))
+        }
+
+        XCTAssertEqual(snapshot.levelBand, .high)
+        XCTAssertEqual(snapshot.waveformLevelBand, .medium)
+        XCTAssertEqual(snapshot.waveformLevel, 0.5, accuracy: 0.000_1)
+    }
+
+    func testWaveformBandRevealsSmallRelativeSectionChanges() {
+        var reducer = ParadeSignalReducer(configuration: configuration)
+
+        _ = reducer.ingest(input(0, 0.78))
+        for sample in 1...10 {
+            _ = reducer.ingest(input(Double(sample) * 0.10, 0.78))
+        }
+
+        var snapshot = reducer.ingest(input(1.10, 0.82))
+        XCTAssertEqual(snapshot.levelBand, .high)
+        XCTAssertEqual(snapshot.waveformLevelBand, .high)
+        XCTAssertGreaterThanOrEqual(snapshot.waveformLevel, 0.70)
+
+        for sample in 12...16 {
+            snapshot = reducer.ingest(input(Double(sample) * 0.10, 0.78))
+            XCTAssertEqual(snapshot.waveformLevelBand, .high, "high state should not flicker during hold")
+        }
+
+        snapshot = reducer.ingest(input(1.70, 0.78))
+        XCTAssertEqual(snapshot.levelBand, .high)
+        XCTAssertEqual(snapshot.waveformLevelBand, .low)
+        XCTAssertLessThanOrEqual(snapshot.waveformLevel, 0.30)
+    }
+
+    func testWaveformDynamicsResetBeforeTheNextTrack() {
+        var reducer = ParadeSignalReducer(configuration: configuration)
+
+        _ = reducer.ingest(input(0, 0.50))
+        for sample in 1...5 {
+            _ = reducer.ingest(input(Double(sample) * 0.10, 0.50))
+        }
+        _ = reducer.ingest(input(0.60, 0.55))
+        XCTAssertEqual(reducer.snapshot.waveformLevelBand, .high)
+
+        var snapshot = reducer.reset(isPlaying: false)
+        XCTAssertEqual(snapshot.waveformLevel, 0)
+        XCTAssertEqual(snapshot.waveformLevelBand, .low)
+
+        snapshot = reducer.ingest(input(1.0, 0.90))
+        XCTAssertEqual(snapshot.levelBand, .high)
+        XCTAssertEqual(snapshot.waveformLevel, 0.5, accuracy: 0.000_1)
+        XCTAssertEqual(snapshot.waveformLevelBand, .medium)
+
+        snapshot = reducer.ingest(input(1.1, nil))
+        XCTAssertEqual(snapshot.waveformLevel, 0)
+        XCTAssertEqual(snapshot.waveformLevelBand, .unavailable)
     }
 
     func testParadeMotionPreferenceUsesSystemSettingUnlessPreviewOverrideIsExplicit() {
@@ -186,5 +252,98 @@ final class ParadeSignalReducerTests: XCTestCase {
         XCTAssertEqual(unavailable.staticLength, 20)
         XCTAssertTrue(low.usesAccentColor)
         XCTAssertFalse(unavailable.usesAccentColor)
+        XCTAssertEqual(stopped.centerMark, "止")
+        XCTAssertEqual(unavailable.centerMark, "—")
+        XCTAssertEqual(low.centerMark, "静")
+        XCTAssertEqual(
+            CircularWaveformPresentation(activity: .normal, levelBand: .medium).centerMark,
+            "響"
+        )
+        XCTAssertEqual(
+            CircularWaveformPresentation(activity: .normal, levelBand: .high).centerMark,
+            "烈"
+        )
+    }
+
+    @MainActor
+    func testExportsCircularWaveformStateBoard() throws {
+        try exportWindowArtifact(
+            rootView: CircularWaveformArtifactBoard(),
+            windowWidth: 402,
+            windowHeight: 874,
+            interfaceStyle: .light,
+            attachmentName: "circular-waveform-state-board.png"
+        )
+    }
+}
+
+private struct CircularWaveformArtifactState: Identifiable {
+    let id: String
+    let activity: ParadeSignalSnapshot.Activity
+    let levelBand: ParadeSignalSnapshot.LevelBand
+    let level: Double
+    let reduceMotion: Bool
+}
+
+private struct CircularWaveformArtifactBoard: View {
+    private let states = [
+        CircularWaveformArtifactState(
+            id: "stopped", activity: .stopped, levelBand: .high, level: 0, reduceMotion: false
+        ),
+        CircularWaveformArtifactState(
+            id: "unavailable", activity: .unavailable, levelBand: .unavailable, level: 0, reduceMotion: false
+        ),
+        CircularWaveformArtifactState(
+            id: "low", activity: .quietProxy, levelBand: .low, level: 0.08, reduceMotion: false
+        ),
+        CircularWaveformArtifactState(
+            id: "medium", activity: .normal, levelBand: .medium, level: 0.42, reduceMotion: false
+        ),
+        CircularWaveformArtifactState(
+            id: "high", activity: .normal, levelBand: .high, level: 0.88, reduceMotion: false
+        ),
+        CircularWaveformArtifactState(
+            id: "high · Reduce Motion", activity: .normal, levelBand: .high, level: 0.88, reduceMotion: true
+        )
+    ]
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("円形波形 · 状態見本")
+                    .font(.system(.headline, design: .serif))
+                    .tracking(2)
+                    .foregroundStyle(YagyoPrintColor.ink)
+
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(states) { state in
+                        VStack(spacing: 6) {
+                            CircularWaveform(
+                                progress: 0.62,
+                                level: state.level,
+                                activity: state.activity,
+                                levelBand: state.levelBand,
+                                reduceMotionOverride: state.reduceMotion
+                            )
+                            .frame(height: 150)
+
+                            Text(state.id)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(YagyoPrintColor.inkMuted)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                        .modernRetroPanel(tone: .paper, radius: 8, padding: 8)
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .background(YagyoPrintColor.canvas.ignoresSafeArea())
     }
 }

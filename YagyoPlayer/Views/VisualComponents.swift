@@ -5,48 +5,39 @@ struct YagyoBackdrop: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: isUshimitsu
-                    ? [
-                        YagyoColor.ushiSumi,
-                        Color(yagyoHex: 0x1d0e26),
-                        YagyoColor.ushiSumi
-                    ]
-                    : [
-                        YagyoColor.sumi,
-                        Color(yagyoHex: 0x11131f),
-                        YagyoColor.sumi
-                    ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            YagyoPrintColor.canvas
+                .ignoresSafeArea()
+
+            // 丑三つ時も紙面全体は暗転させず、ごく薄い朱の刷りだけを重ねる。
+            YagyoPrintColor.vermillion
+                .opacity(isUshimitsu ? 0.025 : 0)
+                .ignoresSafeArea()
 
             Canvas { context, size in
-                // 遠くの星 — 静かに散らす
-                for index in 0..<40 {
+                // ラスターを使わない、決定論的な紙の繊維。装飾なので3%以下に抑える。
+                for index in 0..<64 {
                     let seed = Double(index)
                     let x = Self.fract(sin(seed * 12.9898) * 43758.5453) * size.width
-                    let y = Self.fract(sin(seed * 78.233) * 12543.123) * size.height * 0.6
-                    let alpha = 0.03 + Self.fract(sin(seed * 3.7) * 951.135) * 0.06
+                    let y = Self.fract(sin(seed * 78.233) * 12543.123) * size.height
+                    let side = index.isMultiple(of: 5) ? 1.4 : 0.8
                     context.fill(
-                        Path(CGRect(x: x, y: y, width: 1.5, height: 1.5)),
-                        with: .color(YagyoColor.geppaku.opacity(alpha))
+                        Path(CGRect(x: x, y: y, width: side, height: side)),
+                        with: .color(YagyoPrintColor.ink.opacity(0.018))
                     )
                 }
 
-                // 靄の筋
-                for index in 0..<18 {
-                    let y = size.height * CGFloat(index) / 17
-                    let alpha = 0.04 + Double(index % 4) * 0.01
+                for index in 0..<14 {
+                    let seed = Double(index + 80)
+                    let x = Self.fract(sin(seed * 19.913) * 15731.743) * size.width
+                    let y = Self.fract(sin(seed * 47.853) * 31871.411) * size.height
                     var path = Path()
-                    path.move(to: CGPoint(x: -20, y: y))
-                    path.addCurve(
-                        to: CGPoint(x: size.width + 20, y: y + CGFloat(index % 3) * 14),
-                        control1: CGPoint(x: size.width * 0.22, y: y - 20),
-                        control2: CGPoint(x: size.width * 0.72, y: y + 24)
+                    path.move(to: CGPoint(x: x, y: y))
+                    path.addLine(to: CGPoint(x: min(size.width, x + 7), y: y + CGFloat(index % 2)))
+                    context.stroke(
+                        path,
+                        with: .color(YagyoPrintColor.inkMuted.opacity(0.025)),
+                        lineWidth: 0.7
                     )
-                    context.stroke(path, with: .color(YagyoColor.line.opacity(alpha)), lineWidth: 1)
                 }
             }
             .ignoresSafeArea()
@@ -116,6 +107,16 @@ enum CircularWaveformPresentation: Equatable, Sendable {
             true
         }
     }
+
+    var centerMark: String {
+        switch self {
+        case .stopped: "止"
+        case .unavailable: "—"
+        case .low: "静"
+        case .medium: "響"
+        case .high: "烈"
+        }
+    }
 }
 
 struct CircularWaveform: View {
@@ -123,8 +124,13 @@ struct CircularWaveform: View {
     var level: Double = 0
     var activity: ParadeSignalSnapshot.Activity
     var levelBand: ParadeSignalSnapshot.LevelBand
+    var reduceMotionOverride: Bool? = nil
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+
+    private var reduceMotion: Bool {
+        reduceMotionOverride ?? systemReduceMotion
+    }
 
     var body: some View {
         let presentation = CircularWaveformPresentation(
@@ -132,52 +138,134 @@ struct CircularWaveform: View {
             levelBand: levelBand
         )
 
-        Canvas { context, size in
-            let center = CGPoint(x: size.width / 2, y: size.height / 2)
-            let radius = min(size.width, size.height) * 0.35
-            let count = 76
+        GeometryReader { geometry in
+            let side = min(geometry.size.width, geometry.size.height)
+            let centerMarkSize = max(42, min(side * 0.27, 70))
 
-            for index in 0..<count {
-                let normalized = Double(index) / Double(count)
-                let angle = normalized * .pi * 2 - .pi / 2
-                let length: CGFloat
-                if reduceMotion || !presentation.usesProgressPhase {
-                    length = CGFloat(presentation.staticLength)
-                } else {
-                    let pulse = sin((normalized * 8 + progress * 3.5) * .pi * 2)
-                    let sway = 6 + level * 16
-                    length = CGFloat(12 + (pulse + 1) * sway)
+            ZStack {
+                Canvas { context, size in
+                    let center = CGPoint(x: size.width / 2, y: size.height / 2)
+                    let discRadius = min(size.width, size.height) * 0.46
+                    let innerRingRadius = discRadius - 6
+                    let tickOuterRadius = discRadius * 0.78
+                    let progressRadius = discRadius - 3
+                    let clampedProgress = min(max(progress, 0), 1)
+                    let clampedLevel = min(max(level, 0), 1)
+
+                    let discRect = CGRect(
+                        x: center.x - discRadius,
+                        y: center.y - discRadius,
+                        width: discRadius * 2,
+                        height: discRadius * 2
+                    )
+                    context.fill(Path(ellipseIn: discRect), with: .color(YagyoPrintColor.paper))
+
+                    let outerRing = Path(ellipseIn: discRect)
+                    let innerRing = Path(
+                        ellipseIn: CGRect(
+                            x: center.x - innerRingRadius,
+                            y: center.y - innerRingRadius,
+                            width: innerRingRadius * 2,
+                            height: innerRingRadius * 2
+                        )
+                    )
+                    let ringDash: [CGFloat] = presentation == .unavailable ? [4, 3] : []
+                    context.stroke(
+                        outerRing,
+                        with: .color(YagyoPrintColor.ink),
+                        style: StrokeStyle(lineWidth: 1.5, dash: ringDash)
+                    )
+                    context.stroke(
+                        innerRing,
+                        with: .color(YagyoPrintColor.inkMuted),
+                        style: StrokeStyle(lineWidth: 1, dash: ringDash)
+                    )
+
+                    let count = 48
+                    for index in 0..<count {
+                        if presentation == .unavailable, !index.isMultiple(of: 4) {
+                            continue
+                        }
+
+                        let normalized = Double(index) / Double(count)
+                        let angle = CGFloat(normalized * .pi * 2 - .pi / 2)
+                        let baseLength = CGFloat(presentation.staticLength)
+                        let animatedAddition: CGFloat
+                        if reduceMotion || !presentation.usesProgressPhase {
+                            animatedAddition = 0
+                        } else {
+                            let pulse = sin((normalized * 8 + clampedProgress * 3.5) * .pi * 2)
+                            animatedAddition = CGFloat((pulse + 1) * (2 + clampedLevel * 6))
+                        }
+                        let hierarchyAddition: CGFloat
+                        if index.isMultiple(of: 12) {
+                            hierarchyAddition = 5
+                        } else if index.isMultiple(of: 4) {
+                            hierarchyAddition = 2
+                        } else {
+                            hierarchyAddition = 0
+                        }
+                        let length = min(
+                            baseLength + animatedAddition + hierarchyAddition,
+                            max(8, tickOuterRadius - centerMarkSize * 0.58)
+                        )
+
+                        var tick = Path()
+                        tick.move(to: point(center: center, radius: tickOuterRadius - length, angle: angle))
+                        tick.addLine(to: point(center: center, radius: tickOuterRadius, angle: angle))
+
+                        let isMajor = index.isMultiple(of: 12)
+                        let tickColor = presentation == .high && isMajor
+                            ? YagyoPrintColor.vermillion
+                            : YagyoPrintColor.ink
+                        let width: CGFloat = isMajor ? 2.2 : (index.isMultiple(of: 4) ? 1.5 : 1)
+                        context.stroke(
+                            tick,
+                            with: .color(tickColor.opacity(lineOpacity(for: presentation))),
+                            lineWidth: width
+                        )
+                    }
+
+                    var progressArc = Path()
+                    progressArc.addArc(
+                        center: center,
+                        radius: progressRadius,
+                        startAngle: .degrees(-90),
+                        endAngle: .degrees(-90 + 360 * clampedProgress),
+                        clockwise: false
+                    )
+                    context.stroke(
+                        progressArc,
+                        with: .color(YagyoPrintColor.vermillion),
+                        style: StrokeStyle(lineWidth: 4, lineCap: .butt)
+                    )
+
+                    let endpointAngle = CGFloat(clampedProgress * .pi * 2 - .pi / 2)
+                    let endpoint = point(center: center, radius: progressRadius, angle: endpointAngle)
+                    let endpointRect = CGRect(x: endpoint.x - 5, y: endpoint.y - 5, width: 10, height: 10)
+                    context.fill(
+                        Path(ellipseIn: endpointRect),
+                        with: .color(YagyoPrintColor.persimmon)
+                    )
+                    context.stroke(
+                        Path(ellipseIn: endpointRect),
+                        with: .color(YagyoPrintColor.ink),
+                        lineWidth: 1
+                    )
                 }
-                let inner = radius - length * 0.35
-                let outer = radius + length
 
-                var path = Path()
-                path.move(to: point(center: center, radius: inner, angle: angle))
-                path.addLine(to: point(center: center, radius: outer, angle: angle))
-
-                let color: Color
-                if presentation.usesAccentColor {
-                    color = index % 11 == 0 ? YagyoColor.kitsunebi : YagyoColor.geppaku
-                } else {
-                    color = YagyoColor.dim
-                }
-                let lineWidth: CGFloat = presentation == .unavailable ? 1.2 : (index % 11 == 0 ? 2.2 : 1.4)
-                let dash: [CGFloat] = presentation == .unavailable ? [2, 2] : []
-                context.stroke(
-                    path,
-                    with: .color(color.opacity(lineOpacity(for: presentation))),
-                    style: StrokeStyle(lineWidth: lineWidth, dash: dash)
-                )
+                Text(presentation.centerMark)
+                    .font(.system(size: max(18, side * 0.12), weight: .semibold, design: .serif))
+                    .foregroundStyle(YagyoPrintColor.ink)
+                    .frame(width: centerMarkSize, height: centerMarkSize)
+                    .background(YagyoPrintColor.paperRaised, in: Circle())
+                    .overlay {
+                        Circle().stroke(YagyoPrintColor.ink, lineWidth: 1)
+                        Circle()
+                            .inset(by: 4)
+                            .stroke(YagyoPrintColor.paperMuted, lineWidth: 1)
+                    }
             }
-
-            let ring = Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
-            let ringColor = presentation.usesAccentColor ? YagyoColor.chochin : YagyoColor.dim
-            let ringDash: [CGFloat] = presentation == .unavailable ? [3, 3] : []
-            context.stroke(
-                ring,
-                with: .color(ringColor.opacity(presentation == .stopped ? 0.32 : 0.52)),
-                style: StrokeStyle(lineWidth: 1, dash: ringDash)
-            )
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
@@ -186,19 +274,19 @@ struct CircularWaveform: View {
     private func lineOpacity(for presentation: CircularWaveformPresentation) -> Double {
         switch presentation {
         case .stopped:
-            0.32
+            0.55
         case .unavailable:
-            0.52
+            0.70
         case .low:
-            reduceMotion ? 0.42 : 0.86
+            reduceMotion ? 0.68 : 0.86
         case .medium:
-            reduceMotion ? 0.64 : 0.86
+            reduceMotion ? 0.78 : 0.90
         case .high:
-            0.86
+            0.95
         }
     }
 
-    private func point(center: CGPoint, radius: CGFloat, angle: Double) -> CGPoint {
+    private func point(center: CGPoint, radius: CGFloat, angle: CGFloat) -> CGPoint {
         CGPoint(
             x: center.x + cos(angle) * radius,
             y: center.y + sin(angle) * radius
@@ -206,8 +294,7 @@ struct CircularWaveform: View {
     }
 }
 
-/// ステップシーケンサー風の再生位置バー — Web版のグリッドのマスをそのまま
-/// シークバーに。過ぎたマスは朱、いま鳴っているマスは提灯色に灯る。
+/// 16本の短冊目盛による再生位置。過ぎた目盛は朱、現在位置は柿色で示す。
 struct StepProgressBar: View {
     var progress: Double
     var isEnabled: Bool
@@ -224,10 +311,11 @@ struct StepProgressBar: View {
             HStack(spacing: spacing) {
                 ForEach(0..<steps, id: \.self) { index in
                     cell(at: index)
-                        .frame(width: cellWidth)
+                        .frame(width: cellWidth, height: index.isMultiple(of: 4) ? 11 : 7)
                         .padding(.leading, index % 4 == 0 && index > 0 ? groupGap : 0)
                 }
             }
+            .frame(maxHeight: .infinity, alignment: .center)
             .contentShape(Rectangle())
             .onTapGesture(coordinateSpace: .local) { location in
                 guard isEnabled else { return }
@@ -241,7 +329,8 @@ struct StepProgressBar: View {
                 including: isEnabled ? .all : .subviews
             )
         }
-        .frame(height: 30)
+        // 短冊の見た目は7/11ptのまま、scrub操作面だけを44pt確保する。
+        .frame(height: YagyoPrintMetrics.controlHitTarget)
         .opacity(isEnabled ? 1 : 0.45)
         .accessibilityElement()
         .accessibilityLabel("再生位置")
@@ -274,35 +363,31 @@ struct StepProgressBar: View {
     private func cell(at index: Int) -> some View {
         let current = min(steps - 1, Int(progress * Double(steps)))
         let hasStarted = progress > 0
-        let shape = RoundedRectangle(cornerRadius: 7, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 1, style: .continuous)
 
         return shape
             .fill(fillColor(index: index, current: current, hasStarted: hasStarted))
             .overlay(shape.stroke(borderColor(index: index, current: current, hasStarted: hasStarted), lineWidth: 1))
-            .shadow(
-                color: hasStarted && index == current ? YagyoColor.chochin.opacity(0.5) : .clear,
-                radius: 5
-            )
     }
 
     private func fillColor(index: Int, current: Int, hasStarted: Bool) -> Color {
-        guard hasStarted else { return YagyoColor.cellEmpty }
-        if index < current { return YagyoColor.shu }
-        if index == current { return YagyoColor.chochin }
-        return YagyoColor.cellEmpty
+        guard hasStarted else { return YagyoPrintColor.paperMuted }
+        if index < current { return YagyoPrintColor.vermillion }
+        if index == current { return YagyoPrintColor.persimmon }
+        return YagyoPrintColor.paperMuted
     }
 
     private func borderColor(index: Int, current: Int, hasStarted: Bool) -> Color {
-        guard hasStarted else { return YagyoColor.line }
-        if index < current { return YagyoColor.cellHitBorder }
-        if index == current { return YagyoColor.cellStrongBorder }
-        return YagyoColor.line
+        guard hasStarted else { return YagyoPrintColor.inkMuted }
+        if index < current { return YagyoPrintColor.vermillionInk }
+        if index == current { return YagyoPrintColor.ink }
+        return YagyoPrintColor.inkMuted
     }
 }
 
 /// 灯芯 — 音量の自前スライダー。明治大正の計器を思わせる「罫と丸紋」の意匠:
-/// 単罫+四半目盛のトラック、通過側は提灯色の実線、ノブは丸紋(提灯色+
-/// 墨の輪+朱の芯)。フラット塗りで、ドラッグ中は朱の芯がわずかに広がる
+/// 単罫+四半目盛のトラック、通過側は柿色の実線、ノブは丸紋(生成り+
+/// 焦茶の輪+柿色の芯)。フラット塗りで、ドラッグ中は芯がわずかに広がる
 /// (Reduce Motion時は変化なし)。StepProgressBar と同族。
 struct TomoshibiSlider: View {
     @Binding var value: Double
@@ -326,12 +411,12 @@ struct TomoshibiSlider: View {
 
             ZStack(alignment: .leading) {
                 Rectangle()
-                    .fill(YagyoColor.line)
+                    .fill(YagyoPrintColor.inkMuted)
                     .frame(height: 2)
 
                 ForEach([0.0, 0.25, 0.5, 0.75, 1.0], id: \.self) { mark in
                     Rectangle()
-                        .fill(YagyoColor.line)
+                        .fill(YagyoPrintColor.inkMuted)
                         .frame(width: 1.5, height: 7)
                         .position(
                             x: knobRadius + CGFloat(mark) * max(0, width - Self.knobDiameter),
@@ -340,15 +425,15 @@ struct TomoshibiSlider: View {
                 }
 
                 Rectangle()
-                    .fill(YagyoColor.chochin)
+                    .fill(YagyoPrintColor.persimmon)
                     .frame(width: max(knobCenterX, 2), height: 2)
 
                 Circle()
-                    .fill(YagyoColor.chochin)
-                    .overlay(Circle().stroke(YagyoColor.sumi, lineWidth: 2))
+                    .fill(YagyoPrintColor.paperRaised)
+                    .overlay(Circle().stroke(YagyoPrintColor.ink, lineWidth: 1.5))
                     .overlay(
                         Circle()
-                            .fill(YagyoColor.shu)
+                            .fill(YagyoPrintColor.persimmon)
                             .frame(width: coreDiameter, height: coreDiameter)
                     )
                     .frame(width: Self.knobDiameter, height: Self.knobDiameter)
@@ -367,7 +452,8 @@ struct TomoshibiSlider: View {
                     }
             )
         }
-        .frame(height: 33)
+        // 見た目の14ptノブは保ち、透明な操作面だけを44ptへ広げる。
+        .frame(height: YagyoPrintMetrics.controlHitTarget)
         .accessibilityElement()
         .accessibilityLabel("音量")
         .accessibilityValue("\(Int(value * 100))パーセント")
