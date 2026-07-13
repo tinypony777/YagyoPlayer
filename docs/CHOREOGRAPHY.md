@@ -14,6 +14,12 @@
 | resident | 現在トラックの UUID から互換性を保つ固定 roster で一体を割り当てる。聴取回数による選出ではない | resident を重複なく先頭へ移し、先導灯で示す | 同じ先頭位置、先導灯、VoiceOver の「先導は…」で示す | Karakasa選択を座標tapなしのsemantic AX testで確認。履歴による演出は未接続 |
 | Ushimitsu | 丑三つ時モードが有効な状態。音量解析の結果ではない | 一つ目小僧を最後尾へ追加する。一つ目小僧も共通の通常・`quietProxy` の速度と bob に参加するが、strong 固有反応は持たない | 同じ最後尾の静止追加と VoiceOver の「丑三つ時」で示し、strong 固有の輪郭線は出さない | Strong + UshimitsuをProのsemantic AX testと独立native visual QAで確認済み |
 
+### 円形波形の相対表示
+
+妖怪の振付とVoiceOverは、上表の絶対 `level` / `levelBand` 契約を維持する。円形波形の放射罫と中央の `静 / 響 / 烈` だけは、圧縮された音源が絶対highへ張り付かないよう、同じ曲の中で観測した局所floor/ceilingから `waveformLevel` / `waveformLevelBand` を別に作る。floorは下がる方向、ceilingは上がる方向へ即応し、反対方向へはゆっくり追従する。したがって一定の大音量は `響`へ戻り、小さい相対上昇・下降も形と文字へ残る。
+
+これはサビ、セクション、音楽的アタック、ラウドネス規格を検出する処理ではない。15 Hzの平滑化済み `averagePower` を局所包絡へ写像する表示上の近似であり、再生音、解析値、妖怪の振付判定を変更しない。
+
 現在候補はXcode 27.0のgeneric iOS buildに成功し、checked projectをiOS 27のiPhone 17 Pro destinationでfocused QA **11 / 11**、full suite **65 / 65**、いずれもskip 0で合格しました。semantic AX validationは座標tapなしで、iPhone 17 ProのNormal／Quiet／Strong／Strong + Ushimitsuのstate matrix **4 / 4**、Strong + Reduce Motion stability **1 / 1**、最小幅iPhone 17eのdefault Normal + Karakasa **1 / 1**を通過しました。Reduce Motionの`t0`／`t+2 s` full PNGは同一SHA-256で、canvas cropのdiffering bytesは0です。最初の17e menu試行失敗とauto diagnostics終了は正本結果から除外し、follow-up GREENだけを採用します。[証跡ledger](evidence/step4-karakasa/README.md)はcontact sheet／GIFとSimulator画像7枚のすべてを2名の独立native reviewerがAPPROVEDし、BLOCKER／MAJOR／MINORはいずれも0です。Pro Strongの右端寄りは切断なしのINFOだけでした。binary evidence commit `150219fea8a13ed95ea65885f5e7b46101cff9e5`で9 binary hashとlinkも確認済みです。旧32件／57件と紫色・横向き・横に開いた旧画像はsupersededです。ユーザー見た目承認も2026-07-12にPR #13で完了しました。
 
 ## 判定定数
@@ -28,12 +34,14 @@
 - 強反応の各段階: anticipate `0.07 s`、`.open` `0.27 s`、recover `0.20 s`。`.open` は互換性名で、唐傘の視覚は正面reaction。
 - reset 後の warm-up: `0.30 s`。
 - サンプル時刻が逆行するか、間隔が `> 0.50 s` のときは時間依存状態を reseed し、そのサンプルでは強反応を発火しない。
+- 円形波形の局所range: floor/ceilingの縮小方向は時定数 `8.0 s`、拡大方向は即応、最小span `0.05`。相対値は中点を `0.50` として `0...1` にclampする。
+- 円形波形の表示帯: low進入 `<= 0.30` / 離脱 `>= 0.42`、high進入 `>= 0.70` / 離脱 `<= 0.58`。帯変更後 `0.55 s` は次の変更を保留して文字のちらつきを抑える。
 
 低速基準包絡は `alpha = 1 - exp(-dt / 0.80)`、`baseline += alpha * (level - baseline)` で更新します。一定の大音量だけでは強反応を繰り返さず、いったん再武装条件を満たしてから再上昇したときだけ次の反応を許します。曲頭が大音量の場合も、seed と warm-up により強反応を出しません。
 
 ## 状態の境界
 
-`pause`、`stop`、`seek`、track load 開始（次曲を含む）、load failure、play failure では視覚 reducer を reset します。再開後は最初の有限サンプルで基準値を seed し、warm-up が終わるまで `strongRiseProxy` を抑止します。meter timer の張り直しだけは意味上の reset ではありません。
+`pause`、`stop`、`seek`、track load 開始（次曲を含む）、load failure、play failure では視覚 reducer を reset します。円形波形の局所floor/ceilingも同時に破棄し、次曲へ持ち越しません。再開後は最初の有限サンプルで基準値を seed し、波形表示は `響`を中立として開始、warm-up が終わるまで `strongRiseProxy` を抑止します。meter timer の張り直しだけは意味上の reset ではありません。
 
 `stopped`、`unavailable`、`quietProxy` は別の状態です。停止を「曲中の静けさ」と解釈せず、meter が読めない状態も低レベルとみなしません。視覚信号が利用できなくても、再生経路そのものは継続します。
 

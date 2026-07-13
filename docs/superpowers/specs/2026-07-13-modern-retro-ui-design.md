@@ -119,7 +119,7 @@
 
 ## 7. 円形波形 — レコード盤／丸紋の計器
 
-現行波形はデジタルな放射バーと大きな角丸のアートワーク枠で、印刷物の文法から外れる。`progress / level / activity / levelBand` の入力契約は保ったまま、描画を全面的に置き換える。
+現行波形はデジタルな放射バーと大きな角丸のアートワーク枠で、印刷物の文法から外れる。既存の `progress / level / activity / levelBand` と妖怪側の振付契約は保ったまま、描画を全面的に置き換える。2026-07-13のPRレビューを受け、円形波形だけは絶対 `levelBand` を直接表示せず、曲中の局所floor/ceilingから作る表示専用 `waveformLevel / waveformLevelBand` を使用する。
 
 ### 7.1 構造
 
@@ -132,6 +132,8 @@
 5. 現在位置を示す柿色の小さな丸紋。円弧末端へ固定する。
 6. 中央に同系紙色の小札を置き、停止時は「止」、利用不可時は「—」、lowは「静」、mediumは「響」、highは「烈」と一文字で示す。VoiceOver情報は既存の親要素に残し、この文字は装飾表示として扱う。
 
+`静 / 響 / 烈` はラウドネス規格、サビ、セクションの判定ではない。15 Hzの平滑化済み `averagePower` について、局所floor/ceilingの拡大方向へ即応し、縮小方向へ時定数8秒で追従させ、最小span 0.05で相対化した表示上の近似である。一定の高ラウドネスは中立の `響`へ戻し、小さな相対上昇・下降はヒステリシスと0.55秒holdを通して `烈 / 静`へ残す。再生音、解析値、妖怪の絶対音量帯、VoiceOverは変更しない。
+
 ### 7.2 状態表現
 
 | 状態 | 放射罫 | 円弧・輪郭 |
@@ -142,7 +144,7 @@
 | medium | 中程度。4本単位の長短 | 同上 |
 | high | 長い罫。12本ごとに朱 | 同上。glowやscaleは加えない |
 
-通常モーションでは、現行と同様に `progress` と `level` から放射罫の長さを連続変化させる。ただし円盤自体は回転させない。Reduce Motionでは状態表の静止長だけを使い、low / medium / highを形の差で識別できるようにする。
+通常モーションでは、`progress` と表示専用 `waveformLevel` から放射罫の長さを連続変化させる。ただし円盤自体は回転させない。Reduce Motionでは `waveformLevelBand` の静止長だけを使い、low / medium / highを形の差で識別できるようにする。
 
 ### 7.3 レイアウト
 
@@ -238,9 +240,10 @@
 
 - macOS内蔵ディスクの空き容量が逼迫しているため、すべての`xcodebuild`で `TMPDIR=/Volumes/MacBook_Data_Add/CodexDerivedData/YagyoPlayer/tmp` と `-derivedDataPath /Volumes/MacBook_Data_Add/CodexDerivedData/YagyoPlayer/modern-retro-ui/<run-name>` を指定する。接続先はUSB外付けAPFS SSD、空き756 GiBを確認済み。未接続時は内蔵ディスクへfallbackせず、検証を停止して明示する。
 - Xcode 27.0 generic iOS build。
-- iPhone 17 Pro / iOS 26.5 full suite。基準は124 tests、failure 0、skip 0。
-- iOS 27 betaはPlaybackController 12件を除く112件を実行し、Playback 12件はiOS 26.5 full suiteで担保する。
+- iPhone 17 Pro / iOS 26.5 full suite。PR #23レビュー対応後の基準は127 tests、failure 0、skip 0。
+- iOS 27 betaはPlaybackController 12件を除く115件を実行し、Playback 12件はiOS 26.5 full suiteで担保する。
 - `CircularWaveformPresentation` の stopped / unavailable / low / medium / high とReduce Motion静止値。
+- 高ラウドネスの定常入力が波形上はmediumへ中立化し、小さい相対上昇・下降でhigh / lowへ遷移すること。reset後は局所rangeを次曲へ持ち越さないこと。
 - `TomoshibiSlider` の位置逆写像とVoiceOver nudgeを維持。
 - 3タブ順、routing、ミニ灯り表示契約を維持。
 - 狐火の帳 Phase A の既知信号とartifact exportを維持。

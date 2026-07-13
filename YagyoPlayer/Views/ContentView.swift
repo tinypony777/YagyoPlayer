@@ -327,9 +327,9 @@ private struct ReactiveVisualStage: View {
         ArtworkStage(
             track: track,
             progress: progress,
-            level: snapshot.level,
+            waveformLevel: snapshot.waveformLevel,
             activity: snapshot.activity,
-            levelBand: snapshot.levelBand,
+            waveformLevelBand: snapshot.waveformLevelBand,
             isCompact: isCompact
         )
     }
@@ -338,9 +338,9 @@ private struct ReactiveVisualStage: View {
 private struct ArtworkStage: View {
     var track: AudioTrack?
     var progress: Double
-    var level: Double
+    var waveformLevel: Double
     var activity: ParadeSignalSnapshot.Activity
-    var levelBand: ParadeSignalSnapshot.LevelBand
+    var waveformLevelBand: ParadeSignalSnapshot.LevelBand
     /// 夜行タブの1画面レイアウト用。波形の四角を残り高さへ縮め、
     /// 曲札を1行へ畳んで、スクロールなしで再生操作まで見えるようにする。
     var isCompact: Bool = false
@@ -349,9 +349,9 @@ private struct ArtworkStage: View {
         VStack(spacing: isCompact ? 10 : 16) {
             CircularWaveform(
                 progress: progress,
-                level: level,
+                level: waveformLevel,
                 activity: activity,
-                levelBand: levelBand
+                levelBand: waveformLevelBand
             )
             .aspectRatio(1, contentMode: .fit)
             .frame(minHeight: 140, maxHeight: isCompact ? .infinity : 360)

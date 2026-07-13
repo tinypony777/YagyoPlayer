@@ -67,6 +67,71 @@ final class ParadeSignalReducerTests: XCTestCase {
         XCTAssertEqual(ParadeSignalSnapshot.preview(activity: .normal, level: 0.65).levelBand, .high)
     }
 
+    func testWaveformBandCentersAConsistentlyLoudCompressedTrack() {
+        var reducer = ParadeSignalReducer(configuration: configuration)
+
+        var snapshot = reducer.ingest(input(0, 0.82))
+        XCTAssertEqual(snapshot.levelBand, .high)
+        XCTAssertEqual(snapshot.waveformLevelBand, .medium)
+        XCTAssertEqual(snapshot.waveformLevel, 0.5, accuracy: 0.000_1)
+
+        for sample in 1...20 {
+            snapshot = reducer.ingest(input(Double(sample) * 0.10, 0.82))
+        }
+
+        XCTAssertEqual(snapshot.levelBand, .high)
+        XCTAssertEqual(snapshot.waveformLevelBand, .medium)
+        XCTAssertEqual(snapshot.waveformLevel, 0.5, accuracy: 0.000_1)
+    }
+
+    func testWaveformBandRevealsSmallRelativeSectionChanges() {
+        var reducer = ParadeSignalReducer(configuration: configuration)
+
+        _ = reducer.ingest(input(0, 0.78))
+        for sample in 1...10 {
+            _ = reducer.ingest(input(Double(sample) * 0.10, 0.78))
+        }
+
+        var snapshot = reducer.ingest(input(1.10, 0.82))
+        XCTAssertEqual(snapshot.levelBand, .high)
+        XCTAssertEqual(snapshot.waveformLevelBand, .high)
+        XCTAssertGreaterThanOrEqual(snapshot.waveformLevel, 0.70)
+
+        for sample in 12...16 {
+            snapshot = reducer.ingest(input(Double(sample) * 0.10, 0.78))
+            XCTAssertEqual(snapshot.waveformLevelBand, .high, "high state should not flicker during hold")
+        }
+
+        snapshot = reducer.ingest(input(1.70, 0.78))
+        XCTAssertEqual(snapshot.levelBand, .high)
+        XCTAssertEqual(snapshot.waveformLevelBand, .low)
+        XCTAssertLessThanOrEqual(snapshot.waveformLevel, 0.30)
+    }
+
+    func testWaveformDynamicsResetBeforeTheNextTrack() {
+        var reducer = ParadeSignalReducer(configuration: configuration)
+
+        _ = reducer.ingest(input(0, 0.50))
+        for sample in 1...5 {
+            _ = reducer.ingest(input(Double(sample) * 0.10, 0.50))
+        }
+        _ = reducer.ingest(input(0.60, 0.55))
+        XCTAssertEqual(reducer.snapshot.waveformLevelBand, .high)
+
+        var snapshot = reducer.reset(isPlaying: false)
+        XCTAssertEqual(snapshot.waveformLevel, 0)
+        XCTAssertEqual(snapshot.waveformLevelBand, .low)
+
+        snapshot = reducer.ingest(input(1.0, 0.90))
+        XCTAssertEqual(snapshot.levelBand, .high)
+        XCTAssertEqual(snapshot.waveformLevel, 0.5, accuracy: 0.000_1)
+        XCTAssertEqual(snapshot.waveformLevelBand, .medium)
+
+        snapshot = reducer.ingest(input(1.1, nil))
+        XCTAssertEqual(snapshot.waveformLevel, 0)
+        XCTAssertEqual(snapshot.waveformLevelBand, .unavailable)
+    }
+
     func testParadeMotionPreferenceUsesSystemSettingUnlessPreviewOverrideIsExplicit() {
         XCTAssertFalse(
             ParadeMotionPreference.resolve(

@@ -6,7 +6,7 @@
 
 2026-07-13、本人提供の明治・大正モダンレトロ参考画像をもとに、生成り紙を基本面、焦茶を本文と罫、朱・柿を選択と主操作、青緑を狐火の分析値へ限定するDayモードが本人承認された。夜行・行列・巻物・ミニ灯り・狐火の帳へ共通の札、二重罫、単罫を反映し、円形波形もレコード盤／丸紋の計器へ描き直した実装候補がgreenである。狐火の帳は濃い青い面を撤去し、一枚紙の開いた台帳へ再構成した。
 
-Xcode 27.0 generic iOS build、iPhone 17 Pro / iOS 26.5 full suite **124 / 124**、iPhone 17 Pro / iOS 27.0のPlaybackController以外 **112 / 112**、iPhone 17e / iOS 27.0の3タブ実描画 **1 / 1**は、いずれもfailure 0・skip 0。iOS 27.0 beta Simulatorだけで既存PlaybackController群の同期AVAudioSession初期化が返らないため、その12件はiOS 26.5 full suiteでgreenを確認した。[現在の実描画証跡](evidence/modern-retro-ui/README.md)にDay、丑三つ時、17e、Dynamic Type、波形状態、狐火の帳とhashを集約する。コンセプトは承認済みだが、実装された実機描画は本人の最終確認まで完成扱いにしない。
+Xcode 27.0 generic iOS build、iPhone 17 Pro / iOS 26.5 full suite **127 / 127**、iPhone 17 Pro / iOS 27.0のPlaybackController以外 **115 / 115**、iPhone 17e / iOS 27.0の3タブ実描画 **1 / 1**は、いずれもfailure 0・skip 0。iOS 27.0 beta Simulatorだけで既存PlaybackController群の同期AVAudioSession初期化が返らないため、その12件はiOS 26.5 full suiteでgreenを確認した。PR #23レビュー後は、円形波形だけを曲中の局所floor/ceilingへ相対化し、高ラウドネス定常入力が常時`烈`へ張り付かない回帰を追加した。[現在の実描画証跡](evidence/modern-retro-ui/README.md)にDay、丑三つ時、17e、Dynamic Type、波形状態、狐火の帳とhashを集約する。コンセプトは承認済みだが、実装された実機描画は本人の最終確認まで完成扱いにしない。
 
 ## Step 4 唐傘縦切りの現在地
 
