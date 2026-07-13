@@ -1,6 +1,6 @@
 # Core AI / Music Understanding / DSP 実装計画
 
-> Status: **Active — Phase 0 Music Understanding capability spike in progress.**
+> Status: **Active — Phase 0 capability and Phase 1 deterministic DSP boundary verified; playback integration next.**
 >
 > 2026-07-14、ユーザーの明示承認により iOS 27 beta SDK で Step 3 を再開した。正式版 SDK での再検証はリリースゲートとして残す。現時点の再生経路は Music Understanding、Core AI、Listening Profile DSP のいずれにも依存しない。
 
@@ -202,7 +202,7 @@ recipe ID の意味を版の途中で変更しない。削除・調整時は cat
 再生スレッドが受け取るのは、検証済み recipe から control thread 上で作った immutable parameter snapshot だけである。
 
 - render callback 内で Music Understanding、Core AI、キャッシュ、永続化、ログ、ロック、割り当てを呼ばない。
-- snapshot は buffer boundary で原子的に交換する。
+- snapshot は固定容量SPSC mailboxを介し、buffer boundaryの先頭で完成済みの最新1件だけを交換する。mailboxが満杯ならcontrol側の新規投入を拒否し、render側が読んでいるslotを上書きしない。producer／consumer endpointはone-shot builderから各1つだけ取得でき、noncopyableかつmutating APIとして同一endpointの安全でない共有を型で防ぐ。
 - bypass／Original は恒久的な first-class path とし、DSP 障害時にも再生を継続する。
 - 出力が非有限になった場合は診断をレート制限し、そのバッファを安全化したうえで Original へ latch する。
 - interruption、seek、background、route change は解析や推論より再生状態機械を優先する。
@@ -279,7 +279,7 @@ YagyoPlayer は次だけを縮小して独自実装する。
 - render側は要求frameを全量処理するか明示失敗し、部分処理しない。
 - pure kernelの`invalidBuffers`は未処理outputを変更しない。AVAudioUnit adapter接続時はこの結果を受けて要求frame全体をzero-clearする契約と回帰テストを必須にする。
 - Original、DSP safety trim、ユーザー音量、将来のラウドネスマッチ乗数を別の責務として保持する。
-- snapshot handoffは二面swapをコピーせず、所有権が明確なbounded SPSC mailboxとして別commitで実装する。
+- snapshot handoffは二面swapをコピーせず、所有権が明確なcapacity 4のbounded SPSC mailboxとして実装する。noncopyableなproducer／consumerは各1つに限定し、release／acquireでslot公開を同期する。consumerは公開済みbatchの最新snapshotだけを定数時間で取り出す。
 
 ## 7. Availability, privacy, and fallback
 
@@ -332,7 +332,7 @@ YagyoPlayer は次だけを縮小して独自実装する。
 - 正のゲインを使わないラウドネスマッチと明示選択フローを検証する。
 - AI がなくても安全性、音切れ、比較可能性、アクセシビリティを評価できるようにする。
 
-2026-07-14 時点で、3〜5 band peaking EQ、±3 dB、Q `0.5...2.0`、`20 Hz...min(20 kHz, Nyquist × 0.95)`、非正input headroom／output trimを検証してimmutable snapshotへ変換するpure coreを追加した。input headroomは各bandの正boost合計以上の減衰を必須とし、output trimで内部余裕を代用しない。render kernelはmono/stereo、44.1/48/96 kHz、可変chunk、有限入力に対するOriginalのbit transparency、非有限入力のzero化、impulse、中心周波数応答、DC、決定論的noise、denormal、channel独立、全buffer alias、buffer境界適用、invalid state時Original latch、無効frameの非部分処理、同一周波数5-band最大boostをfocused test `16 / 16` で確認した。app full suiteは `167 / 167`、skip 0、generic iOS buildも成功。PlaybackController、AVAudioEngine、UIには未接続である。
+2026-07-14 時点で、3〜5 band peaking EQ、±3 dB、Q `0.5...2.0`、`20 Hz...min(20 kHz, Nyquist × 0.95)`、非正input headroom／output trimを検証してimmutable snapshotへ変換するpure coreを追加した。input headroomは各bandの正boost合計以上の減衰を必須とし、output trimで内部余裕を代用しない。render kernelはmono/stereo、44.1/48/96 kHz、可変chunk、有限入力に対するOriginalのbit transparency、非有限入力のzero化、impulse、中心周波数応答、DC、決定論的noise、denormal、channel独立、全buffer alias、buffer境界適用、invalid state時Original latch、無効frameの非部分処理、同一周波数5-band最大boostをfocused test `16 / 16` で確認した。さらにcapacity 4のSPSC mailboxとrender-owned processorを追加し、one-shot endpoint所有権、満杯時no-overwrite、stale snapshotの定数時間破棄、buffer先頭での最新世代適用、20,000世代のring wrapとpayload整合性をfocused test `3 / 3` とThread Sanitizerで確認した。合同focused testは `19 / 19`、app full suiteは `170 / 170`、skip 0、generic iOS buildも成功。PlaybackController、AVAudioEngine、UIには未接続である。
 
 **Gate:** DSP と UX の価値が AI 抜きで成立し、bypass、切替、リアルタイム制約に合格すること。
 
