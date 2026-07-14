@@ -4,24 +4,63 @@ import SwiftUI
 /// This is a same-track DSP audition, not the two-track A/B flow in 狐火の帳.
 struct FixedEQAuditionView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var library: AudioLibraryStore
     @EnvironmentObject private var player: PlaybackController
+    @StateObject private var featureAnalysis = FeatureAnalysisSession.live()
+
+    private enum AnalysisRequest: Hashable {
+        case unavailable(String)
+        case analyze(
+            trackID: AudioTrack.ID,
+            url: URL,
+            sourceFingerprint: String
+        )
+    }
 
     var body: some View {
         FixedEQAuditionPanel(
             state: player.fixedEQAuditionState,
             message: player.fixedEQAuditionMessage,
+            featureAnalysisState: featureAnalysis.state,
             onSelect: player.selectFixedEQAuditionMode,
             onClose: { dismiss() }
         )
-        .presentationDetents([.height(450), .large])
+        .presentationDetents([.height(570), .large])
         .presentationDragIndicator(.hidden)
         .presentationBackground(YagyoPrintColor.canvas)
+        .task(id: analysisRequest) {
+            switch analysisRequest {
+            case .unavailable(let message):
+                featureAnalysis.markUnavailable(message)
+            case .analyze(_, let url, let sourceFingerprint):
+                await featureAnalysis.analyze(
+                    url: url,
+                    sourceFingerprint: sourceFingerprint
+                )
+            }
+        }
+    }
+
+    private var analysisRequest: AnalysisRequest {
+        guard let currentTrack = player.currentTrack else {
+            return .unavailable("曲を読み込むとMusic Understandingで解析できます。")
+        }
+        let track = library.tracks.first { $0.id == currentTrack.id } ?? currentTrack
+        guard let sourceFingerprint = track.contentHash else {
+            return .unavailable("解析用の音源識別子を準備しています。")
+        }
+        return .analyze(
+            trackID: track.id,
+            url: library.fileURL(for: track),
+            sourceFingerprint: sourceFingerprint
+        )
     }
 }
 
 private struct FixedEQAuditionPanel: View {
     let state: FixedEQAuditionState
     let message: String?
+    let featureAnalysisState: FeatureAnalysisSession.State
     let onSelect: (FixedEQAuditionMode) -> Void
     let onClose: () -> Void
 
@@ -30,6 +69,7 @@ private struct FixedEQAuditionPanel: View {
             VStack(alignment: .leading, spacing: 15) {
                 header
                 intro
+                featureAnalysis
                 modeChooser
                 previewRecipe
                 footnote
@@ -66,6 +106,132 @@ private struct FixedEQAuditionPanel: View {
                 action: onClose
             )
         }
+    }
+
+    private var featureAnalysis: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("曲相")
+                    .font(.system(.subheadline, design: .serif).weight(.semibold))
+                    .foregroundStyle(YagyoPrintColor.ink)
+                Text("MUSIC UNDERSTANDING")
+                    .font(.caption2.weight(.bold))
+                    .tracking(1.1)
+                    .foregroundStyle(YagyoPrintColor.vermillionInk)
+                Spacer(minLength: 6)
+                analysisStatusMark
+            }
+
+            switch featureAnalysisState {
+            case .idle, .analyzing:
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(YagyoPrintColor.vermillionInk)
+                    Text("この曲を端末内で読み解いています…")
+                        .font(.caption)
+                        .foregroundStyle(YagyoPrintColor.inkMuted)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Music Understandingで解析中")
+
+            case .ready(let snapshot):
+                analysisSummary(snapshot)
+
+            case .unavailable(let reason):
+                Text(reason)
+                    .font(.caption)
+                    .foregroundStyle(YagyoPrintColor.inkMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .modernRetroPanel(tone: .paper, radius: 12, padding: 12)
+    }
+
+    @ViewBuilder
+    private var analysisStatusMark: some View {
+        switch featureAnalysisState {
+        case .idle, .analyzing:
+            Text("解析中")
+                .analysisStatusStyle(
+                    fill: YagyoPrintColor.persimmon,
+                    foreground: YagyoPrintColor.ink,
+                    stroke: YagyoPrintColor.ink.opacity(0.35)
+                )
+        case .ready:
+            Text("解析済")
+                .analysisStatusStyle(
+                    fill: YagyoPrintColor.paperRaised,
+                    foreground: YagyoPrintColor.teal,
+                    stroke: YagyoPrintColor.teal
+                )
+        case .unavailable:
+            Text("待機")
+                .analysisStatusStyle(
+                    fill: YagyoPrintColor.paperMuted,
+                    foreground: YagyoPrintColor.ink,
+                    stroke: YagyoPrintColor.ink.opacity(0.35)
+                )
+        }
+    }
+
+    private func analysisSummary(_ snapshot: FeatureSnapshot) -> some View {
+        let music = snapshot.boundedFiniteFeatures.musicUnderstanding
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                analysisValue(
+                    title: "テンポ",
+                    value: music.beatsPerMinute.map { String(format: "%.0f BPM", $0) } ?? "—"
+                )
+                analysisValue(
+                    title: "調",
+                    value: music.dominantKey.map { "\($0.tonic.uppercased()) \($0.mode)" } ?? "—"
+                )
+                analysisValue(
+                    title: "区間",
+                    value: "\(music.sectionCount)"
+                )
+            }
+
+            Text(instrumentSummary(music.instruments))
+                .font(.caption2)
+                .foregroundStyle(YagyoPrintColor.inkMuted)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(analysisAccessibilityLabel(snapshot))
+    }
+
+    private func analysisValue(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(YagyoPrintColor.inkMuted)
+            Text(value)
+                .font(.system(.caption, design: .monospaced).weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(YagyoPrintColor.teal)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func instrumentSummary(
+        _ instruments: [FeatureSnapshot.MusicUnderstandingFeatures.Instrument]
+    ) -> String {
+        let names = instruments.prefix(3).map(\.identifier)
+        return names.isEmpty
+            ? "主な音の判定はありません"
+            : "主な音  " + names.joined(separator: " · ")
+    }
+
+    private func analysisAccessibilityLabel(_ snapshot: FeatureSnapshot) -> String {
+        let music = snapshot.boundedFiniteFeatures.musicUnderstanding
+        let tempo = music.beatsPerMinute.map { String(format: "%.0f BPM", $0) } ?? "テンポ不明"
+        let key = music.dominantKey.map { "\($0.tonic) \($0.mode)" } ?? "調不明"
+        return "Music Understanding解析済み、\(tempo)、\(key)、区間\(music.sectionCount)"
     }
 
     private var intro: some View {
@@ -206,7 +372,7 @@ private struct FixedEQAuditionPanel: View {
                 .foregroundStyle(YagyoPrintColor.paperRaised)
                 .frame(width: 24, height: 24)
                 .background(YagyoPrintColor.vermillionInk, in: RoundedRectangle(cornerRadius: 5))
-            Text("この曲だけ・保存されません。Music Understandingによる曲別候補は次の段階です。")
+            Text("解析結果はこの端末のキャッシュへ保存されます。試聴設定は保存されず、曲別候補は次の段階です。")
                 .font(.caption2)
                 .foregroundStyle(YagyoPrintColor.inkMuted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -282,9 +448,82 @@ struct FixedEQAuditionPreviewHarness: View {
                 failureMessage: nil
             ),
             message: nil,
+            featureAnalysisState: .ready(
+                FixedEQAuditionPreviewHarness.previewSnapshot
+            ),
             onSelect: { mode = $0 },
             onClose: {}
         )
     }
+
+    private static let previewSnapshot = FeatureSnapshot(
+        schemaVersion: FeatureSnapshot.currentSchemaVersion,
+        sourceFingerprint: String(repeating: "a", count: 64),
+        analyzerVersion: FeatureSnapshot.currentAnalyzerVersion,
+        compatibilityKey: FeatureSnapshot.currentCompatibilityKey,
+        availability: .complete,
+        boundedFiniteFeatures: .init(
+            musicUnderstanding: .init(
+                beatsPerMinute: 118,
+                beatCount: 64,
+                barCount: 16,
+                meanPace: 0.52,
+                sectionCount: 4,
+                segmentCount: 8,
+                phraseCount: 12,
+                silenceSummary: .init(observedSampleCount: 20, silentSampleCount: 2),
+                dominantKey: .init(
+                    tonic: "a",
+                    mode: "minor",
+                    observedDurationSeconds: 30
+                ),
+                instruments: [
+                    .init(
+                        identifier: "vocal",
+                        activeRangeCount: 3,
+                        activitySampleCount: 8,
+                        meanActivity: 0.78
+                    ),
+                    .init(
+                        identifier: "drum",
+                        activeRangeCount: 2,
+                        activitySampleCount: 8,
+                        meanActivity: 0.64
+                    )
+                ]
+            ),
+            kitsunebi: TobariMetrics(
+                analyzerVersion: TobariMetrics.currentAnalyzerVersion,
+                contentHash: String(repeating: "a", count: 64),
+                analyzedAt: Date(timeIntervalSince1970: 1_784_000_000),
+                sampleRate: 48_000,
+                durationSeconds: 30,
+                channelCount: 2,
+                integratedLUFS: -18,
+                maxShortTermLUFS: -16,
+                samplePeakDBFS: -1,
+                truePeakDBTP: -0.8,
+                clipRunCount: 0,
+                clipRunSeconds: [],
+                stereoCorrelation: 0.9
+            )
+        ),
+        createdAt: Date(timeIntervalSince1970: 1_784_000_000)
+    )
 }
 #endif
+
+private extension View {
+    func analysisStatusStyle(
+        fill: Color,
+        foreground: Color,
+        stroke: Color
+    ) -> some View {
+        font(.caption2.weight(.bold))
+            .foregroundStyle(foreground)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(fill, in: Capsule())
+            .overlay(Capsule().stroke(stroke, lineWidth: 1))
+    }
+}

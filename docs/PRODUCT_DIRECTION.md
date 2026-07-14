@@ -73,7 +73,7 @@ North Star は次の 3 条件。確認の物差しは市場指標ではなく、
 - 音源は外へ送らず、元ファイルも書き換えない。利用条件が local-first の約束を満たさない端末では、この機能自体を使わない。
 - Core AI が任意のエフェクトや並び順を作ることはない。選べるのは、人が測定・試聴して版を管理したレシピだけである。
 - これは将来の**再生音の Listening Profile**構想であり、Step 4 の `averagePower` 由来の視覚信号とは別の仕事として扱う。一つの巨大な解析経路へ結びつけることを前提にしない。
-- **現在地(正直に)**: iOS 27 の `MusicUnderstandingSession` を availability gate の内側でローカル `AVAsset` 解析へ接続し、六つの結果を app-owned Codable 型へ正規化する Phase 0 adapterを実装した。Phase 1では、AI非依存の3〜5 band固定EQ pure core、Original latch、固定容量SPSC snapshot境界、in-process `AUAudioUnit`、allocation-free dry／wet ramp、target完了世代ackを実装した。さらにiOS 27 Debug限定で `AVAudioPlayerNode -> FixedEQAudioUnit` のpreview backendと「一本の耳」sheetを接続し、固定3-band fixtureをOriginalと最大256 framesで切り替えられる。Release／iOS 26は従来backendのままで、選択は保存せず、狐火の帳の二曲A/B・音量乗数とも独立している。route変更ではOriginalへ戻し、要求投入失敗時はFixed EQを鳴らし続けず停止する。Phase 2では、Music Understanding要約と現行Kitsunebi安全計測を厳格なSHA／版／有限値契約を持つ固定上限`FeatureSnapshot`へ一本化し、purge可能なoffline cache actor、旧版／破損entryの無効化、解析とfile-read chunk間のcancellationを実装した。snapshot/cache focused testは8 / 8、マージ後レビューの安全補修は2 / 2、app full suiteは225 / 225、いずれもskip 0、generic iOS Release buildも成功した。実機realtime性能と音質、実曲のoffline解析性能、Music Understandingによる曲別候補、cacheのruntime接続、Core AI、Listening Profile保存、候補間ラウドネスマッチは未検証・未実装である。seek時の厳密なIIR resetもrender barrier導入まで保留し、現状は位置とscheduleを壊さずfilter historyを連続させる。
+- **現在地(正直に)**: iOS 27 の `MusicUnderstandingSession` を availability gate の内側でローカル `AVAsset` 解析へ接続し、六つの結果を app-owned Codable 型へ正規化する Phase 0 adapterを実装した。Phase 1では、AI非依存の3〜5 band固定EQ pure core、Original latch、固定容量SPSC snapshot境界、in-process `AUAudioUnit`、allocation-free dry／wet ramp、target完了世代ackを実装した。さらにiOS 27 Debug限定で `AVAudioPlayerNode -> FixedEQAudioUnit` のpreview backendと「一本の耳」sheetを接続し、固定3-band fixtureをOriginalと最大256 framesで切り替えられる。Release／iOS 26は従来backendのままで、選択は保存せず、狐火の帳の二曲A/B・音量乗数とも独立している。route変更ではOriginalへ戻し、要求投入失敗時はFixed EQを鳴らし続けず停止する。Phase 2では、Music Understanding要約と現行Kitsunebi安全計測を厳格なSHA／版／有限値契約を持つ固定上限`FeatureSnapshot`へ一本化し、purge可能なoffline cache actor、旧版／破損entryの無効化、解析とfile-read chunk間のcancellationを実装した。さらにcache-first serviceを、ユーザーが「一本の耳」を開いている間だけ動くSwiftUI taskへ接続し、BPM・調・セクション数・上位楽器を「曲相」カードへ表示する。import、再生開始、playback backend、AU、render callbackからは呼ばない。session／snapshot focused testは11 / 11、app full suiteは229 / 229、いずれも失敗0で通過し、generic iOS Release buildと署名付き実機Debug build／installも成功した。実機realtime性能と音質、実曲のoffline解析性能／電力／cache再利用、Music Understandingによる曲別候補、Core AI、Listening Profile保存、候補間ラウドネスマッチは未検証・未実装である。seek時の厳密なIIR resetもrender barrier導入まで保留し、現状は位置とscheduleを壊さずfilter historyを連続させる。
 
 ### 4.3 住み着きの夜 — 聴いた時間が世界を深める
 
@@ -132,7 +132,7 @@ Release criteria:
 
 ### Step 3 — 狐火の調律(§4.2、Phase 0 / 1 / 2 進行中)
 
-状態: **2026-07-14に保留解除。iOS 27 betaのMusic Understanding境界、AI非依存の固定EQ core／AU／snapshot handoff、版付きoffline FeatureSnapshot／cache境界を実装した。iOS 27 Debugでは「一本の耳」から固定fixtureを実音声graphで試聴できる。FeatureSnapshotはまだimport／UI／再生経路から呼ばず、Release経路、Core AI、曲別候補、Listening Profile永続化も未接続。**
+状態: **2026-07-14に保留解除。iOS 27 betaのMusic Understanding境界、AI非依存の固定EQ core／AU／snapshot handoff、版付きoffline FeatureSnapshot／cache境界を実装した。iOS 27 Debugでは「一本の耳」から固定fixtureを実音声graphで試聴でき、sheetを開いた間だけcache-first解析を行って「曲相」を表示する。import、再生開始、playback backend、AU、render callbackからは解析を呼ばず、Release DSP経路、Core AI、曲別候補、Listening Profile永続化も未接続。**
 
 Phase 0 の残り条件:
 - iOS 27 実機でローカル実曲、cancellation、オンデバイス実行条件、対応端末、性能を確認する。
