@@ -123,7 +123,13 @@ private struct FixedEQAuditionPanel: View {
             }
 
             switch featureAnalysisState {
-            case .idle, .analyzing:
+            case .idle:
+                Text("解析開始を待っています。")
+                    .font(.caption)
+                    .foregroundStyle(YagyoPrintColor.inkMuted)
+                    .accessibilityLabel("Music Understanding解析待機")
+
+            case .analyzing:
                 HStack(spacing: 10) {
                     ProgressView()
                         .controlSize(.small)
@@ -151,7 +157,7 @@ private struct FixedEQAuditionPanel: View {
     @ViewBuilder
     private var analysisStatusMark: some View {
         switch featureAnalysisState {
-        case .idle, .analyzing:
+        case .analyzing:
             Text("解析中")
                 .analysisStatusStyle(
                     fill: YagyoPrintColor.persimmon,
@@ -165,7 +171,7 @@ private struct FixedEQAuditionPanel: View {
                     foreground: YagyoPrintColor.teal,
                     stroke: YagyoPrintColor.teal
                 )
-        case .unavailable:
+        case .idle, .unavailable:
             Text("待機")
                 .analysisStatusStyle(
                     fill: YagyoPrintColor.paperMuted,
