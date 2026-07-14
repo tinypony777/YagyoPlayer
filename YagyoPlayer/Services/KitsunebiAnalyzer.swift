@@ -760,8 +760,10 @@ enum KitsunebiAnalyzer {
 
     static func analyze(
         url: URL,
-        progress: (@Sendable (Double) -> Void)? = nil
+        progress: (@Sendable (Double) -> Void)? = nil,
+        cancellationCheck: @Sendable () throws -> Void = { try Task.checkCancellation() }
     ) throws -> TobariMeasurement {
+        try cancellationCheck()
         let audioFile: AVAudioFile
         do {
             audioFile = try AVAudioFile(
@@ -789,6 +791,7 @@ enum KitsunebiAnalyzer {
 
         let totalFrames = max(0, Int(audioFile.length))
         guard totalFrames > 0 else {
+            try cancellationCheck()
             progress?(1.0)
             return engine.finalize()
         }
@@ -802,6 +805,7 @@ enum KitsunebiAnalyzer {
 
         var framesRead = 0
         while framesRead < totalFrames {
+            try cancellationCheck()
             let framesToRead = AVAudioFrameCount(min(Int(readBufferFrames), totalFrames - framesRead))
             do {
                 try audioFile.read(into: buffer, frameCount: framesToRead)
@@ -819,6 +823,7 @@ enum KitsunebiAnalyzer {
             progress?(min(1.0, Double(framesRead) / Double(totalFrames)))
         }
 
+        try cancellationCheck()
         progress?(1.0)
         return engine.finalize()
     }

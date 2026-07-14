@@ -3,6 +3,32 @@ import XCTest
 @testable import YagyoPlayer
 
 final class SilenceHysteresisTests: XCTestCase {
+    func testCodableNormalizesNonFiniteReadingToUnavailable() throws {
+        let legacyData = Data(#"{"finite":{"_0":-18.2}}"#.utf8)
+
+        XCTAssertEqual(
+            try JSONDecoder().decode(LoudnessReading.self, from: legacyData),
+            .finite(-18.2)
+        )
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                LoudnessReading.self,
+                from: JSONEncoder().encode(LoudnessReading.finite(-18.2))
+            ),
+            .finite(-18.2)
+        )
+
+        let data = try JSONEncoder().encode(LoudnessReading.finite(.nan))
+        let json = try XCTUnwrap(String(data: data, encoding: .utf8))
+
+        XCTAssertFalse(json.contains("NaN"))
+        XCTAssertFalse(json.contains("Infinity"))
+        XCTAssertEqual(
+            try JSONDecoder().decode(LoudnessReading.self, from: data),
+            .unavailable
+        )
+    }
+
     func testEntryAndExitThresholdsKeepFiveLUHysteresis() {
         var detector = SilenceHysteresis()
 

@@ -42,6 +42,30 @@ struct TobariSuggestion: Identifiable, Hashable, Sendable {
 extension TobariMetrics {
     static let currentAnalyzerVersion = 1
 
+    /// Kitsunebiの1パス計測から永続化モデルを作る唯一の変換境界。
+    /// 狐火の帳とStep 3 FeatureSnapshotが同じ値定義を共有する。
+    init(
+        measurement: TobariMeasurement,
+        contentHash: String?,
+        analyzedAt: Date = Date()
+    ) {
+        self.init(
+            analyzerVersion: Self.currentAnalyzerVersion,
+            contentHash: contentHash,
+            analyzedAt: analyzedAt,
+            sampleRate: measurement.sampleRate,
+            durationSeconds: measurement.durationSeconds,
+            channelCount: measurement.channelCount,
+            integratedLUFS: measurement.integratedLUFS,
+            maxShortTermLUFS: measurement.maxShortTermLUFS,
+            samplePeakDBFS: measurement.samplePeakDBFS,
+            truePeakDBTP: measurement.truePeakDBTP,
+            clipRunCount: measurement.clipRunCount,
+            clipRunSeconds: measurement.clipRunSeconds,
+            stereoCorrelation: measurement.stereoCorrelation
+        )
+    }
+
     /// キャッシュが現在のトラックとアナライザ版に対して有効か。
     func isValidCache(for contentHash: String?) -> Bool {
         guard analyzerVersion == Self.currentAnalyzerVersion else { return false }

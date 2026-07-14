@@ -6,6 +6,74 @@ enum LoudnessReading: Codable, Equatable, Sendable {
     case negativeInfinity
     case unavailable
 
+    private enum CodingKeys: String, CodingKey, CaseIterable {
+        case finite
+        case negativeInfinity
+        case unavailable
+    }
+
+    private enum FiniteCodingKeys: String, CodingKey {
+        case value = "_0"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let presentCases = CodingKeys.allCases.filter(container.contains)
+        guard presentCases.count == 1, let presentCase = presentCases.first else {
+            throw DecodingError.dataCorrupted(
+                .init(
+                    codingPath: container.codingPath,
+                    debugDescription: "A loudness reading must contain exactly one case."
+                )
+            )
+        }
+
+        switch presentCase {
+        case .finite:
+            let finiteContainer = try container.nestedContainer(
+                keyedBy: FiniteCodingKeys.self,
+                forKey: .finite
+            )
+            let value = try finiteContainer.decode(Double.self, forKey: .value)
+            guard value.isFinite else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .value,
+                    in: finiteContainer,
+                    debugDescription: "A finite loudness reading must contain a finite value."
+                )
+            }
+            self = .finite(value)
+        case .negativeInfinity:
+            self = .negativeInfinity
+        case .unavailable:
+            self = .unavailable
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .finite(let value) where value.isFinite:
+            var finiteContainer = container.nestedContainer(
+                keyedBy: FiniteCodingKeys.self,
+                forKey: .finite
+            )
+            try finiteContainer.encode(value, forKey: .value)
+        case .negativeInfinity:
+            _ = container.nestedContainer(
+                keyedBy: FiniteCodingKeys.self,
+                forKey: .negativeInfinity
+            )
+        case .finite, .unavailable:
+            // A defensive direct construction such as `.finite(.nan)` is persisted
+            // as unavailable rather than making the entire Codable payload fail.
+            _ = container.nestedContainer(
+                keyedBy: FiniteCodingKeys.self,
+                forKey: .unavailable
+            )
+        }
+    }
+
     var finiteValue: Double? {
         guard case .finite(let value) = self, value.isFinite else { return nil }
         return value

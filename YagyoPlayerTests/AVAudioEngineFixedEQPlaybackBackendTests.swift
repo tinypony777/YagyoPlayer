@@ -95,6 +95,31 @@ final class AVAudioEngineFixedEQPlaybackBackendTests: XCTestCase {
         XCTAssertEqual(backend.fixedEQAuditionState, .waitingForTrack)
     }
 
+    func testLowSampleRateTrackIsMarkedUnsupportedBeforeFixedEQSelection() throws {
+        let fileURL = try makeSineFile(
+            named: "low-sample-rate.caf",
+            duration: 0.25,
+            sampleRate: 8_000
+        )
+        let trackID = UUID()
+        let backend = AVAudioEngineFixedEQPlaybackBackend()
+
+        try backend.load(url: fileURL, trackID: trackID)
+        defer { backend.stop() }
+
+        XCTAssertEqual(backend.currentSchedule?.trackID, trackID)
+        XCTAssertEqual(backend.fixedEQAuditionState.availability, .unsupported)
+        XCTAssertEqual(backend.fixedEQAuditionState.requestedMode, .original)
+        XCTAssertThrowsError(
+            try backend.requestFixedEQAuditionMode(.fixedEQ)
+        ) { error in
+            XCTAssertEqual(
+                error as? AVAudioEngineFixedEQPlaybackBackendError,
+                .invalidPreviewRecipe
+            )
+        }
+    }
+
     func testRealtimeGraphAcknowledgesFixedAndOriginalTargets() async throws {
         let fileURL = try makeSineFile(named: "realtime.caf", duration: 2)
         let backend = AVAudioEngineFixedEQPlaybackBackend()
@@ -240,9 +265,9 @@ final class AVAudioEngineFixedEQPlaybackBackendTests: XCTestCase {
     private func makeSineFile(
         named name: String,
         duration: TimeInterval,
-        frequency: Double = 440
+        frequency: Double = 440,
+        sampleRate: Double = 48_000
     ) throws -> URL {
-        let sampleRate = 48_000.0
         let channelCount = 2
         let frameCount = Int(sampleRate * duration)
         let format = try XCTUnwrap(

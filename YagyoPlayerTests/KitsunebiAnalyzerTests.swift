@@ -366,6 +366,70 @@ final class KitsunebiAnalyzerTests: XCTestCase {
         XCTAssertTrue(recorder.isMonotonic)
     }
 
+    func testAnalyzeFileHonorsCancellationBetweenReadChunks() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tobari-cancel-\(UUID().uuidString).caf")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        guard let format = AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: sampleRate,
+            channels: 2,
+            interleaved: false
+        ) else {
+            XCTFail("フォーマットを作成できません")
+            return
+        }
+        let signal = sine(frequency: 997, amplitude: 0.1, seconds: 4)
+        do {
+            let file = try AVAudioFile(
+                forWriting: url,
+                settings: format.settings,
+                commonFormat: .pcmFormatFloat32,
+                interleaved: false
+            )
+            guard let buffer = AVAudioPCMBuffer(
+                pcmFormat: format,
+                frameCapacity: AVAudioFrameCount(signal.count)
+            ), let channelData = buffer.floatChannelData else {
+                XCTFail("書き込みバッファを確保できません")
+                return
+            }
+            for channel in 0..<2 {
+                signal.withUnsafeBufferPointer { pointer in
+                    channelData[channel].update(from: pointer.baseAddress!, count: signal.count)
+                }
+            }
+            buffer.frameLength = AVAudioFrameCount(signal.count)
+            try file.write(from: buffer)
+        }
+
+        final class CancellationProbe: @unchecked Sendable {
+            private let lock = NSLock()
+            private var callCount = 0
+
+            func check() throws {
+                lock.lock()
+                callCount += 1
+                let shouldCancel = callCount >= 3
+                lock.unlock()
+                if shouldCancel {
+                    throw CancellationError()
+                }
+            }
+        }
+        let probe = CancellationProbe()
+
+        XCTAssertThrowsError(
+            try KitsunebiAnalyzer.analyze(
+                url: url,
+                cancellationCheck: probe.check
+            )
+        ) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+    }
+
     // MARK: - QA artifact(帳の一画面)
 
     @MainActor

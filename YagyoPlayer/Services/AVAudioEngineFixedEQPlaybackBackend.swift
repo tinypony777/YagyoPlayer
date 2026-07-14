@@ -95,6 +95,16 @@ final class AVAudioEngineFixedEQPlaybackBackend: AudioPlaybackBackend, FixedEQAu
 
     var fixedEQAuditionState: FixedEQAuditionState {
         guard let graph else { return .waitingForTrack }
+        guard graph.supportsFixedEQPreview else {
+            return FixedEQAuditionState(
+                availability: .unsupported,
+                requestedMode: .original,
+                appliedMode: .original,
+                isSwitching: false,
+                appliesOnNextPlay: false,
+                failureMessage: "Fixed EQ is unavailable for this track's sample rate."
+            )
+        }
         synchronizeDSPTelemetry(in: graph)
 
         let telemetry = graph.fixedEQ.renderTelemetry
@@ -215,6 +225,9 @@ final class AVAudioEngineFixedEQPlaybackBackend: AudioPlaybackBackend, FixedEQAu
         guard let graph else {
             throw AudioPlaybackBackendError.noTrackLoaded
         }
+        guard mode == .original || graph.supportsFixedEQPreview else {
+            throw AVAudioEngineFixedEQPlaybackBackendError.invalidPreviewRecipe
+        }
         synchronizeDSPTelemetry(in: graph)
 
         if graph.playbackRequested {
@@ -286,6 +299,11 @@ final class AVAudioEngineFixedEQPlaybackBackend: AudioPlaybackBackend, FixedEQAu
         guard file.length <= AVAudioFramePosition(AVAudioFrameCount.max) else {
             throw AVAudioEngineFixedEQPlaybackBackendError.audioFileTooLong
         }
+        let supportsFixedEQPreview = FixedEQSnapshotFactory.make(
+            recipe: Self.previewRecipe,
+            sampleRate: format.sampleRate,
+            generation: 0
+        ).mode == .processed
 
         FixedEQAudioUnit.registerComponent()
         let effect = AVAudioUnitEffect(
@@ -323,7 +341,8 @@ final class AVAudioEngineFixedEQPlaybackBackend: AudioPlaybackBackend, FixedEQAu
             file: file,
             trackID: trackID,
             meter: meter,
-            completion: completion
+            completion: completion,
+            supportsFixedEQPreview: supportsFixedEQPreview
         )
         candidate.tapIsInstalled = true
         candidate.schedule(from: startingFrame)
@@ -410,6 +429,7 @@ private final class PreviewGraph {
     let trackID: AudioTrack.ID
     let meter: PreviewMeterState
     let completion: PreviewCompletionState
+    let supportsFixedEQPreview: Bool
 
     var scheduledStartFrame: AVAudioFramePosition = 0
     var fallbackFrame: AVAudioFramePosition = 0
@@ -438,7 +458,8 @@ private final class PreviewGraph {
         file: AVAudioFile,
         trackID: AudioTrack.ID,
         meter: PreviewMeterState,
-        completion: PreviewCompletionState
+        completion: PreviewCompletionState,
+        supportsFixedEQPreview: Bool
     ) {
         self.engine = engine
         self.player = player
@@ -448,6 +469,7 @@ private final class PreviewGraph {
         self.trackID = trackID
         self.meter = meter
         self.completion = completion
+        self.supportsFixedEQPreview = supportsFixedEQPreview
     }
 
     func schedule(from requestedFrame: AVAudioFramePosition) {

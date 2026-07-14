@@ -91,19 +91,8 @@ final class TobariAnalysisController: ObservableObject {
         library: AudioLibraryStore
     ) {
         let metrics = TobariMetrics(
-            analyzerVersion: TobariMetrics.currentAnalyzerVersion,
-            contentHash: contentHash,
-            analyzedAt: Date(),
-            sampleRate: measurement.sampleRate,
-            durationSeconds: measurement.durationSeconds,
-            channelCount: measurement.channelCount,
-            integratedLUFS: measurement.integratedLUFS,
-            maxShortTermLUFS: measurement.maxShortTermLUFS,
-            samplePeakDBFS: measurement.samplePeakDBFS,
-            truePeakDBTP: measurement.truePeakDBTP,
-            clipRunCount: measurement.clipRunCount,
-            clipRunSeconds: measurement.clipRunSeconds,
-            stereoCorrelation: measurement.stereoCorrelation
+            measurement: measurement,
+            contentHash: contentHash
         )
         // hashをbackfillできなかった音源はキャッシュせず、今回の表示だけに使う(仕様 §4.1)。
         if contentHash != nil {
