@@ -27,7 +27,7 @@ struct ParadeProcessionLayout: Sendable {
     }
 }
 
-/// 夜行絵巻 — 音量近似を、説明可能な行進・静音・強反応へ翻訳する表示層。
+/// 妖怪欄間 — 音量近似を、説明可能な行進・静音・強反応へ翻訳する表示層。
 /// 楽曲の拍や構成を推定せず、再生は一切操作しない。
 struct YagyoParadeView: View {
     var signal: ParadeSignalSnapshot
@@ -74,21 +74,23 @@ struct YagyoParadeView: View {
                 }
             }
         }
-        .frame(height: 158)
-        .background(YagyoPrintColor.stage)
-        .clipShape(RoundedRectangle(cornerRadius: YagyoPrintMetrics.panelRadius, style: .continuous))
+        .frame(height: 142)
+        .background(isUshimitsu ? YagyoPrintColor.stage : YagyoPrintColor.paperRaised)
+        .clipShape(WoodblockFrameShape(cut: 10))
         .overlay {
-            let shape = RoundedRectangle(
-                cornerRadius: YagyoPrintMetrics.panelRadius,
-                style: .continuous
+            let shape = WoodblockFrameShape(cut: 10)
+            shape.stroke(
+                isUshimitsu ? YagyoPrintColor.ink : YagyoPrintColor.indigo,
+                lineWidth: isUshimitsu ? 1 : 2
             )
-            shape.stroke(YagyoPrintColor.ink, lineWidth: YagyoPrintMetrics.ruleWidth)
-            shape
-                .inset(by: YagyoPrintMetrics.innerRuleInset)
-                .stroke(YagyoPrintColor.paper, lineWidth: YagyoPrintMetrics.ruleWidth)
+            if !isUshimitsu {
+                shape
+                    .inset(by: 4)
+                    .stroke(YagyoPrintColor.vermillion.opacity(0.72), lineWidth: 1)
+            }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("妖怪の夜行絵巻")
+        .accessibilityLabel("音に反応する妖怪の行列")
         .accessibilityValue(
             signal.accessibilityValue(
                 residentName: residentSprite?.name,
@@ -137,17 +139,28 @@ struct YagyoParadeView: View {
             )
         )
 
+        if !isUshimitsu {
+            drawDayPrintMotifs(in: &context, width: width, height: height)
+        }
         drawStars(in: &context, width: width, height: height, time: time, animated: animated)
         drawMoon(in: &context, width: width, palette: pal)
         drawFog(in: &context, width: width, time: time, palette: pal, animated: animated)
 
         context.fill(
             Path(CGRect(x: 0, y: height - 22, width: width, height: 22)),
-            with: .color(.black.opacity(0.35))
+            with: .color(
+                isUshimitsu
+                    ? Color.black.opacity(0.35)
+                    : YagyoPrintColor.persimmon.opacity(0.15)
+            )
         )
         context.fill(
             Path(CGRect(x: 0, y: height - 22, width: width, height: 1)),
-            with: .color(YagyoColor.geppaku.opacity(0.08))
+            with: .color(
+                isUshimitsu
+                    ? YagyoColor.geppaku.opacity(0.08)
+                    : YagyoPrintColor.vermillion.opacity(0.50)
+            )
         )
 
         let sway1 = animated ? sin(time * 0.8) * 3 : 0
@@ -156,6 +169,45 @@ struct YagyoParadeView: View {
         drawChochin(in: &context, x: width * 0.42 + sway2, y: 22, time: time + 3, animated: animated)
 
         drawProcession(in: &context, width: width, height: height, time: time)
+    }
+
+    /// Day欄間へ色版を足す。細い藍の青海波と朱の霞だけに留め、妖怪の輪郭を邪魔しない。
+    private func drawDayPrintMotifs(
+        in context: inout GraphicsContext,
+        width: Double,
+        height: Double
+    ) {
+        var kasumi = Path()
+        kasumi.move(to: CGPoint(x: 0, y: 27))
+        kasumi.addLine(to: CGPoint(x: width * 0.46, y: 27))
+        kasumi.addLine(to: CGPoint(x: width * 0.41, y: 35))
+        kasumi.addLine(to: CGPoint(x: 0, y: 35))
+        kasumi.closeSubpath()
+        context.fill(kasumi, with: .color(YagyoPrintColor.vermillion.opacity(0.10)))
+
+        let radius = max(18, width / 12)
+        for row in 0..<2 {
+            for column in -1...8 {
+                let offset = row.isMultiple(of: 2) ? 0.0 : radius
+                let center = CGPoint(
+                    x: Double(column) * radius * 2 + offset,
+                    y: height - 18 - Double(row) * radius * 0.52
+                )
+                var wave = Path()
+                wave.addArc(
+                    center: center,
+                    radius: radius,
+                    startAngle: .degrees(180),
+                    endAngle: .degrees(360),
+                    clockwise: false
+                )
+                context.stroke(
+                    wave,
+                    with: .color(YagyoPrintColor.indigo.opacity(row == 0 ? 0.16 : 0.09)),
+                    lineWidth: 0.8
+                )
+            }
+        }
     }
 
     private func drawStars(
@@ -175,7 +227,11 @@ struct YagyoParadeView: View {
             let side: Double = big ? 2 : 1
             context.fill(
                 Path(CGRect(x: x, y: y, width: side, height: side)),
-                with: .color(YagyoPrintColor.paperRaised.opacity(alpha))
+                with: .color(
+                    isUshimitsu
+                        ? YagyoPrintColor.paperRaised.opacity(alpha)
+                        : YagyoPrintColor.inkMuted.opacity(alpha * 0.22)
+                )
             )
         }
     }
@@ -258,7 +314,15 @@ struct YagyoParadeView: View {
         var cord = Path()
         cord.move(to: CGPoint(x: x, y: 0))
         cord.addLine(to: CGPoint(x: x + sway, y: y))
-        context.stroke(cord, with: .color(YagyoColor.geppaku.opacity(0.2)), lineWidth: 1)
+        context.stroke(
+            cord,
+            with: .color(
+                isUshimitsu
+                    ? YagyoColor.geppaku.opacity(0.2)
+                    : YagyoPrintColor.inkMuted.opacity(0.30)
+            ),
+            lineWidth: 1
+        )
 
         let bx = x + sway
         let halo = chochinHalo
@@ -278,15 +342,7 @@ struct YagyoParadeView: View {
                 style: StrokeStyle(lineWidth: 1, dash: [2, 2])
             )
         } else {
-            context.fill(
-                glowPath,
-                with: .radialGradient(
-                    Gradient(colors: [YagyoColor.chochin.opacity(halo.opacity), .clear]),
-                    center: CGPoint(x: bx, y: glowY),
-                    startRadius: 0,
-                    endRadius: max(halo.width, halo.height) / 2
-                )
-            )
+            context.fill(glowPath, with: .color(YagyoColor.chochin.opacity(halo.opacity * 0.42)))
         }
 
         context.fill(Path(CGRect(x: bx - 4, y: y, width: 8, height: 3)), with: .color(Color(yagyoHex: 0x191420)))

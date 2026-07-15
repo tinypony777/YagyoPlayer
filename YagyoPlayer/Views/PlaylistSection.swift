@@ -71,17 +71,12 @@ struct PlaylistSection: View {
     }
 
     private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("巻物")
-                    .font(.system(.headline, design: .serif))
-                    .tracking(4)
-                    .foregroundStyle(YagyoPrintColor.ink)
-                Text("Playlists · Organize tracks your way")
-                    .font(.caption)
-                    .foregroundStyle(YagyoPrintColor.inkMuted)
-            }
-            Spacer()
+        WoodblockSectionHeader(
+            title: "巻物",
+            overline: "BOUND VOLUMES",
+            detail: "Playlists · Arrange tracks in your order",
+            accent: YagyoPrintColor.vermillionInk
+        ) {
             Button {
                 isCreatePresented = true
             } label: {
@@ -89,11 +84,11 @@ struct PlaylistSection: View {
                     .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(YagyoPrintColor.ink)
-            .background(YagyoPrintColor.paperRaised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .foregroundStyle(YagyoPrintColor.vermillionInk)
+            .background(YagyoPrintColor.paperRaised, in: WoodblockFrameShape(cut: 8))
             .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(YagyoPrintColor.ink, lineWidth: 1)
+                WoodblockFrameShape(cut: 8)
+                    .stroke(YagyoPrintColor.vermillionInk, lineWidth: 1.5)
             }
             .accessibilityLabel("Create playlist")
         }
@@ -112,6 +107,9 @@ struct PlaylistSection: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
+        .overlay(alignment: .top) {
+            RetroDivider(color: YagyoPrintColor.paperMuted)
+        }
     }
 
     private var renameAlertBinding: Binding<Bool> {
@@ -146,10 +144,13 @@ private struct PlaylistRow: View {
                         .font(.title3)
                         .foregroundStyle(isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.inkMuted)
                         .frame(width: 44, height: 44)
-                        .background(YagyoPrintColor.paper, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .background(YagyoPrintColor.persimmon.opacity(0.18), in: WoodblockFrameShape(cut: 7))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .stroke(isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.paperMuted, lineWidth: 1)
+                            WoodblockFrameShape(cut: 7)
+                                .stroke(
+                                    isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.indigoMuted,
+                                    lineWidth: 1
+                                )
                         }
 
                     VStack(alignment: .leading, spacing: 3) {
@@ -198,10 +199,13 @@ private struct PlaylistRow: View {
                 expandedContent
             }
         }
-        .background(isActive ? YagyoPrintColor.paperRaised : YagyoPrintColor.paper, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(isActive ? YagyoPrintColor.paperRaised : YagyoPrintColor.paper, in: WoodblockFrameShape(cut: 8))
         .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.paperMuted, lineWidth: 1)
+            WoodblockFrameShape(cut: 8)
+                .stroke(
+                    isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.indigoMuted,
+                    lineWidth: 1
+                )
         }
     }
 
@@ -268,8 +272,8 @@ private struct PlaylistTrackRow: View {
             }
         } label: {
             HStack(spacing: 10) {
-                Text("\(position + 1)")
-                    .font(.caption.monospacedDigit())
+                Text(positionLabel)
+                    .font(.system(.caption, design: .serif).weight(.semibold))
                     .foregroundStyle(YagyoPrintColor.inkMuted)
                     .frame(width: 20, alignment: .trailing)
 
@@ -293,9 +297,9 @@ private struct PlaylistTrackRow: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .frame(minHeight: 44)
-            .background(isCurrent ? YagyoPrintColor.paperRaised : YagyoPrintColor.paper, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(isCurrent ? YagyoPrintColor.paperRaised : YagyoPrintColor.paper, in: WoodblockFrameShape(cut: 7))
             .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                WoodblockFrameShape(cut: 7)
                     .stroke(isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.paperMuted, lineWidth: 1)
             }
         }
@@ -321,5 +325,10 @@ private struct PlaylistTrackRow: View {
                 Label("Remove from playlist", systemImage: "minus.circle")
             }
         }
+    }
+
+    private var positionLabel: String {
+        let marks = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"]
+        return marks.indices.contains(position) ? marks[position] : "\(position + 1)"
     }
 }

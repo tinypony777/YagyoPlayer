@@ -44,6 +44,54 @@ struct ParadeSignalInput: Equatable, Sendable {
     let sampledAt: TimeInterval
 }
 
+/// 音の足跡の表示専用リング。同値サンプルも時間の1点として保持する。
+struct WaveformHistoryBuffer: Equatable, Sendable {
+    private(set) var levels: [Double] = []
+    let limit: Int
+
+    init(limit: Int = 96) {
+        self.limit = max(1, limit)
+    }
+
+    mutating func reset(to level: Double, count: Int = 48) {
+        let clamped = Self.clamp(level)
+        levels = Array(repeating: clamped, count: min(max(1, count), limit))
+    }
+
+    mutating func append(_ level: Double) {
+        guard level.isFinite else { return }
+        levels.append(Self.clamp(level))
+        if levels.count > limit {
+            levels.removeFirst(levels.count - limit)
+        }
+    }
+
+    mutating func clear() {
+        levels.removeAll(keepingCapacity: true)
+    }
+
+    func sampled(count: Int, fallback: Double) -> [Double] {
+        let resolvedCount = max(1, count)
+        guard !levels.isEmpty else {
+            return Array(repeating: Self.clamp(fallback), count: resolvedCount)
+        }
+        if levels.count == resolvedCount { return levels }
+
+        return (0..<resolvedCount).map { index in
+            let sourceIndex = min(
+                levels.count - 1,
+                Int((Double(index) / Double(max(resolvedCount - 1, 1))) * Double(levels.count - 1))
+            )
+            return levels[sourceIndex]
+        }
+    }
+
+    private static func clamp(_ level: Double) -> Double {
+        guard level.isFinite else { return 0 }
+        return min(max(level, 0), 1)
+    }
+}
+
 struct ParadeSignalSnapshot: Equatable, Sendable {
     enum Activity: Equatable, Sendable { case stopped, unavailable, quietProxy, normal }
     enum StrongPhase: Equatable, Sendable { case inactive, anticipate, open, recover }
@@ -53,10 +101,12 @@ struct ParadeSignalSnapshot: Equatable, Sendable {
     fileprivate(set) var activity: Activity = .stopped
     fileprivate(set) var strongPhase: StrongPhase = .inactive
     fileprivate(set) var strongSequence: UInt64 = 0
-    /// 円形波形だけに使う、曲中の局所的な強弱へ正規化した表示値。
+    /// 音の足跡だけに使う、曲中の局所的な強弱へ正規化した表示値。
     /// 妖怪の振付とVoiceOverは既存の `level` / `levelBand` 契約を維持する。
     fileprivate(set) var waveformLevel: Double = 0
     fileprivate(set) var waveformLevelBand: LevelBand = .low
+    /// 値が前回と同じでも、15 Hzの1サンプルを時系列として残す。
+    fileprivate(set) var waveformHistory = WaveformHistoryBuffer()
 
     static func preview(
         activity: Activity,
@@ -193,6 +243,7 @@ struct ParadeSignalReducer: Sendable {
         let alpha = 1 - exp(-deltaTime / configuration.baselineTimeConstant)
         self.baseline = baseline + alpha * baselineDelta
         self.lastSampleAt = now
+        snapshot.waveformHistory.append(snapshot.waveformLevel)
 
         return snapshot
     }
@@ -204,6 +255,7 @@ struct ParadeSignalReducer: Sendable {
         snapshot.strongPhase = .inactive
         snapshot.waveformLevel = 0
         snapshot.waveformLevelBand = isPlaying ? .unavailable : .low
+        snapshot.waveformHistory.clear()
         return snapshot
     }
 
@@ -219,6 +271,7 @@ struct ParadeSignalReducer: Sendable {
         snapshot.strongPhase = .inactive
         snapshot.waveformLevel = level <= configuration.quietEnterLevel ? 0.15 : 0.5
         snapshot.waveformLevelBand = level <= configuration.quietEnterLevel ? .low : .medium
+        snapshot.waveformHistory.reset(to: snapshot.waveformLevel, count: 1)
         waveformFloor = level
         waveformCeiling = level
         waveformBandChangedAt = now
