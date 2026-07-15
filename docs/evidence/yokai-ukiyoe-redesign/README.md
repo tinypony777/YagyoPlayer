@@ -56,6 +56,7 @@ DerivedData、`xcresult`、一時生成物はすべて外付けSSDの `/Volumes/
 - iOS 27 Simulator focused regression: 50 tests、0 failures
 - iOS 27 Simulator non-playback suite: 200 tests、0 failures
 - Release generic iOS build: PASS
+- Xcode 26.6／iOS 26.5 SDK Release compatibility build: PASS
 - iPhone 17 Pro Max 署名付きDebug build／wireless install: PASS
 
 全235件のSimulator実行では、既存の `PlaybackBackendSeamTests`／`PlaybackControllerTests` に入るとAudio Session初期化後にtest hostが終了し、Xcodeが各testを再起動し続けた。iOS 27とiOS 26.5の双方で同じ挙動で、今回変更したUI／アセット／waveform／解析を含む残り200件はiOS 27で完走している。再生系35件は実機testへ切り替えて最終確認する。

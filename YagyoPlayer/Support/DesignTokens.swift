@@ -100,6 +100,11 @@ struct WoodblockFrameShape: InsettableShape {
     var cut: CGFloat = YagyoPrintMetrics.frameCut
     private var insetAmount: CGFloat = 0
 
+    /// Xcode 26.5 / Swift 6.2でもprivate stored propertyに左右されず同じAPIを公開する。
+    init(cut: CGFloat = YagyoPrintMetrics.frameCut) {
+        self.cut = cut
+    }
+
     func path(in rect: CGRect) -> Path {
         let insetRect = rect.insetBy(dx: insetAmount, dy: insetAmount)
         guard insetRect.width > 0, insetRect.height > 0 else { return Path() }
