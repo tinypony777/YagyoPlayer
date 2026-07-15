@@ -15,7 +15,7 @@ The requested app is local-file first, so playback uses `AVAudioPlayer` from AVF
 
 Now Playing integration uses the stable `MediaPlayer` APIs (`MPNowPlayingInfoCenter` and `MPRemoteCommandCenter`) because they directly support local-file metadata and remote controls. The newer `NowPlaying.framework` is noted as a likely future migration path once the app needs a richer system media content model.
 
-No music-intelligence analysis runs during import or playback in the current iOS 26 app. File intake therefore remains independent of the iOS 27 proposal.
+No music-intelligence analysis runs during import or playback. On iOS 27, analysis can start only while the user explicitly opens the 「一本の耳」 sheet; file intake and playback startup remain independent of it.
 
 ## iOS 27 Beta Direction — Phase 0 Active
 
@@ -26,7 +26,7 @@ Apple's Music Understanding and Core AI documentation describe iOS 27 beta APIs.
 - The feature remains optional and local-first. Unsupported devices, unavailable models, invalid results, or failed validation return to unchanged `Original` playback.
 - Listening Profile processing and parade-reaction analysis are separate contracts. Music Understanding may inform either where the release API fits, but selected playback DSP is not treated as the parade's analysis engine.
 
-The app target now contains a weak-linked adapter, an app-owned result model, and a bounded offline `FeatureSnapshot`/cache service that reuses the existing Kitsunebi safety metrics. Import, UI, playback, and render callbacks do not invoke that service yet. API names, packaging, supported formats, device performance, and permission to persist derived Music Understanding summaries must still be revalidated against Apple's iOS 27 release SDK and terms.
+The app target now contains a weak-linked adapter, an app-owned result model, and a bounded offline `FeatureSnapshot`/cache service that reuses the existing Kitsunebi safety metrics. The service is cache-first and is invoked only by a cancellable SwiftUI task while the user has the 「一本の耳」 sheet open; the sheet presents a bounded summary of BPM, key, sections, and leading instruments. Import, playback startup, the playback backend, the audio unit, and render callbacks do not invoke it. API names, packaging, supported formats, device performance, and permission to persist derived Music Understanding summaries must still be revalidated against Apple's iOS 27 release SDK and terms.
 
 ## Apple References Checked
 

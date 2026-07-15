@@ -1,6 +1,6 @@
 # Core AI / Music Understanding / DSP 実装計画
 
-> Status: **Active — Phase 0 capability verified; Phase 1 has an iOS 27 Debug audition vertical slice under device verification; Phase 2 has an offline snapshot/cache boundary that is not runtime-connected.**
+> Status: **Active — Phase 0 capability verified; Phase 1 has an iOS 27 Debug audition vertical slice under device verification; Phase 2 connects the offline snapshot/cache boundary only to the explicit 「一本の耳」 UI and remains under device verification.**
 >
 > 2026-07-14、ユーザーの明示承認により iOS 27 beta SDK で Step 3 を再開した。正式版 SDK での再検証はリリースゲートとして残す。Release／iOS 26 の既定再生経路は Music Understanding、Core AI、Listening Profile DSP のいずれにも依存しない。iOS 27 Debug だけが、明示試聴用の固定EQ preview backendを使う。
 
@@ -28,7 +28,7 @@ YagyoPlayer は音楽プレイヤーであり、自動マスタリング製品�
    - instrument activity の分類は bass、drum、vocal、other である。structure は時間境界であり、verse／chorus の意味ラベルではない。
    - これらの境界は、任意のローカルファイル形式、結果の永続化可否、端末条件まで保証しない。
 3. Core AI は、開発者が用意する `.aimodel` を使った汎用オンデバイス推論フレームワークであり、名前付きの NDArray／pixel-buffer 値をモデル入出力として扱う。DSP レシピ提案器は内蔵されていないため、YagyoPlayer 用モデル、schema、学習・評価、版管理は開発側で用意する。
-4. アプリには availability-gated `MusicUnderstandingAdapter` と offline `FeatureSnapshot`／cache境界があるが、import、UI、再生開始、playback backend、render callback からは未接続である。Core AI と Listening Profile DSP の実行時依存はない。
+4. アプリには availability-gated `MusicUnderstandingAdapter` と offline `FeatureSnapshot`／cache境界があり、ユーザーが明示的に「一本の耳」を開いた間だけUIから呼ばれる。import、再生開始、playback backend、AU、render callbackからは呼ばれず、Core AI と Listening Profile DSP の実行時依存もない。
 
 Apple reference:
 
@@ -345,7 +345,7 @@ YagyoPlayer は次だけを縮小して独自実装する。
 
 **UNMET REQUIREMENT / WHY NOT / ALTERNATIVE / IMPACT / FOLLOW-UP:** seek直後の最初のsampleでIIR stateまで厳密にresetする要件は未達である。実行中のAUへcontrol側から同期 `reset()` を呼ぶとrender callbackと競合し、通常snapshotだけでは「新scheduleの最初のbuffer」へresetを結び付けられない。現段階ではexact schedule identityと再生位置を壊さず、render所有のIIR historyを連続させる。seek後の短い区間ではseek前のfilter historyが残り得るが、位置の巻き戻り、二重再生、control/render data raceは作らない。将来の再生engine移行でsource token付き非同期render barrierを設けてから実装する。
 
-Music Understandingによる曲別候補、feature cacheのruntime呼び出し、Core AI ranker、Listening Profile永続化、候補間ラウドネスマッチは未実装である。この縦切りは固定fixtureを耳で評価するためのもので、Phase 1全体またはStep 3完了を意味しない。PR #25のマージ後レビューで判明した境界も補修し、非有限の`LoudnessReading`を直接Codable化しても`.unavailable`へ正規化し、固定7.5 kHz帯域がNyquist契約を超える低サンプルレート音源は再生を維持したままFixed EQだけを選択前から非対応とする。再現／修正focused testは `2 / 2`、app full suiteは `225 / 225`、skip 0で通過した。
+Music Understandingによる曲別候補、Core AI ranker、Listening Profile永続化、候補間ラウドネスマッチは未実装である。この縦切りは固定fixtureを耳で評価するためのもので、Phase 1全体またはStep 3完了を意味しない。PR #25のマージ後レビューで判明した境界も補修し、非有限の`LoudnessReading`を直接Codable化しても`.unavailable`へ正規化し、固定7.5 kHz帯域がNyquist契約を超える低サンプルレート音源は再生を維持したままFixed EQだけを選択前から非対応とする。再現／修正focused testは `2 / 2`、app full suiteは `225 / 225`、skip 0で通過した。
 
 **Gate:** DSP と UX の価値が AI 抜きで成立し、bypass、切替、リアルタイム制約に合格すること。
 
@@ -357,7 +357,9 @@ Music Understandingによる曲別候補、feature cacheのruntime呼び出し�
 
 2026-07-14、Phase 0のapp-owned解析型と現行`KitsunebiAnalyzer`を一本化するoffline縦切りを追加した。`FeatureSnapshot`は厳格なSHA-256 content fingerprint、schema／analyzer／Music Understanding compatibility key、固定上限の要約だけを保持し、可変長instrument activityは決定論的な上位16件へ制限する。True Peak、clip run、stereo correlationを含む安全計測は別実装を増やさず、狐火の帳と同じ`TobariMetrics`変換境界を使う。purge可能なCaches配下のactorは書込前・復元後に有限値と版を検証し、旧版／破損entryをcache missとして削除する。pipelineはcache miss時だけMusic UnderstandingとKitsunebiを順に実行し、各段階とKitsunebiのread chunk間でcancellationを確認する。focused testはsnapshot/cache/service 7件とKitsunebi cancellation 1件の `8 / 8`、app full suiteは `225 / 225`、skip 0、Xcode 27 generic iOS Release buildも成功した。生成物はすべて外付けSSDへ出した。
 
-この境界をimport、UI、再生開始、playback backend、AU、render callbackから呼ぶコードはまだない。したがって再生開始をブロックしない構造は守られているが、実曲での処理時間／メモリ／電力、同一fingerprintへの同時要求、iOS 27実機でのcache再利用、Music Understanding結果の永続化がAppleの正式版契約を満たすことは未検証であり、Phase 2 gateは未完了とする。
+同日、cache-first serviceを「一本の耳」sheetへだけ接続した。`FeatureAnalysisSession`はSwiftUIの`.task(id:)`をそのままawaitするため、sheet closeまたは曲変更のcancellationがoffline pipelineへ伝わる。対象曲のcontent fingerprintがない場合は解析を開始せず、成功時はBPM、調、セクション数、上位楽器だけを固定上限の「曲相」カードへ表示する。解析結果はローカルcacheへ保存するが、Fixed EQの選択は従来どおり保存せず、解析結果からDSP候補も生成しない。session／snapshot focused testは `11 / 11`、app full suiteは `229 / 229`、いずれも失敗0で通過した。generic iOS Release buildと署名付き実機Debug build／installも成功し、生成物はすべて外付けSSDへ出した。
+
+この接続はユーザーが明示的にsheetを開いた間のcontrol-side taskだけであり、import、再生開始、playback backend、AU、render callbackからは呼ばない。したがって再生開始とrealtime renderをブロックしない構造は守られている。一方、実曲での処理時間／メモリ／電力、同一fingerprintへの同時要求、iOS 27実機でのcache再利用、Music Understanding結果の永続化がAppleの正式版契約を満たすことは未検証であり、Phase 2 gateは未完了とする。
 
 **Gate:** 必要特徴が安定して有限値へ正規化でき、プライバシーと性能予算を満たすこと。
 

@@ -97,6 +97,7 @@ struct ContentView: View {
             }
             .sheet(isPresented: $isFixedEQAuditionPresented) {
                 FixedEQAuditionView()
+                    .environmentObject(library)
                     .environmentObject(player)
             }
             .onChange(of: router.pendingAction) { _, action in
