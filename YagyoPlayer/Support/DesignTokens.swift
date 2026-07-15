@@ -85,11 +85,12 @@ struct ParadePalette {
     )
 
     static let ushimitsu = ParadePalette(
-        skyTop: Color(yagyoHex: 0x160a1c),
-        skyBottom: Color(yagyoHex: 0x2a1035),
+        // 紫黒へ落とし切らず、木版の墨線と限定色が読める温かい暮色に留める。
+        skyTop: Color(yagyoHex: 0x493f3f),
+        skyBottom: Color(yagyoHex: 0x6b5d53),
         moon: YagyoColor.akaMoon,
         halo: YagyoColor.akaMoon.opacity(0.16),
-        fog: Color(yagyoHex: 0xc878a0).opacity(0.06)
+        fog: YagyoPrintColor.paperRaised.opacity(0.07)
     )
 }
 

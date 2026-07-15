@@ -40,7 +40,8 @@ struct YagyoParadeView: View {
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
     private static let launch = Date()
-    private static let spriteScale: Double = 2
+    private static let pixelSpriteScale: Double = 2
+    private static let woodblockSpriteScale: Double = 1.62
     private static let moonRadius: Double = 19
 
     private var reduceMotion: Bool {
@@ -150,7 +151,7 @@ struct YagyoParadeView: View {
             Path(CGRect(x: 0, y: height - 22, width: width, height: 22)),
             with: .color(
                 isUshimitsu
-                    ? Color.black.opacity(0.35)
+                    ? Color.black.opacity(0.18)
                     : YagyoPrintColor.persimmon.opacity(0.15)
             )
         )
@@ -400,37 +401,77 @@ struct YagyoParadeView: View {
                 time: time
             )
 
-            guard let frame = frame(for: sprite, time: time) else { continue }
+            let woodblockArt = WoodblockYokaiGallery.asset(withID: sprite.id)
+            guard let frame = woodblockArt?.frame ?? frame(for: sprite, time: time) else { continue }
 
             let bob = bobOffset(index: index, time: time)
+            let baseScale = woodblockArt == nil
+                ? Self.pixelSpriteScale
+                : Self.woodblockSpriteScale
+            // 木版正本へ替えても、従来の妖怪ごとのhush/strong反応表は広げない。
+            let supportsHushReaction = sprite.hushFrame != nil
+            let supportsStrongReaction = !sprite.strongFrames.isEmpty
+            let poseActivity: ParadeSignalSnapshot.Activity =
+                signal.activity == .quietProxy && !supportsHushReaction
+                ? .normal
+                : signal.activity
+            let poseStrongPhase: ParadeSignalSnapshot.StrongPhase = supportsStrongReaction
+                ? signal.strongPhase
+                : .inactive
+            let pose = woodblockArt == nil
+                ? WoodblockYokaiPose(scale: 1, verticalOffset: 0, opacity: 1)
+                : WoodblockYokaiPose.resolve(
+                    activity: poseActivity,
+                    strongPhase: poseStrongPhase,
+                    reduceMotion: reduceMotion
+                )
+            let drawScale = baseScale * pose.scale
+            let baseWidth = Double(frame.pixelWidth) * baseScale
+            let width = Double(frame.pixelWidth) * drawScale
+            let height = Double(frame.pixelHeight) * drawScale
             let rect = CGRect(
-                x: x,
-                y: ground - Double(frame.pixelHeight) * Self.spriteScale - bob,
-                width: Double(frame.pixelWidth) * Self.spriteScale,
-                height: Double(frame.pixelHeight) * Self.spriteScale
+                x: x - (width - baseWidth) / 2,
+                y: ground - Double(frame.contentRect.maxY) * drawScale - bob + pose.verticalOffset,
+                width: width,
+                height: height
             )
-            context.draw(frame.image, in: rect)
+            if pose.opacity < 0.999 {
+                context.drawLayer { layer in
+                    layer.opacity = pose.opacity
+                    layer.draw(frame.image, in: rect)
+                }
+            } else {
+                context.draw(frame.image, in: rect)
+            }
 
             let isResident = index == 0 && residentSpriteID == sprite.id
             if isResident {
-                // 契約上の透明上余白ぶん浮かないよう、安定した idle の本体bboxへ合わせる。
-                let anchor = sprite.idleFrame ?? frame
-                drawResidentMarker(in: &context, above: contentRect(of: anchor, drawnIn: rect))
+                drawResidentMarker(
+                    in: &context,
+                    above: contentRect(of: frame, drawnIn: rect, scale: drawScale)
+                )
             }
 
-            if reduceMotion, isStrongActive, !sprite.strongFrames.isEmpty {
-                drawStaticStrongOutline(in: &context, around: contentRect(of: frame, drawnIn: rect))
+            if reduceMotion, isStrongActive, supportsStrongReaction {
+                drawStaticStrongOutline(
+                    in: &context,
+                    around: contentRect(of: frame, drawnIn: rect, scale: drawScale)
+                )
             }
         }
     }
 
     /// キャンバス全体の描画rectから、フレームの不透明bboxが占める画面上のrectを得る。
-    private func contentRect(of frame: SpriteFrame, drawnIn rect: CGRect) -> CGRect {
+    private func contentRect(
+        of frame: SpriteFrame,
+        drawnIn rect: CGRect,
+        scale: Double
+    ) -> CGRect {
         CGRect(
-            x: rect.minX + frame.contentRect.minX * Self.spriteScale,
-            y: rect.minY + frame.contentRect.minY * Self.spriteScale,
-            width: frame.contentRect.width * Self.spriteScale,
-            height: frame.contentRect.height * Self.spriteScale
+            x: rect.minX + frame.contentRect.minX * scale,
+            y: rect.minY + frame.contentRect.minY * scale,
+            width: frame.contentRect.width * scale,
+            height: frame.contentRect.height * scale
         )
     }
 

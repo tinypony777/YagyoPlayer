@@ -289,7 +289,6 @@ private struct HeaderView: View {
             }
         }
         .modernRetroPanel(tone: .paper, radius: 12, padding: 12)
-        .animation(.easeInOut(duration: 1.2), value: isUshimitsu)
     }
 
     private var seal: some View {
@@ -398,7 +397,10 @@ private struct ArtworkStage: View {
     var isCompact: Bool = false
 
     var body: some View {
-        let guardianImage = track.map { YokaiGallery.sprite(for: $0.id).thumbnail.image }
+        let guardianImage = track.map { track in
+            WoodblockYokaiGallery.asset(for: track.id)?.image
+                ?? YokaiGallery.sprite(for: track.id).thumbnail.image
+        }
 
         WoodblockWaveform(
             level: waveformLevel,
@@ -793,6 +795,7 @@ private struct LibraryStatusBanner: View {
 private struct TrackRow: View {
     @EnvironmentObject private var library: AudioLibraryStore
     @EnvironmentObject private var player: PlaybackController
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var track: AudioTrack
     var playbackContext: PlaybackContext = .library
@@ -807,6 +810,14 @@ private struct TrackRow: View {
 
     var body: some View {
         let sprite = YokaiGallery.sprite(for: track.id)
+        let woodblockGuardian = WoodblockYokaiGallery.asset(for: track.id)
+        let guardianImage = woodblockGuardian?.image ?? sprite.thumbnail.image
+        let guardianSealFill = sprite.id == "yuki"
+            // 雪女の正本は紙色の線が主体。小さな印章だけを濃紺にして線を残す。
+            ? YagyoPrintColor.indigo.opacity(isCurrent ? 0.92 : 0.82)
+            : (isCurrent
+                ? YagyoPrintColor.persimmon.opacity(0.22)
+                : YagyoPrintColor.brass.opacity(0.18))
 
         Button {
             if isCurrent {
@@ -822,15 +833,11 @@ private struct TrackRow: View {
             HStack(spacing: 12) {
                 ZStack {
                     WoodblockFrameShape(cut: 7)
-                        .fill(
-                            isCurrent
-                                ? YagyoPrintColor.persimmon.opacity(0.22)
-                                : YagyoPrintColor.brass.opacity(0.18)
-                        )
-                    sprite.thumbnail.image
+                        .fill(guardianSealFill)
+                    guardianImage
                         .resizable()
                         .scaledToFit()
-                        .padding(5)
+                        .padding(woodblockGuardian == nil ? 5 : 2)
                         .accessibilityHidden(true)
                 }
                 .frame(width: 46, height: 46)
@@ -846,33 +853,16 @@ private struct TrackRow: View {
                     Text(track.title)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.ink)
-                        .lineLimit(1)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
 
                     if let artist = track.artist, !artist.isEmpty {
                         Text(artist)
                             .font(.caption.weight(.medium))
                             .foregroundStyle(YagyoPrintColor.inkMuted)
-                            .lineLimit(1)
+                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
                     }
 
-                    HStack(spacing: 4) {
-                        Text(sprite.name)
-                            .font(.system(size: 11, design: .serif))
-                            .foregroundStyle(isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.inkMuted)
-                        Text("· \(track.durationText) · \(track.importedDateText)")
-                            .font(.caption)
-                            .foregroundStyle(YagyoPrintColor.inkMuted)
-                        if track.notes != nil {
-                            Image(systemName: "note.text")
-                                .font(.caption2)
-                                .foregroundStyle(YagyoPrintColor.inkMuted)
-                        }
-                        if track.artworkFilename != nil {
-                            Image(systemName: "photo")
-                                .font(.caption2)
-                                .foregroundStyle(YagyoPrintColor.inkMuted)
-                        }
-                    }
+                    trackMetadata(sprite: sprite)
                 }
 
                 Spacer()
@@ -948,6 +938,49 @@ private struct TrackRow: View {
             Button("キャンセル", role: .cancel) {}
         } message: {
             Text("消えるのはアプリ内にコピーされた音源だけです。取込元のファイルには影響しません。")
+        }
+    }
+
+    @ViewBuilder
+    private func trackMetadata(sprite: YokaiSprite) -> some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(sprite.name)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.inkMuted)
+                Text("\(track.durationText) · \(track.importedDateText)")
+                    .font(.caption)
+                    .foregroundStyle(YagyoPrintColor.inkMuted)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 4) {
+                    metadataIcons
+                }
+            }
+        } else {
+            HStack(spacing: 4) {
+                Text(sprite.name)
+                    .font(.system(size: 11, design: .serif))
+                    .foregroundStyle(isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.inkMuted)
+                Text("· \(track.durationText) · \(track.importedDateText)")
+                    .font(.caption)
+                    .foregroundStyle(YagyoPrintColor.inkMuted)
+                metadataIcons
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var metadataIcons: some View {
+        if track.notes != nil {
+            Image(systemName: "note.text")
+                .font(.caption2)
+                .foregroundStyle(YagyoPrintColor.inkMuted)
+        }
+        if track.artworkFilename != nil {
+            Image(systemName: "photo")
+                .font(.caption2)
+                .foregroundStyle(YagyoPrintColor.inkMuted)
         }
     }
 }
@@ -1027,7 +1060,10 @@ private struct EmptyLibraryView: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            (YokaiGallery.sprite(withID: "kitsune") ?? YokaiGallery.parade[0]).thumbnail.image
+            (
+                WoodblockYokaiGallery.asset(withID: "kitsune")?.image
+                    ?? (YokaiGallery.sprite(withID: "kitsune") ?? YokaiGallery.parade[0]).thumbnail.image
+            )
                 .resizable()
                 .scaledToFit()
                 .frame(width: 54, height: 54)

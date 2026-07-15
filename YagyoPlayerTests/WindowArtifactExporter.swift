@@ -16,6 +16,7 @@ extension XCTestCase {
         interfaceStyle: UIUserInterfaceStyle = .light,
         dynamicTypeSize: DynamicTypeSize = .large,
         settlingDelay: TimeInterval = 0.7,
+        scrollToBottom: Bool = false,
         expectedTabTitles: [String]? = nil,
         attachmentName: String
     ) throws {
@@ -36,6 +37,15 @@ extension XCTestCase {
         host.view.frame = window.bounds
         host.view.layoutIfNeeded()
         RunLoop.main.run(until: Date().addingTimeInterval(settlingDelay))
+
+        if scrollToBottom {
+            XCTAssertTrue(
+                scrollLargestVerticalContentToBottom(in: window),
+                "下端artifact用の縦ScrollViewが見つかりません"
+            )
+            host.view.layoutIfNeeded()
+            RunLoop.main.run(until: Date().addingTimeInterval(0.4))
+        }
 
         let tabItemFrames = expectedTabTitles.map {
             assertVisibleTabTitles($0, in: window)
@@ -114,6 +124,30 @@ extension XCTestCase {
             result.append(contentsOf: descendants(of: type, in: child))
         }
         return result
+    }
+
+    @MainActor
+    private func scrollLargestVerticalContentToBottom(in window: UIWindow) -> Bool {
+        let candidates = descendants(of: UIScrollView.self, in: window)
+            .filter {
+                !$0.isHidden
+                    && $0.alpha > 0.01
+                    && $0.contentSize.height > $0.bounds.height + 1
+            }
+        guard let scrollView = candidates.max(by: {
+            ($0.contentSize.height - $0.bounds.height) < ($1.contentSize.height - $1.bounds.height)
+        }) else { return false }
+
+        let maximumY = max(
+            -scrollView.adjustedContentInset.top,
+            scrollView.contentSize.height - scrollView.bounds.height + scrollView.adjustedContentInset.bottom
+        )
+        scrollView.setContentOffset(
+            CGPoint(x: scrollView.contentOffset.x, y: maximumY),
+            animated: false
+        )
+        scrollView.layoutIfNeeded()
+        return true
     }
 
     /// 16x16へ縮小したときの画素値の広がり。単色画像は0に近い。

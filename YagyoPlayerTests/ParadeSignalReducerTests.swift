@@ -67,6 +67,33 @@ final class ParadeSignalReducerTests: XCTestCase {
         XCTAssertEqual(ParadeSignalSnapshot.preview(activity: .normal, level: 0.65).levelBand, .high)
     }
 
+    func testWoodblockPoseDerivesQuietStrongAndReducedMotionFromOneBaseArt() {
+        XCTAssertEqual(
+            WoodblockYokaiPose.resolve(
+                activity: .quietProxy,
+                strongPhase: .inactive,
+                reduceMotion: false
+            ),
+            WoodblockYokaiPose(scale: 0.95, verticalOffset: 2, opacity: 0.78)
+        )
+        XCTAssertEqual(
+            WoodblockYokaiPose.resolve(
+                activity: .normal,
+                strongPhase: .open,
+                reduceMotion: false
+            ),
+            WoodblockYokaiPose(scale: 1.07, verticalOffset: -2, opacity: 1)
+        )
+        XCTAssertEqual(
+            WoodblockYokaiPose.resolve(
+                activity: .normal,
+                strongPhase: .open,
+                reduceMotion: true
+            ),
+            WoodblockYokaiPose(scale: 1, verticalOffset: 0, opacity: 1)
+        )
+    }
+
     func testWaveformBandCentersAConsistentlyLoudCompressedTrack() {
         var reducer = ParadeSignalReducer(configuration: configuration)
 

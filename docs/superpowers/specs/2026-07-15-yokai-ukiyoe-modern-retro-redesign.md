@@ -1,6 +1,6 @@
 # 妖怪 × 浮世絵 × モダンレトロ — 一枚摺の番付 UI 設計仕様
 
-**状態:** 実装中
+**状態:** 実装済み・最終実機検証中
 **作成日:** 2026-07-15
 **対象:** 夜行・行列・巻物・ミニ灯り・狐火の帳・一本の耳・音の可視化
 **デザイン命題:** 画面をカードの束から一枚の摺り物へ改め、紙上を歩く妖怪、浮世絵の非対称な版面、モダンレトロの編集秩序を同格に扱う。
@@ -38,9 +38,9 @@
 
 ### 3.2 妖怪を紙面へ解放する
 
-- resident ID、40 × 48 logical canvas、4歩行／静音／強反応のフレーム契約は維持する。
+- resident ID、並び順、4歩行／静音／強反応の意味と対象matrixは維持する。旧pixel正本は40 × 48 logical canvasの互換fallbackとして残す。
 - 2頭身のピクセルマスコット表現は廃し、個体ごとの正本に基づく木版輪郭・限定色の全身図へ描き直す。成人型は4〜5頭身、一つ目小僧は3〜3.5頭身、河童は3〜4頭身を目安とし、器物・動物型へ人型頭身を強制しない。
-- 80 × 96 pt 表示へ使う透過ラスター正本は、最低でも @3x 相当の 240 × 288 px を持たせる。40 × 48 logical canvas、anchor、baseline は配置・状態契約として維持し、低解像度ピクセルを拡大した見た目には戻さない。
+- 透過ラスター正本は最低でも @3x 相当を持たせる。承認済みの正方形正本は縦横比を歪めない64 × 64の配置座標へ置き、442px正本のalpha bboxを接地・住人印・静的輪郭の基準にする。40 × 48の旧anchor／baselineはpixel fallbackで維持し、低解像度ピクセルを拡大した見た目には戻さない。
 - Day の行列は暗い `stage` 箱から生成りの欄間へ移す。
 - 曲の resident は行列の先導に加え、曲札の「守り神印」として再利用する。
 - 妖怪へ blur、色フィルタ、非整数 scale、常時 glow を加えない。
@@ -240,19 +240,19 @@ Reference は次の責任境界で使い、雰囲気だけを混ぜない。
 
 ## 11. Acceptance criteria
 
-- [ ] Day の最大暗色面がなく、妖怪が生成り紙の欄間に接地して見える。
-- [ ] 最大視覚要素が横長の版木枠「音の足跡」で、円形計器が残っていない。
-- [ ] 表示が直近信号であることを UI・仕様ともに偽らず、全曲波形と表現しない。
-- [ ] 丑三つ時は妖怪欄間だけが暮れ、横長の音表示・背景紙・本文は読める。
-- [ ] teal が通常 artist／本文／広い面に使われず、分析用途に限定される。
-- [ ] 妖怪9体のneutral idleが個体Reference契約どおりに見え、ユーザー本人の承認後に同じbase artから状態差分が派生され、resident ID・歩行・静音・強反応matrixが変わらない。
-- [ ] 行列、巻物、狐火の帳、一本の耳が同じ版木枠・外題・単罫体系に見える。
-- [ ] 一本の耳に `区間` が残らず、表示と VoiceOver が `構成 n幕` になる。
-- [ ] native TabView、三タブ順、ミニ灯り、A/B、Fixed EQ、取込、再生契約が不変。
-- [ ] iPhone 17 Pro Max、iPhone 17e、Accessibility Dynamic Type で切れ・重なりがない。
-- [ ] stopped / unavailable / low / medium / high / Reduce Motion の横長音表示を形で判別できる。
+- [x] Day の最大暗色面がなく、妖怪が生成り紙の欄間に接地して見える。
+- [x] 最大視覚要素が横長の版木枠「音の足跡」で、円形計器が残っていない。
+- [x] 表示が直近信号であることを UI・仕様ともに偽らず、全曲波形と表現しない。
+- [x] 丑三つ時は妖怪欄間だけが暮れ、横長の音表示・背景紙・本文は読める。
+- [x] teal が通常 artist／本文／広い面に使われず、分析用途に限定される。
+- [x] 妖怪9体のneutral idleが個体Reference契約どおりに見え、ユーザー本人の承認後に同じbase artから状態差分が派生され、resident ID・歩行・静音・強反応matrixが変わらない。
+- [x] 行列、巻物、狐火の帳、一本の耳が同じ版木枠・外題・単罫体系に見える。
+- [x] 一本の耳に `区間` が残らず、表示と VoiceOver が `構成 n幕` になる。
+- [x] native TabView、三タブ順、ミニ灯り、A/B、Fixed EQ、取込、再生契約が不変。
+- [x] iPhone 17 Pro Max、iPhone 17e、Accessibility Dynamic Type で切れ・重なりがない。
+- [x] stopped / unavailable / low / medium / high / Reduce Motion の横長音表示を形で判別できる。
 - [ ] Reduce Motion の比較画像で、時間経過による差分がない。
-- [ ] 外付け SSD の DerivedData/TMPDIR で focused test、full suite、Release build が成功する。
+- [ ] 外付け SSD の DerivedData/TMPDIR で focused test、full suite、Release build が成功する（focused 50件、再生系2クラスを除く200件、Releaseは成功。Simulatorの既存Audio Session系35件はtest host終了のため実機で最終確認中）。
 - [ ] 実機へ署名付き build を install・launch し、主要五画面を目視確認する。
 
 ## 12. Screenshot matrix
