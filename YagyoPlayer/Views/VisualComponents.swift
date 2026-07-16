@@ -228,6 +228,22 @@ struct WoodblockSectionHeader<Trailing: View>: View {
     }
 }
 
+/// 欄外注 — 一枚摺の余白へ直接刷る但し書き。パネルへ閉じ込めず、
+/// 夜行・行列・巻物で同じ「注」の語り口を共有する。
+struct RetroMarginalNote: View {
+    var text: String
+    var alignment: Alignment = .trailing
+
+    var body: some View {
+        Text(text)
+            .font(.system(.caption2, design: .serif))
+            .tracking(1.4)
+            .foregroundStyle(YagyoPrintColor.inkMuted)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: alignment)
+    }
+}
+
 /// 横長の「音の足跡」が引き継ぐ表示状態。
 /// 入力は全曲波形ではなく、既存の局所正規化された15 Hz表示信号である。
 enum WoodblockWaveformPresentation: Equatable, Sendable {
@@ -542,23 +558,36 @@ struct WoodblockWaveform: View {
 }
 
 /// 16本の短冊目盛による再生位置。過ぎた目盛は朱、現在位置は柿色で示す。
+/// 短冊は名のとおり縦長の紙片にし、幅は固定・間だけを画面幅で伸縮させる。
 struct StepProgressBar: View {
     var progress: Double
     var isEnabled: Bool
     var onScrub: (Double) -> Void
 
     private let steps = 16
-    private let spacing: CGFloat = 3
     private let groupGap: CGFloat = 8
+    /// 短冊一枚の幅。これより広げず、余りは目と目の間へ配る。
+    private let cellWidthLimit: CGFloat = 9
+    private let minSpacing: CGFloat = 3
 
     var body: some View {
         GeometryReader { geometry in
             let width = geometry.size.width
-            let cellWidth = max(1, (width - spacing * CGFloat(steps - 1) - groupGap * 3) / CGFloat(steps))
+            let cellWidth = max(
+                2,
+                min(
+                    cellWidthLimit,
+                    (width - groupGap * 3 - minSpacing * CGFloat(steps - 1)) / CGFloat(steps)
+                )
+            )
+            let spacing = max(
+                minSpacing,
+                (width - cellWidth * CGFloat(steps) - groupGap * 3) / CGFloat(steps - 1)
+            )
             HStack(spacing: spacing) {
                 ForEach(0..<steps, id: \.self) { index in
                     cell(at: index)
-                        .frame(width: cellWidth, height: index.isMultiple(of: 4) ? 11 : 7)
+                        .frame(width: cellWidth, height: index.isMultiple(of: 4) ? 21 : 15)
                         .padding(.leading, index % 4 == 0 && index > 0 ? groupGap : 0)
                 }
             }
@@ -566,17 +595,17 @@ struct StepProgressBar: View {
             .contentShape(Rectangle())
             .onTapGesture(coordinateSpace: .local) { location in
                 guard isEnabled else { return }
-                onScrub(fraction(at: location.x, cellWidth: cellWidth))
+                onScrub(fraction(at: location.x, cellWidth: cellWidth, spacing: spacing))
             }
             .gesture(
                 DragGesture(minimumDistance: 8)
                     .onChanged { value in
-                        onScrub(fraction(at: value.location.x, cellWidth: cellWidth))
+                        onScrub(fraction(at: value.location.x, cellWidth: cellWidth, spacing: spacing))
                     },
                 including: isEnabled ? .all : .subviews
             )
         }
-        // 短冊の見た目は7/11ptのまま、scrub操作面だけを44pt確保する。
+        // 短冊の見た目は15/21ptのまま、scrub操作面だけを44pt確保する。
         .frame(height: YagyoPrintMetrics.controlHitTarget)
         .opacity(isEnabled ? 1 : 0.45)
         .accessibilityElement()
@@ -589,8 +618,8 @@ struct StepProgressBar: View {
         }
     }
 
-    /// タップ/ドラッグ位置をセル配置(3ptの目 + 拍頭8ptの間)に沿って割合へ写す。
-    private func fraction(at x: CGFloat, cellWidth: CGFloat) -> Double {
+    /// タップ/ドラッグ位置をセル配置(伸縮する目 + 拍頭8ptの間)に沿って割合へ写す。
+    private func fraction(at x: CGFloat, cellWidth: CGFloat, spacing: CGFloat) -> Double {
         var start: CGFloat = 0
         for index in 0..<steps {
             if index > 0 {
@@ -617,11 +646,12 @@ struct StepProgressBar: View {
             .overlay(shape.stroke(borderColor(index: index, current: current, hasStarted: hasStarted), lineWidth: 1))
     }
 
+    /// 書き入れ前の短冊は白紙(持ち上がった紙色)。濁った鼠を置かない。
     private func fillColor(index: Int, current: Int, hasStarted: Bool) -> Color {
-        guard hasStarted else { return YagyoPrintColor.paperMuted }
+        guard hasStarted else { return YagyoPrintColor.paperRaised }
         if index < current { return YagyoPrintColor.vermillion }
         if index == current { return YagyoPrintColor.persimmon }
-        return YagyoPrintColor.paperMuted
+        return YagyoPrintColor.paperRaised
     }
 
     private func borderColor(index: Int, current: Int, hasStarted: Bool) -> Color {

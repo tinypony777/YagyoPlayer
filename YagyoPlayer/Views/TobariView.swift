@@ -168,7 +168,7 @@ struct TobariView: View {
         WoodblockSectionHeader(
             title: "狐火の帳",
             overline: "ANALYSIS LEDGER",
-            detail: "On-device · Read only",
+            detail: "端末内で解析 · 読み取りのみ",
             accent: YagyoPrintColor.vermillionInk
         ) {
             RetroIconButton(

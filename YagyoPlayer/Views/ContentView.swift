@@ -75,10 +75,10 @@ struct ContentView: View {
                     }
                 }
             }
-            .alert("Import failed", isPresented: importAlertBinding) {
+            .alert("取込に失敗しました", isPresented: importAlertBinding) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text(importErrorMessage ?? "The selected files could not be imported.")
+                Text(importErrorMessage ?? "選んだファイルを取り込めませんでした。")
             }
             .alert("取込結果", isPresented: importSummaryBinding) {
                 Button("OK", role: .cancel) {}
@@ -151,6 +151,8 @@ struct ContentView: View {
                 ScrollView {
                     VStack(spacing: 18) {
                         PlaylistSection(initiallyExpandedPlaylistID: initiallyExpandedPlaylistID)
+                        // 仕様§7.3 — 空白を放置された余白に見せない欄外注。
+                        RetroMarginalNote(text: "注　行列の曲は長押しで巻物へ綴じられる")
                     }
                     .padding(.horizontal, 18)
                     .padding(.top, 18)
@@ -309,9 +311,15 @@ private struct HeaderView: View {
             .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
             .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.78)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 6)
             .background(YagyoPrintColor.indigo, in: WoodblockFrameShape(cut: 5))
+            .overlay {
+                // 明治大正のラベルに倣う内側の飾り罫。縦外題柱と同じ文法。
+                WoodblockFrameShape(cut: 4)
+                    .inset(by: 2.5)
+                    .stroke(YagyoPrintColor.paperRaised.opacity(0.55), lineWidth: 1)
+            }
     }
 
     private var statusLine: some View {
@@ -347,7 +355,7 @@ private struct HeaderView: View {
 
             RetroIconButton(
                 systemImage: "square.and.arrow.down",
-                accessibilityLabel: "Import audio",
+                accessibilityLabel: "音源を納める",
                 accent: YagyoPrintColor.indigo,
                 shape: .seal,
                 action: importAction
@@ -434,9 +442,15 @@ private struct TransportView: View {
                     Image(systemName: "backward.fill")
                         .frame(width: 48, height: 48)
                         .background(YagyoPrintColor.paperRaised, in: Circle())
-                        .overlay(Circle().stroke(YagyoPrintColor.indigo, lineWidth: 1.5))
+                        .overlay {
+                            Circle().stroke(YagyoPrintColor.indigo, lineWidth: 1.5)
+                            Circle()
+                                .inset(by: 4)
+                                .stroke(YagyoPrintColor.paperMuted, lineWidth: 1)
+                        }
                 }
                 .disabled(!library.hasTracks)
+                .accessibilityLabel("前の曲")
 
                 Button {
                     if player.currentTrack == nil, let selectedTrack = library.selectedTrack {
@@ -458,7 +472,7 @@ private struct TransportView: View {
                         }
                 }
                 .disabled(!library.hasTracks)
-                .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
+                .accessibilityLabel(player.isPlaying ? "一時停止" : "再生")
 
                 Button {
                     player.playNext()
@@ -466,9 +480,15 @@ private struct TransportView: View {
                     Image(systemName: "forward.fill")
                         .frame(width: 48, height: 48)
                         .background(YagyoPrintColor.paperRaised, in: Circle())
-                        .overlay(Circle().stroke(YagyoPrintColor.indigo, lineWidth: 1.5))
+                        .overlay {
+                            Circle().stroke(YagyoPrintColor.indigo, lineWidth: 1.5)
+                            Circle()
+                                .inset(by: 4)
+                                .stroke(YagyoPrintColor.paperMuted, lineWidth: 1)
+                        }
                 }
                 .disabled(!library.hasTracks)
+                .accessibilityLabel("次の曲")
             }
             .font(.title2.weight(.semibold))
             .buttonStyle(.plain)
@@ -533,7 +553,7 @@ private struct LibrarySection: View {
             WoodblockSectionHeader(
                 title: "行列",
                 overline: "YŌKAI REGISTER",
-                detail: "Library · Files kept on this device",
+                detail: "この端末に納めた音源の番付",
                 accent: YagyoPrintColor.indigo
             ) {
                 Button(action: importAction) {
@@ -547,7 +567,7 @@ private struct LibrarySection: View {
                     WoodblockFrameShape(cut: 8)
                         .stroke(YagyoPrintColor.indigo, lineWidth: 1.5)
                 }
-                .accessibilityLabel("Import audio")
+                .accessibilityLabel("音源を納める")
             }
 
             libraryFeedback(duplicateTrackGroups: duplicateTrackGroups)
@@ -643,7 +663,7 @@ private struct LibrarySection: View {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(YagyoPrintColor.inkMuted)
-                TextField("Search title, artist, file, notes", text: $searchText)
+                TextField("曲名・作者・ファイル・覚え書きで探す", text: $searchText)
                     .textInputAutocapitalization(.never)
                     .disableAutocorrection(true)
                     .foregroundStyle(YagyoPrintColor.ink)
@@ -686,7 +706,7 @@ private struct LibrarySection: View {
     }
 
     private var scopePicker: some View {
-        Picker("Scope", selection: $selectedPlaylistID) {
+        Picker("巻物範囲", selection: $selectedPlaylistID) {
             Text("行列すべて").tag(Playlist.ID?.none)
             ForEach(library.playlists) { playlist in
                 Text(playlist.name).tag(Optional(playlist.id))
@@ -695,11 +715,11 @@ private struct LibrarySection: View {
         .pickerStyle(.menu)
         .lineLimit(1)
         .fixedSize()
-        .frame(minHeight: 44)
+        .modifier(FilterPlaque())
     }
 
     private var sortPicker: some View {
-        Picker("Sort", selection: $sort) {
+        Picker("並び順", selection: $sort) {
             ForEach(availableSorts) { sort in
                 Text(sort.rawValue).tag(sort)
             }
@@ -707,7 +727,7 @@ private struct LibrarySection: View {
         .pickerStyle(.menu)
         .lineLimit(1)
         .fixedSize()
-        .frame(minHeight: 44)
+        .modifier(FilterPlaque())
     }
 
     private func trackCountText(visibleCount: Int) -> some View {
@@ -758,6 +778,20 @@ private struct LibrarySection: View {
             message += " 他 \(groups.count - visibleGroups.count) 組"
         }
         return message
+    }
+}
+
+/// 絞り込みメニューを裸の文字列にせず、押せる「札」として紙面へ載せる。
+private struct FilterPlaque: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, 10)
+            .frame(minHeight: 44)
+            .background(YagyoPrintColor.paperRaised, in: WoodblockFrameShape(cut: 6))
+            .overlay {
+                WoodblockFrameShape(cut: 6)
+                    .stroke(YagyoPrintColor.indigoMuted, lineWidth: YagyoPrintMetrics.ruleWidth)
+            }
     }
 }
 
@@ -888,7 +922,7 @@ private struct TrackRow: View {
         .buttonStyle(.plain)
         .contextMenu {
             Button(action: editAction) {
-                Label("Edit metadata", systemImage: "pencil")
+                Label("札を直す", systemImage: "pencil")
             }
 
             Button(action: tobariAction) {
@@ -916,14 +950,14 @@ private struct TrackRow: View {
                         .disabled(alreadyInPlaylist)
                     }
                 } label: {
-                    Label("Add to playlist", systemImage: "text.badge.plus")
+                    Label("巻物へ綴じる", systemImage: "text.badge.plus")
                 }
             }
 
             Button(role: .destructive) {
                 isDeleteConfirmationPresented = true
             } label: {
-                Label("Delete from app folder", systemImage: "trash")
+                Label("行列から外す", systemImage: "trash")
             }
         }
         .confirmationDialog(
@@ -1009,19 +1043,19 @@ private struct TrackMetadataEditor: View {
         NavigationStack {
             Form {
                 Section("音源の札") {
-                    TextField("Title", text: $title)
-                    TextField("Artist", text: $artist)
-                    TextField("Artwork filename or reference", text: $artworkFilename)
+                    TextField("曲名", text: $title)
+                    TextField("作者", text: $artist)
+                    TextField("絵の名または参照", text: $artworkFilename)
                         .textInputAutocapitalization(.never)
                         .disableAutocorrection(true)
                 }
 
-                Section("Notes") {
+                Section("覚え書き") {
                     TextEditor(text: $notes)
                         .frame(minHeight: 120)
                 }
 
-                Section("Stored copy") {
+                Section("納めた写し") {
                     Text(track.storedFilename)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -1031,10 +1065,10 @@ private struct TrackMetadataEditor: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("やめる") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button("保存") {
                         let didSave = library.updateMetadata(
                             for: track.id,
                             title: title,
@@ -1074,7 +1108,7 @@ private struct EmptyLibraryView: View {
                     .font(.system(.headline, design: .serif))
                     .tracking(3)
                     .foregroundStyle(YagyoPrintColor.ink)
-                Text("Choose MP3, M4A, WAV, AIFF, AAC, CAF, or FLAC files. They will be copied into this app.")
+                Text("MP3・M4A・WAV・AIFF・AAC・CAF・FLAC を選ぶと、写しがこのアプリへ納められます。")
                     .font(.footnote)
                     .foregroundStyle(YagyoPrintColor.inkMuted)
                     .multilineTextAlignment(.center)
@@ -1097,7 +1131,7 @@ private struct EmptyLibraryView: View {
                 .foregroundStyle(YagyoPrintColor.ink)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Import audio")
+            .accessibilityLabel("音源を納める")
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 18)
@@ -1134,27 +1168,16 @@ private struct EmptyFilteredLibraryView: View {
     }
 }
 
+/// 開発者向けの説明パネルは置かず、一枚摺の欄外注として最小限だけ残す。
 private struct PlatformNote: View {
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "music.note.list")
-                .foregroundStyle(YagyoPrintColor.ink)
-            Text("Built for iOS 26+. Local files stay inside the app folder; Apple Music catalog features can be layered on later with MusicKit.")
-                .font(.caption)
-                .foregroundStyle(YagyoPrintColor.inkMuted)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .modernRetroPanel(tone: .paper, radius: 12, padding: 12)
+        RetroMarginalNote(text: "注　音源の写しはこのアプリの内にだけ納められる · iOS 26以上")
     }
 }
 
 private struct FooterView: View {
     var body: some View {
-        Text("注　音の足跡は直近の響き・短冊は曲の位置")
-            .font(.system(size: 11, design: .serif))
-            .tracking(1.4)
-            .foregroundStyle(YagyoPrintColor.inkMuted)
-            .frame(maxWidth: .infinity, alignment: .trailing)
+        RetroMarginalNote(text: "注　音の足跡は直近の響き・短冊は曲の位置")
             .padding(.top, 2)
     }
 }
@@ -1262,7 +1285,7 @@ struct MiniAkariBar: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(YagyoPrintColor.vermillionInk)
-            .accessibilityLabel(isPlaying ? "Pause" : "Play")
+            .accessibilityLabel(isPlaying ? "一時停止" : "再生")
         }
         .padding(.leading, 14)
         .padding(.trailing, 6)
