@@ -76,22 +76,22 @@ struct ContentView: View {
                 }
             }
             .alert("取込に失敗しました", isPresented: importAlertBinding) {
-                Button("OK", role: .cancel) {}
+                Button("閉じる", role: .cancel) {}
             } message: {
                 Text(importErrorMessage ?? "選んだファイルを取り込めませんでした。")
             }
             .alert("取込結果", isPresented: importSummaryBinding) {
-                Button("OK", role: .cancel) {}
+                Button("閉じる", role: .cancel) {}
             } message: {
                 Text(importSummaryMessage)
             }
             .alert("保存に失敗しました", isPresented: persistenceErrorBinding) {
-                Button("OK", role: .cancel) {}
+                Button("閉じる", role: .cancel) {}
             } message: {
                 Text(library.persistenceErrorMessage ?? "")
             }
             .alert("再生できません", isPresented: playbackErrorBinding) {
-                Button("OK", role: .cancel) {}
+                Button("閉じる", role: .cancel) {}
             } message: {
                 Text(player.playbackErrorMessage ?? "")
             }
