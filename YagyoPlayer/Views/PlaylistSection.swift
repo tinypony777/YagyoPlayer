@@ -43,45 +43,40 @@ struct PlaylistSection: View {
         }
         .modernRetroPanel(tone: .paper, radius: 12, padding: 16)
         .alert("新しい巻物", isPresented: $isCreatePresented) {
-            TextField("Playlist name", text: $newPlaylistName)
-            Button("Create") {
+            TextField("巻物の名", text: $newPlaylistName)
+            Button("作る") {
                 library.createPlaylist(named: newPlaylistName)
                 newPlaylistName = ""
             }
-            Button("Cancel", role: .cancel) {
+            Button("やめる", role: .cancel) {
                 newPlaylistName = ""
             }
         } message: {
-            Text("Name the new playlist.")
+            Text("新しい巻物の名を付けてください。")
         }
         .alert("巻物の名を改める", isPresented: renameAlertBinding) {
-            TextField("Playlist name", text: $renameText)
-            Button("Rename") {
+            TextField("巻物の名", text: $renameText)
+            Button("改める") {
                 if let playlist = playlistToRename {
                     library.renamePlaylist(playlist, to: renameText)
                 }
                 playlistToRename = nil
             }
-            Button("Cancel", role: .cancel) {
+            Button("やめる", role: .cancel) {
                 playlistToRename = nil
             }
         } message: {
-            Text("Enter a new name for the playlist.")
+            Text("巻物の新しい名を入れてください。")
         }
     }
 
     private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("巻物")
-                    .font(.system(.headline, design: .serif))
-                    .tracking(4)
-                    .foregroundStyle(YagyoPrintColor.ink)
-                Text("Playlists · Organize tracks your way")
-                    .font(.caption)
-                    .foregroundStyle(YagyoPrintColor.inkMuted)
-            }
-            Spacer()
+        WoodblockSectionHeader(
+            title: "巻物",
+            overline: "BOUND VOLUMES",
+            detail: "曲を好きな順に綴じる帳",
+            accent: YagyoPrintColor.vermillionInk
+        ) {
             Button {
                 isCreatePresented = true
             } label: {
@@ -89,13 +84,13 @@ struct PlaylistSection: View {
                     .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(YagyoPrintColor.ink)
-            .background(YagyoPrintColor.paperRaised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .foregroundStyle(YagyoPrintColor.vermillionInk)
+            .background(YagyoPrintColor.paperRaised, in: WoodblockFrameShape(cut: 8))
             .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(YagyoPrintColor.ink, lineWidth: 1)
+                WoodblockFrameShape(cut: 8)
+                    .stroke(YagyoPrintColor.vermillionInk, lineWidth: 1.5)
             }
-            .accessibilityLabel("Create playlist")
+            .accessibilityLabel("巻物を作る")
         }
     }
 
@@ -105,13 +100,16 @@ struct PlaylistSection: View {
                 .font(.system(.subheadline, design: .serif))
                 .tracking(2)
                 .foregroundStyle(YagyoPrintColor.ink)
-            Text("Create a playlist, then add tracks from the library via long press.")
+            Text("巻物を作り、行列の曲を長押しで綴じてください。")
                 .font(.footnote)
                 .foregroundStyle(YagyoPrintColor.inkMuted)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
+        .overlay(alignment: .top) {
+            RetroDivider(color: YagyoPrintColor.paperMuted)
+        }
     }
 
     private var renameAlertBinding: Binding<Bool> {
@@ -146,10 +144,13 @@ private struct PlaylistRow: View {
                         .font(.title3)
                         .foregroundStyle(isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.inkMuted)
                         .frame(width: 44, height: 44)
-                        .background(YagyoPrintColor.paper, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .background(YagyoPrintColor.persimmon.opacity(0.18), in: WoodblockFrameShape(cut: 7))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .stroke(isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.paperMuted, lineWidth: 1)
+                            WoodblockFrameShape(cut: 7)
+                                .stroke(
+                                    isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.indigoMuted,
+                                    lineWidth: 1
+                                )
                         }
 
                     VStack(alignment: .leading, spacing: 3) {
@@ -157,8 +158,8 @@ private struct PlaylistRow: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.ink)
                             .lineLimit(1)
-                        Text("\(playlist.trackCount) track\(playlist.trackCount == 1 ? "" : "s")")
-                            .font(.caption)
+                        Text("全\(playlist.trackCount)曲")
+                            .font(.caption.monospacedDigit())
                             .foregroundStyle(YagyoPrintColor.inkMuted)
                     }
 
@@ -179,18 +180,18 @@ private struct PlaylistRow: View {
                 Button {
                     playFromStart()
                 } label: {
-                    Label("Play playlist", systemImage: "play.fill")
+                    Label("巻物を通しで聴く", systemImage: "play.fill")
                 }
                 .disabled(library.tracks(in: playlist).isEmpty)
 
                 Button(action: renameAction) {
-                    Label("Rename", systemImage: "pencil")
+                    Label("名を改める", systemImage: "pencil")
                 }
 
                 Button(role: .destructive) {
                     library.deletePlaylist(playlist)
                 } label: {
-                    Label("Delete playlist", systemImage: "trash")
+                    Label("巻物を捨てる", systemImage: "trash")
                 }
             }
 
@@ -198,10 +199,13 @@ private struct PlaylistRow: View {
                 expandedContent
             }
         }
-        .background(isActive ? YagyoPrintColor.paperRaised : YagyoPrintColor.paper, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(isActive ? YagyoPrintColor.paperRaised : YagyoPrintColor.paper, in: WoodblockFrameShape(cut: 8))
         .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.paperMuted, lineWidth: 1)
+            WoodblockFrameShape(cut: 8)
+                .stroke(
+                    isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.indigoMuted,
+                    lineWidth: 1
+                )
         }
     }
 
@@ -211,7 +215,7 @@ private struct PlaylistRow: View {
 
         VStack(spacing: 6) {
             if playlistTracks.isEmpty {
-                Text("Long press a library track to add it here.")
+                Text("行列の曲を長押しすると、この巻物へ綴じられます。")
                     .font(.caption)
                     .foregroundStyle(YagyoPrintColor.inkMuted)
                     .frame(maxWidth: .infinity)
@@ -268,8 +272,8 @@ private struct PlaylistTrackRow: View {
             }
         } label: {
             HStack(spacing: 10) {
-                Text("\(position + 1)")
-                    .font(.caption.monospacedDigit())
+                Text(positionLabel)
+                    .font(.system(.caption, design: .serif).weight(.semibold))
                     .foregroundStyle(YagyoPrintColor.inkMuted)
                     .frame(width: 20, alignment: .trailing)
 
@@ -293,9 +297,9 @@ private struct PlaylistTrackRow: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .frame(minHeight: 44)
-            .background(isCurrent ? YagyoPrintColor.paperRaised : YagyoPrintColor.paper, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(isCurrent ? YagyoPrintColor.paperRaised : YagyoPrintColor.paper, in: WoodblockFrameShape(cut: 7))
             .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                WoodblockFrameShape(cut: 7)
                     .stroke(isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.paperMuted, lineWidth: 1)
             }
         }
@@ -304,22 +308,27 @@ private struct PlaylistTrackRow: View {
             Button {
                 library.moveTrack(track, in: playlist, by: -1)
             } label: {
-                Label("Move up", systemImage: "arrow.up")
+                Label("一つ上へ", systemImage: "arrow.up")
             }
             .disabled(position == 0)
 
             Button {
                 library.moveTrack(track, in: playlist, by: 1)
             } label: {
-                Label("Move down", systemImage: "arrow.down")
+                Label("一つ下へ", systemImage: "arrow.down")
             }
             .disabled(position == count - 1)
 
             Button(role: .destructive) {
                 library.removeTrack(track, from: playlist)
             } label: {
-                Label("Remove from playlist", systemImage: "minus.circle")
+                Label("綴じから外す", systemImage: "minus.circle")
             }
         }
+    }
+
+    private var positionLabel: String {
+        let marks = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"]
+        return marks.indices.contains(position) ? marks[position] : "\(position + 1)"
     }
 }

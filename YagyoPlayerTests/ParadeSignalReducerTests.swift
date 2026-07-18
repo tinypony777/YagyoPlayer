@@ -67,6 +67,33 @@ final class ParadeSignalReducerTests: XCTestCase {
         XCTAssertEqual(ParadeSignalSnapshot.preview(activity: .normal, level: 0.65).levelBand, .high)
     }
 
+    func testWoodblockPoseDerivesQuietStrongAndReducedMotionFromOneBaseArt() {
+        XCTAssertEqual(
+            WoodblockYokaiPose.resolve(
+                activity: .quietProxy,
+                strongPhase: .inactive,
+                reduceMotion: false
+            ),
+            WoodblockYokaiPose(scale: 0.95, verticalOffset: 2, opacity: 0.78)
+        )
+        XCTAssertEqual(
+            WoodblockYokaiPose.resolve(
+                activity: .normal,
+                strongPhase: .open,
+                reduceMotion: false
+            ),
+            WoodblockYokaiPose(scale: 1.07, verticalOffset: -2, opacity: 1)
+        )
+        XCTAssertEqual(
+            WoodblockYokaiPose.resolve(
+                activity: .normal,
+                strongPhase: .open,
+                reduceMotion: true
+            ),
+            WoodblockYokaiPose(scale: 1, verticalOffset: 0, opacity: 1)
+        )
+    }
+
     func testWaveformBandCentersAConsistentlyLoudCompressedTrack() {
         var reducer = ParadeSignalReducer(configuration: configuration)
 
@@ -236,48 +263,83 @@ final class ParadeSignalReducerTests: XCTestCase {
         )
     }
 
-    func testCircularWaveformPresentationKeepsStoppedLowAndUnavailableDistinct() {
-        let stopped = CircularWaveformPresentation(activity: .stopped, levelBand: .high)
-        let low = CircularWaveformPresentation(activity: .quietProxy, levelBand: .low)
-        let unavailable = CircularWaveformPresentation(activity: .unavailable, levelBand: .low)
+    func testWoodblockWaveformPresentationKeepsStoppedLowAndUnavailableDistinct() {
+        let stopped = WoodblockWaveformPresentation(activity: .stopped, levelBand: .high)
+        let low = WoodblockWaveformPresentation(activity: .quietProxy, levelBand: .low)
+        let unavailable = WoodblockWaveformPresentation(activity: .unavailable, levelBand: .low)
 
         XCTAssertEqual(stopped, .stopped)
         XCTAssertEqual(low, .low)
         XCTAssertEqual(unavailable, .unavailable)
-        XCTAssertFalse(stopped.usesProgressPhase)
-        XCTAssertTrue(low.usesProgressPhase)
-        XCTAssertFalse(unavailable.usesProgressPhase)
-        XCTAssertEqual(stopped.staticLength, 12)
-        XCTAssertEqual(low.staticLength, 14)
-        XCTAssertEqual(unavailable.staticLength, 20)
         XCTAssertTrue(low.usesAccentColor)
         XCTAssertFalse(unavailable.usesAccentColor)
         XCTAssertEqual(stopped.centerMark, "止")
         XCTAssertEqual(unavailable.centerMark, "—")
         XCTAssertEqual(low.centerMark, "静")
         XCTAssertEqual(
-            CircularWaveformPresentation(activity: .normal, levelBand: .medium).centerMark,
+            WoodblockWaveformPresentation(activity: .normal, levelBand: .medium).centerMark,
             "響"
         )
         XCTAssertEqual(
-            CircularWaveformPresentation(activity: .normal, levelBand: .high).centerMark,
+            WoodblockWaveformPresentation(activity: .normal, levelBand: .high).centerMark,
             "烈"
         )
+        XCTAssertEqual(stopped.accessibilityState, "停止")
+        XCTAssertEqual(unavailable.accessibilityState, "利用不可")
+        XCTAssertEqual(low.accessibilityState, "静か")
+    }
+
+    func testWaveformHistoryKeepsEqualSamplesAndEvictsOldestAtLimit() {
+        var history = WaveformHistoryBuffer(limit: 3)
+
+        history.append(0.4)
+        history.append(0.4)
+        history.append(0.8)
+        history.append(0.2)
+
+        XCTAssertEqual(history.levels, [0.4, 0.8, 0.2])
+    }
+
+    func testWaveformHistoryResetClearClampAndSamplingAreDeterministic() {
+        var history = WaveformHistoryBuffer(limit: 4)
+
+        history.reset(to: 2, count: 8)
+        XCTAssertEqual(history.levels, [1, 1, 1, 1])
+        XCTAssertEqual(history.sampled(count: 2, fallback: 0), [1, 1])
+
+        history.clear()
+        XCTAssertEqual(history.sampled(count: 3, fallback: -1), [0, 0, 0])
+    }
+
+    func testReducerHistoryTracksTimeSamplesAndClearsForUnavailableOrStopped() {
+        var reducer = ParadeSignalReducer(configuration: configuration)
+
+        var snapshot = reducer.ingest(input(0, 0.5))
+        XCTAssertEqual(snapshot.waveformHistory.levels.count, 1)
+
+        snapshot = reducer.ingest(input(0.1, 0.5))
+        XCTAssertEqual(snapshot.waveformHistory.levels.count, 2)
+
+        snapshot = reducer.ingest(input(0.2, nil))
+        XCTAssertTrue(snapshot.waveformHistory.levels.isEmpty)
+
+        snapshot = reducer.reset(isPlaying: false)
+        XCTAssertTrue(snapshot.waveformHistory.levels.isEmpty)
     }
 
     @MainActor
-    func testExportsCircularWaveformStateBoard() throws {
+    func testExportsWoodblockWaveformStateBoard() throws {
         try exportWindowArtifact(
-            rootView: CircularWaveformArtifactBoard(),
+            rootView: WoodblockWaveformArtifactBoard(),
             windowWidth: 402,
             windowHeight: 874,
             interfaceStyle: .light,
-            attachmentName: "circular-waveform-state-board.png"
+            attachmentName: "woodblock-waveform-state-board.png"
         )
     }
 }
 
-private struct CircularWaveformArtifactState: Identifiable {
+private struct WoodblockWaveformArtifactState: Identifiable {
     let id: String
     let activity: ParadeSignalSnapshot.Activity
     let levelBand: ParadeSignalSnapshot.LevelBand
@@ -285,24 +347,24 @@ private struct CircularWaveformArtifactState: Identifiable {
     let reduceMotion: Bool
 }
 
-private struct CircularWaveformArtifactBoard: View {
+private struct WoodblockWaveformArtifactBoard: View {
     private let states = [
-        CircularWaveformArtifactState(
+        WoodblockWaveformArtifactState(
             id: "stopped", activity: .stopped, levelBand: .high, level: 0, reduceMotion: false
         ),
-        CircularWaveformArtifactState(
+        WoodblockWaveformArtifactState(
             id: "unavailable", activity: .unavailable, levelBand: .unavailable, level: 0, reduceMotion: false
         ),
-        CircularWaveformArtifactState(
+        WoodblockWaveformArtifactState(
             id: "low", activity: .quietProxy, levelBand: .low, level: 0.08, reduceMotion: false
         ),
-        CircularWaveformArtifactState(
+        WoodblockWaveformArtifactState(
             id: "medium", activity: .normal, levelBand: .medium, level: 0.42, reduceMotion: false
         ),
-        CircularWaveformArtifactState(
+        WoodblockWaveformArtifactState(
             id: "high", activity: .normal, levelBand: .high, level: 0.88, reduceMotion: false
         ),
-        CircularWaveformArtifactState(
+        WoodblockWaveformArtifactState(
             id: "high · Reduce Motion", activity: .normal, levelBand: .high, level: 0.88, reduceMotion: true
         )
     ]
@@ -315,7 +377,7 @@ private struct CircularWaveformArtifactBoard: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text("円形波形 · 状態見本")
+                Text("版木枠の音の足跡 · 状態見本")
                     .font(.system(.headline, design: .serif))
                     .tracking(2)
                     .foregroundStyle(YagyoPrintColor.ink)
@@ -323,14 +385,13 @@ private struct CircularWaveformArtifactBoard: View {
                 LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(states) { state in
                         VStack(spacing: 6) {
-                            CircularWaveform(
-                                progress: 0.62,
+                            WoodblockWaveform(
                                 level: state.level,
                                 activity: state.activity,
                                 levelBand: state.levelBand,
                                 reduceMotionOverride: state.reduceMotion
                             )
-                            .frame(height: 150)
+                            .frame(height: 112)
 
                             Text(state.id)
                                 .font(.caption.weight(.semibold))

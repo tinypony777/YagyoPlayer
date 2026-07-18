@@ -116,7 +116,7 @@ final class AudioLibraryStore: ObservableObject {
             selectedTrackID = tracks.first?.id
             loadPlaylists()
         } catch {
-            importState = .failed("Library could not be loaded.")
+            importState = .failed("保存済みの行列を読み込めませんでした。")
             tracks = []
         }
     }
@@ -151,7 +151,7 @@ final class AudioLibraryStore: ObservableObject {
                     summary.duplicates += 1
                 case .unsupported:
                     summary.failures.append(
-                        ImportFailure(filename: url.lastPathComponent, reason: "Unsupported file type")
+                        ImportFailure(filename: url.lastPathComponent, reason: "対応していないファイル形式")
                     )
                 }
             } catch {
@@ -177,7 +177,7 @@ final class AudioLibraryStore: ObservableObject {
                 summary.failures.append(contentsOf: importedTracks.map { track in
                     ImportFailure(
                         filename: track.originalFilename,
-                        reason: "Library could not be saved: \(error.localizedDescription)"
+                        reason: "行列の帳面を保存できませんでした: \(error.localizedDescription)"
                     )
                 })
             }
@@ -209,7 +209,7 @@ final class AudioLibraryStore: ObservableObject {
             try save()
             persistenceErrorMessage = nil
         } catch {
-            persistenceErrorMessage = "Playback stats could not be saved: \(error.localizedDescription)"
+            persistenceErrorMessage = "再生の記録を保存できませんでした: \(error.localizedDescription)"
         }
     }
 
@@ -230,7 +230,7 @@ final class AudioLibraryStore: ObservableObject {
             persistenceErrorMessage = nil
         } catch {
             tracks[index].contentHash = nil
-            persistenceErrorMessage = "Content hash could not be saved: \(error.localizedDescription)"
+            persistenceErrorMessage = "音源のSHA-256を保存できませんでした: \(error.localizedDescription)"
         }
     }
 
@@ -245,7 +245,7 @@ final class AudioLibraryStore: ObservableObject {
             persistenceErrorMessage = nil
         } catch {
             tracks[index].tobariMetrics = previous
-            persistenceErrorMessage = "Tobari metrics could not be saved: \(error.localizedDescription)"
+            persistenceErrorMessage = "帳の計測値を保存できませんでした: \(error.localizedDescription)"
         }
     }
 
@@ -281,7 +281,7 @@ final class AudioLibraryStore: ObservableObject {
             return true
         } catch {
             tracks[index] = previousTrack
-            persistenceErrorMessage = "Track metadata could not be saved: \(error.localizedDescription)"
+            persistenceErrorMessage = "曲の札を保存できませんでした: \(error.localizedDescription)"
             return false
         }
     }
@@ -311,7 +311,7 @@ final class AudioLibraryStore: ObservableObject {
             tracks = previousTracks
             selectedTrackID = previousSelectedTrackID
             playlists = previousPlaylists
-            persistenceErrorMessage = "Library could not be saved after delete: \(error.localizedDescription)"
+            persistenceErrorMessage = "削除後の行列を保存できませんでした: \(error.localizedDescription)"
             return
         }
 
@@ -323,7 +323,7 @@ final class AudioLibraryStore: ObservableObject {
             try fileManager.removeItem(at: fileURL(for: track))
             persistenceErrorMessage = nil
         } catch {
-            persistenceErrorMessage = "The audio file could not be removed after delete: \(error.localizedDescription)"
+            persistenceErrorMessage = "削除後に音源ファイルを取り除けませんでした: \(error.localizedDescription)"
         }
     }
 

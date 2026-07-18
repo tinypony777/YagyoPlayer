@@ -14,10 +14,6 @@ targets:
     deploymentTarget: "26.0"
     sources:
       - path: YagyoPlayer
-        excludes:
-          - Resources
-    resources:
-      - path: YagyoPlayer/Resources
     dependencies:
       - sdk: AVFoundation.framework
       - sdk: AudioToolbox.framework

@@ -1,4 +1,5 @@
 import XCTest
+import SwiftUI
 
 @testable import YagyoPlayer
 
@@ -69,6 +70,25 @@ final class FeatureAnalysisSessionTests: XCTestCase {
         session.markUnavailable("曲を読み込むと解析できます。")
 
         XCTAssertEqual(session.state, .unavailable("曲を読み込むと解析できます。"))
+    }
+
+    func testExportsFixedEQAuditionArtifacts() throws {
+        try exportWindowArtifact(
+            rootView: FixedEQAuditionPreviewHarness(),
+            windowWidth: 402,
+            windowHeight: 874,
+            interfaceStyle: .light,
+            attachmentName: "fixed-eq-audition.png"
+        )
+
+        try exportWindowArtifact(
+            rootView: FixedEQAuditionPreviewHarness(),
+            windowWidth: 390,
+            windowHeight: 844,
+            interfaceStyle: .light,
+            dynamicTypeSize: .accessibility2,
+            attachmentName: "fixed-eq-audition-accessibility-large.png"
+        )
     }
 
     private func makeSnapshot() -> FeatureSnapshot {

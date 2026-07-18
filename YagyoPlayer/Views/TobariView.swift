@@ -165,16 +165,12 @@ struct TobariView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            RetroPlaque(horizontalPadding: 14, verticalPadding: 10) {
-                Text("狐火の帳")
-                    .font(.system(.title2, design: .serif).weight(.semibold))
-                    .tracking(3)
-                    .accessibilityHeading(.h1)
-            }
-
-            Spacer()
-
+        WoodblockSectionHeader(
+            title: "狐火の帳",
+            overline: "ANALYSIS LEDGER",
+            detail: "端末内で解析 · 読み取りのみ",
+            accent: YagyoPrintColor.vermillionInk
+        ) {
             RetroIconButton(
                 systemImage: "xmark",
                 accessibilityLabel: "帳を閉じる",
@@ -182,6 +178,8 @@ struct TobariView: View {
                 action: { dismiss() }
             )
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityHeading(.h1)
     }
 
     private var recordNote: some View {

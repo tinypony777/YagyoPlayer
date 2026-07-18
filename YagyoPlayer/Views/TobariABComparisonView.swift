@@ -108,10 +108,10 @@ struct TobariABComparisonView: View {
             .padding(.horizontal, 12)
             .background(
                 YagyoPrintColor.paperRaised,
-                in: RoundedRectangle(cornerRadius: YagyoPrintMetrics.rowRadius, style: .continuous)
+                in: WoodblockFrameShape(cut: YagyoPrintMetrics.rowRadius)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: YagyoPrintMetrics.rowRadius, style: .continuous)
+                WoodblockFrameShape(cut: YagyoPrintMetrics.rowRadius)
                     .stroke(YagyoPrintColor.ink, lineWidth: YagyoPrintMetrics.ruleWidth)
             }
         }
@@ -260,10 +260,10 @@ private struct TobariABPairView: View {
             .padding(10)
             .background(
                 isActive ? YagyoPrintColor.persimmon : YagyoPrintColor.paperRaised,
-                in: RoundedRectangle(cornerRadius: YagyoPrintMetrics.rowRadius, style: .continuous)
+                in: WoodblockFrameShape(cut: YagyoPrintMetrics.rowRadius)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: YagyoPrintMetrics.rowRadius, style: .continuous)
+                WoodblockFrameShape(cut: YagyoPrintMetrics.rowRadius)
                     .stroke(
                         isActive ? YagyoPrintColor.vermillionInk : YagyoPrintColor.paperMuted,
                         lineWidth: isActive ? 1.5 : 1
@@ -295,7 +295,7 @@ private struct TobariABPairView: View {
             .padding(.horizontal, 12)
             .background(
                 YagyoPrintColor.ink,
-                in: RoundedRectangle(cornerRadius: YagyoPrintMetrics.rowRadius, style: .continuous)
+                in: WoodblockFrameShape(cut: YagyoPrintMetrics.rowRadius)
             )
         }
         .buttonStyle(.plain)
@@ -325,10 +325,10 @@ private struct TobariABPairView: View {
                         .padding(.horizontal, 10)
                         .background(
                             isMatchActive ? YagyoPrintColor.persimmon : YagyoPrintColor.paperRaised,
-                            in: RoundedRectangle(cornerRadius: YagyoPrintMetrics.rowRadius, style: .continuous)
+                            in: WoodblockFrameShape(cut: YagyoPrintMetrics.rowRadius)
                         )
                         .overlay {
-                            RoundedRectangle(cornerRadius: YagyoPrintMetrics.rowRadius, style: .continuous)
+                            WoodblockFrameShape(cut: YagyoPrintMetrics.rowRadius)
                                 .stroke(YagyoPrintColor.vermillionInk, lineWidth: 1)
                         }
                 }

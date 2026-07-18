@@ -85,20 +85,12 @@ private struct FixedEQAuditionPanel: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            RetroPlaque(tone: .seal, horizontalPadding: 15, verticalPadding: 10) {
-                HStack(spacing: 9) {
-                    Image(systemName: "ear")
-                        .font(.headline.weight(.semibold))
-                    Text("一本の耳")
-                        .font(.system(.title2, design: .serif).weight(.semibold))
-                        .tracking(3)
-                        .accessibilityHeading(.h1)
-                }
-            }
-
-            Spacer()
-
+        WoodblockSectionHeader(
+            title: "一本の耳",
+            overline: "FIXED EQ AUDITION",
+            detail: "iOS 27 · 同じ曲での聴き比べ",
+            accent: YagyoPrintColor.indigo
+        ) {
             RetroIconButton(
                 systemImage: "xmark",
                 accessibilityLabel: "一本の耳を閉じる",
@@ -106,6 +98,8 @@ private struct FixedEQAuditionPanel: View {
                 action: onClose
             )
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityHeading(.h1)
     }
 
     private var featureAnalysis: some View {
@@ -194,8 +188,8 @@ private struct FixedEQAuditionPanel: View {
                     value: music.dominantKey.map { "\($0.tonic.uppercased()) \($0.mode)" } ?? "—"
                 )
                 analysisValue(
-                    title: "区間",
-                    value: "\(music.sectionCount)"
+                    title: "構成",
+                    value: "\(music.sectionCount)幕"
                 )
             }
 
@@ -237,7 +231,7 @@ private struct FixedEQAuditionPanel: View {
         let music = snapshot.boundedFiniteFeatures.musicUnderstanding
         let tempo = music.beatsPerMinute.map { String(format: "%.0f BPM", $0) } ?? "テンポ不明"
         let key = music.dominantKey.map { "\($0.tonic) \($0.mode)" } ?? "調不明"
-        return "Music Understanding解析済み、\(tempo)、\(key)、区間\(music.sectionCount)"
+        return "Music Understanding解析済み、\(tempo)、\(key)、構成、\(music.sectionCount)幕"
     }
 
     private var intro: some View {
@@ -253,8 +247,8 @@ private struct FixedEQAuditionPanel: View {
                     .foregroundStyle(YagyoPrintColor.ink)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(YagyoPrintColor.persimmon, in: Capsule())
-                    .overlay(Capsule().stroke(YagyoPrintColor.vermillionInk, lineWidth: 1))
+                    .background(YagyoPrintColor.persimmon, in: WoodblockFrameShape(cut: 5))
+                    .overlay(WoodblockFrameShape(cut: 5).stroke(YagyoPrintColor.vermillionInk, lineWidth: 1))
             }
 
             Text("同じ曲・同じ位置のまま、原音と固定EQの色合いを切り替えます。")
@@ -302,10 +296,7 @@ private struct FixedEQAuditionPanel: View {
     ) -> some View {
         let isRequested = state.requestedMode == mode
         let isApplied = state.appliedMode == mode && !state.isSwitching
-        let shape = RoundedRectangle(
-            cornerRadius: YagyoPrintMetrics.rowRadius,
-            style: .continuous
-        )
+        let shape = WoodblockFrameShape(cut: YagyoPrintMetrics.rowRadius)
 
         return Button {
             onSelect(mode)
@@ -377,7 +368,7 @@ private struct FixedEQAuditionPanel: View {
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(YagyoPrintColor.paperRaised)
                 .frame(width: 24, height: 24)
-                .background(YagyoPrintColor.vermillionInk, in: RoundedRectangle(cornerRadius: 5))
+                .background(YagyoPrintColor.vermillionInk, in: WoodblockFrameShape(cut: 5))
             Text("解析結果はこの端末のキャッシュへ保存されます。試聴設定は保存されず、曲別候補は次の段階です。")
                 .font(.caption2)
                 .foregroundStyle(YagyoPrintColor.inkMuted)

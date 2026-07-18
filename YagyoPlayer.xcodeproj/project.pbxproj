@@ -54,6 +54,8 @@
 		9C87F037E1FFF63735C2C70C /* TobariABComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6962BD1BD5E7CBD3A84AAD8 /* TobariABComparisonView.swift */; };
 		9E24A0149621D32F0C16EFC4 /* FixedEQAudioUnit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80768D020E90F7F77C39EE3B /* FixedEQAudioUnit.swift */; };
 		A12F1828F8B2CBD01E4748A1 /* AVAudioEngineFixedEQPlaybackBackendTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF9E53A1CCA55E3F98A2D49D /* AVAudioEngineFixedEQPlaybackBackendTests.swift */; };
+		A17C0D7E2026071500000002 /* WoodblockYokaiArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17C0D7E2026071500000001 /* WoodblockYokaiArt.swift */; };
+		A17C0D7E2026071500000004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A17C0D7E2026071500000003 /* Assets.xcassets */; };
 		A2212F5DAF17CF036C169C99 /* WindowArtifactExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D738D64FCAF63658E3BF2927 /* WindowArtifactExporter.swift */; };
 		A703B0828489B95B8B9FB869 /* YagyoPlayerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25C215A13FBD2FF5FA19ECFB /* YagyoPlayerApp.swift */; };
 		A9BE8B0491943FD5F76C952C /* PlaylistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43BAB562AE3CA0460CA4B562 /* PlaylistTests.swift */; };
@@ -161,6 +163,8 @@
 		9CD4AD4874067B45F463A885 /* BiwaBokubokuSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiwaBokubokuSprite.swift; sourceTree = "<group>"; };
 		9EAFF4117045C3BDB1268CDB /* TobariView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TobariView.swift; sourceTree = "<group>"; };
 		A6962BD1BD5E7CBD3A84AAD8 /* TobariABComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TobariABComparisonView.swift; sourceTree = "<group>"; };
+		A17C0D7E2026071500000001 /* WoodblockYokaiArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoodblockYokaiArt.swift; sourceTree = "<group>"; };
+		A17C0D7E2026071500000003 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B1067EC58308362E47C91EF8 /* YokaiResidencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YokaiResidencyTests.swift; sourceTree = "<group>"; };
 		B13D8A65B01B04F9BD642237 /* VisualComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualComponents.swift; sourceTree = "<group>"; };
 		B4E5D333C49AE2E227C1355C /* YukiOnnaSprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YukiOnnaSprite.swift; sourceTree = "<group>"; };
@@ -274,10 +278,19 @@
 				A6962BD1BD5E7CBD3A84AAD8 /* TobariABComparisonView.swift */,
 				9EAFF4117045C3BDB1268CDB /* TobariView.swift */,
 				B13D8A65B01B04F9BD642237 /* VisualComponents.swift */,
+				A17C0D7E2026071500000001 /* WoodblockYokaiArt.swift */,
 				99DFADEFD1438C21D0A4F055 /* YagyoParadeView.swift */,
 				B4E5D333C49AE2E227C1355C /* YukiOnnaSprite.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		A17C0D7E2026071500000005 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A17C0D7E2026071500000003 /* Assets.xcassets */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		96A0FCFC23817791C74CB671 /* Audio */ = {
@@ -298,6 +311,7 @@
 				F0F88FD17940D815B43BB257 /* Models */,
 				DAA607FD6A61C2602213E678 /* Services */,
 				46D09D35FB3796467FB77045 /* Support */,
+				A17C0D7E2026071500000005 /* Resources */,
 				93A657406EDC74EC63CF6A6E /* Views */,
 			);
 			path = YagyoPlayer;
@@ -397,6 +411,7 @@
 			buildPhases = (
 				B3A5B20598C2FB3AC113FD0B /* Sources */,
 				1594231853BD2D3BACEC17AD /* Frameworks */,
+				A17C0D7E2026071500000006 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -464,6 +479,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A17C0D7E2026071500000006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A17C0D7E2026071500000004 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		174B075A6A809C65629887D3 /* Sources */ = {
@@ -547,6 +573,7 @@
 				546B53B8117CC4C83804A589 /* TobariView.swift in Sources */,
 				3E00AE61C5997249328D5DB6 /* UshimitsuWatch.swift in Sources */,
 				B19BADCB0624C48620272C1D /* VisualComponents.swift in Sources */,
+				A17C0D7E2026071500000002 /* WoodblockYokaiArt.swift in Sources */,
 				F277B9BD9D60634F9BDF94A4 /* YagyoParadeView.swift in Sources */,
 				A703B0828489B95B8B9FB869 /* YagyoPlayerApp.swift in Sources */,
 				B4C130EA40CACEAF7872EDED /* YagyoPlayerIntents.swift in Sources */,

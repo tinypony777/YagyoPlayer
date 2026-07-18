@@ -134,6 +134,17 @@ final class YagyoTabTests: XCTestCase {
             expectedTabTitles: YagyoTab.allCases.map(\.title),
             attachmentName: "tab-gyoretsu-accessibility-large.png"
         )
+        try exportWindowArtifact(
+            rootView: view,
+            windowWidth: 390,
+            windowHeight: 844,
+            interfaceStyle: .light,
+            dynamicTypeSize: .accessibility3,
+            settlingDelay: 2.0,
+            scrollToBottom: true,
+            expectedTabTitles: YagyoTab.allCases.map(\.title),
+            attachmentName: "tab-gyoretsu-accessibility-large-bottom.png"
+        )
     }
 
     @MainActor
@@ -154,6 +165,16 @@ final class YagyoTabTests: XCTestCase {
             interfaceStyle: .light,
             dynamicTypeSize: .accessibility3,
             attachmentName: "tab-yagyo-accessibility-large.png"
+        )
+        try exportWindowArtifact(
+            rootView: view,
+            windowWidth: 390,
+            windowHeight: 844,
+            interfaceStyle: .light,
+            dynamicTypeSize: .accessibility3,
+            settlingDelay: 2.0,
+            scrollToBottom: true,
+            attachmentName: "tab-yagyo-accessibility-large-bottom.png"
         )
     }
 

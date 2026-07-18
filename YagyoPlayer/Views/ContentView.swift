@@ -75,23 +75,23 @@ struct ContentView: View {
                     }
                 }
             }
-            .alert("Import failed", isPresented: importAlertBinding) {
-                Button("OK", role: .cancel) {}
+            .alert("取込に失敗しました", isPresented: importAlertBinding) {
+                Button("閉じる", role: .cancel) {}
             } message: {
-                Text(importErrorMessage ?? "The selected files could not be imported.")
+                Text(importErrorMessage ?? "選んだファイルを取り込めませんでした。")
             }
             .alert("取込結果", isPresented: importSummaryBinding) {
-                Button("OK", role: .cancel) {}
+                Button("閉じる", role: .cancel) {}
             } message: {
                 Text(importSummaryMessage)
             }
             .alert("保存に失敗しました", isPresented: persistenceErrorBinding) {
-                Button("OK", role: .cancel) {}
+                Button("閉じる", role: .cancel) {}
             } message: {
                 Text(library.persistenceErrorMessage ?? "")
             }
             .alert("再生できません", isPresented: playbackErrorBinding) {
-                Button("OK", role: .cancel) {}
+                Button("閉じる", role: .cancel) {}
             } message: {
                 Text(player.playbackErrorMessage ?? "")
             }
@@ -151,6 +151,8 @@ struct ContentView: View {
                 ScrollView {
                     VStack(spacing: 18) {
                         PlaylistSection(initiallyExpandedPlaylistID: initiallyExpandedPlaylistID)
+                        // 仕様§7.3 — 空白を放置された余白に見せない欄外注。
+                        RetroMarginalNote(text: "注　行列の曲は長押しで巻物へ綴じられる")
                     }
                     .padding(.horizontal, 18)
                     .padding(.top, 18)
@@ -181,7 +183,6 @@ struct ContentView: View {
             ReactiveVisualStage(
                 signals: player.paradeSignals,
                 track: latestCurrentTrack,
-                progress: player.progress,
                 isUshimitsu: ushimitsu.isNight,
                 isCompact: true,
                 onMoonTap: { ushimitsu.toggleForced() }
@@ -259,82 +260,113 @@ private struct HeaderView: View {
     var auditionAction: () -> Void
     var importAction: () -> Void
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 9) {
-                    Text("百鬼夜行")
-                        .font(.system(.title2, design: .serif, weight: .semibold))
-                        .tracking(6)
-                        .foregroundStyle(isUshimitsu ? YagyoPrintColor.vermillionInk : YagyoPrintColor.ink)
-                    Text("音")
-                        .font(.system(size: 13, weight: .bold, design: .serif))
-                        .foregroundStyle(YagyoPrintColor.paperRaised)
-                        .frame(width: 27, height: 27)
-                        .background(YagyoPrintColor.vermillion, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
-                        .rotationEffect(.degrees(-4))
-
-                    if isUshimitsu {
-                        Text("丑三つ")
-                            .font(.caption2.weight(.bold))
-                            .tracking(1)
-                            .foregroundStyle(YagyoPrintColor.paperRaised)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 4)
-                            .background(YagyoPrintColor.vermillionInk, in: RoundedRectangle(cornerRadius: 4))
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .top, spacing: 10) {
+                        seal
+                        titleCard
                     }
-                }
 
-                Text("Hyakki Yagyō · Local Procession")
-                    .font(.caption.weight(.semibold))
-                    .tracking(2.4)
-                    .textCase(.uppercase)
-                    .foregroundStyle(YagyoPrintColor.inkMuted)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
+                    statusLine
 
-            Spacer()
+                    actionButtons
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+            } else {
+                HStack(alignment: .center, spacing: 12) {
+                    seal
 
-            HStack(spacing: 8) {
-                if showsFixedEQAudition {
-                    RetroIconButton(
-                        systemImage: "ear",
-                        accessibilityLabel: "一本の耳を開く",
-                        accent: YagyoPrintColor.vermillionInk,
-                        shape: .seal,
-                        action: auditionAction
-                    )
-                }
+                    VStack(alignment: .leading, spacing: 4) {
+                        titleCard
+                        statusLine
+                    }
 
-                Button(action: importAction) {
-                    Label("Import", systemImage: "square.and.arrow.down")
-                        .labelStyle(.iconOnly)
-                        .font(.system(size: 18, weight: .semibold))
-                        .frame(width: 44, height: 44)
+                    Spacer()
+                    actionButtons
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(YagyoPrintColor.ink)
-                .background(YagyoPrintColor.paperRaised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(YagyoPrintColor.ink, lineWidth: 1)
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .inset(by: 4)
-                        .stroke(YagyoPrintColor.paperMuted, lineWidth: 1)
-                }
-                .accessibilityLabel("Import audio")
             }
         }
         .modernRetroPanel(tone: .paper, radius: 12, padding: 12)
-        .animation(.easeInOut(duration: 1.2), value: isUshimitsu)
+    }
+
+    private var seal: some View {
+        Text("妖")
+            .font(.system(.headline, design: .serif).weight(.bold))
+            .foregroundStyle(YagyoPrintColor.paperRaised)
+            .frame(width: 34, height: 38)
+            .background(YagyoPrintColor.vermillionInk, in: WoodblockFrameShape(cut: 7))
+            .rotationEffect(.degrees(-2))
+            .accessibilityHidden(true)
+    }
+
+    private var titleCard: some View {
+        Text("YAGYO PLAYER")
+            .font(.system(.headline, design: .serif).weight(.bold))
+            .tracking(dynamicTypeSize.isAccessibilitySize ? 1.2 : 2.4)
+            .foregroundStyle(YagyoPrintColor.paperRaised)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
+            .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.78)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 6)
+            .background(YagyoPrintColor.indigo, in: WoodblockFrameShape(cut: 5))
+            .overlay {
+                // 明治大正のラベルに倣う内側の飾り罫。縦外題柱と同じ文法。
+                WoodblockFrameShape(cut: 4)
+                    .inset(by: 2.5)
+                    .stroke(YagyoPrintColor.paperRaised.opacity(0.55), lineWidth: 1)
+            }
+    }
+
+    private var statusLine: some View {
+        HStack(spacing: 7) {
+            Text("妖怪音の一枚摺")
+                .font(.caption)
+                .tracking(1.4)
+                .foregroundStyle(YagyoPrintColor.vermillionInk)
+
+            if isUshimitsu {
+                Text("丑三つ")
+                    .font(.caption2.weight(.bold))
+                    .tracking(1)
+                    .foregroundStyle(YagyoPrintColor.paperRaised)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(YagyoPrintColor.vermillionInk, in: WoodblockFrameShape(cut: 4))
+            }
+        }
+    }
+
+    private var actionButtons: some View {
+        HStack(spacing: 8) {
+            if showsFixedEQAudition {
+                RetroIconButton(
+                    systemImage: "ear",
+                    accessibilityLabel: "一本の耳を開く",
+                    accent: YagyoPrintColor.vermillionInk,
+                    shape: .seal,
+                    action: auditionAction
+                )
+            }
+
+            RetroIconButton(
+                systemImage: "square.and.arrow.down",
+                accessibilityLabel: "音源を納める",
+                accent: YagyoPrintColor.indigo,
+                shape: .seal,
+                action: importAction
+            )
+        }
     }
 }
 
 private struct ReactiveVisualStage: View {
     @ObservedObject var signals: ParadeSignalCoordinator
     var track: AudioTrack?
-    var progress: Double
     var isUshimitsu: Bool
     var isCompact: Bool = false
     var onMoonTap: () -> Void
@@ -351,86 +383,48 @@ private struct ReactiveVisualStage: View {
         )
         ArtworkStage(
             track: track,
-            progress: progress,
             waveformLevel: snapshot.waveformLevel,
             activity: snapshot.activity,
             waveformLevelBand: snapshot.waveformLevelBand,
+            waveformHistory: snapshot.waveformHistory,
             isCompact: isCompact
         )
     }
 }
 
 private struct ArtworkStage: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var track: AudioTrack?
-    var progress: Double
     var waveformLevel: Double
     var activity: ParadeSignalSnapshot.Activity
     var waveformLevelBand: ParadeSignalSnapshot.LevelBand
-    /// 夜行タブの1画面レイアウト用。波形の四角を残り高さへ縮め、
+    var waveformHistory: WaveformHistoryBuffer
+    /// 夜行タブの1画面レイアウト用。横長の音の足跡を固定高へ収め、
     /// 曲札を1行へ畳んで、スクロールなしで再生操作まで見えるようにする。
     var isCompact: Bool = false
 
     var body: some View {
-        VStack(spacing: isCompact ? 10 : 16) {
-            CircularWaveform(
-                progress: progress,
-                level: waveformLevel,
-                activity: activity,
-                levelBand: waveformLevelBand
-            )
-            .aspectRatio(1, contentMode: .fit)
-            .frame(minHeight: 140, maxHeight: isCompact ? .infinity : 360)
-            .frame(maxWidth: .infinity)
-
-            if isCompact {
-                HStack(spacing: 8) {
-                    Text(track?.title ?? "行列はまだ静か")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(YagyoPrintColor.ink)
-                        .lineLimit(1)
-                    if let artist = track?.artist, !artist.isEmpty {
-                        Text("· \(artist)")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(YagyoPrintColor.teal)
-                            .lineLimit(1)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(YagyoPrintColor.paperRaised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(YagyoPrintColor.ink, lineWidth: 1)
-                }
-            } else {
-                VStack(spacing: 5) {
-                    Text(track?.title ?? "行列はまだ静か")
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(YagyoPrintColor.ink)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-
-                    if let artist = track?.artist, !artist.isEmpty {
-                        Text(artist)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(YagyoPrintColor.teal)
-                            .lineLimit(1)
-                    }
-
-                    Text(track?.originalFilename ?? "Import a track to start the procession")
-                        .font(.footnote)
-                        .foregroundStyle(YagyoPrintColor.inkMuted)
-                        .lineLimit(1)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(YagyoPrintColor.paperRaised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(YagyoPrintColor.ink, lineWidth: 1)
-                }
-            }
+        let guardianImage = track.map { track in
+            WoodblockYokaiGallery.asset(for: track.id)?.image
+                ?? YokaiGallery.sprite(for: track.id).thumbnail.image
         }
+
+        WoodblockWaveform(
+            level: waveformLevel,
+            activity: activity,
+            levelBand: waveformLevelBand,
+            history: waveformHistory,
+            title: track?.title ?? "行列はまだ静か",
+            artist: track?.artist,
+            guardianImage: guardianImage
+        )
+        .id(track?.id)
+        .frame(
+            height: dynamicTypeSize.isAccessibilitySize
+                ? 254
+                : (isCompact ? 144 : 174)
+        )
         .frame(maxWidth: .infinity)
     }
 }
@@ -448,9 +442,15 @@ private struct TransportView: View {
                     Image(systemName: "backward.fill")
                         .frame(width: 48, height: 48)
                         .background(YagyoPrintColor.paperRaised, in: Circle())
-                        .overlay(Circle().stroke(YagyoPrintColor.ink, lineWidth: 1))
+                        .overlay {
+                            Circle().stroke(YagyoPrintColor.indigo, lineWidth: 1.5)
+                            Circle()
+                                .inset(by: 4)
+                                .stroke(YagyoPrintColor.paperMuted, lineWidth: 1)
+                        }
                 }
                 .disabled(!library.hasTracks)
+                .accessibilityLabel("前の曲")
 
                 Button {
                     if player.currentTrack == nil, let selectedTrack = library.selectedTrack {
@@ -472,7 +472,7 @@ private struct TransportView: View {
                         }
                 }
                 .disabled(!library.hasTracks)
-                .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
+                .accessibilityLabel(player.isPlaying ? "一時停止" : "再生")
 
                 Button {
                     player.playNext()
@@ -480,13 +480,19 @@ private struct TransportView: View {
                     Image(systemName: "forward.fill")
                         .frame(width: 48, height: 48)
                         .background(YagyoPrintColor.paperRaised, in: Circle())
-                        .overlay(Circle().stroke(YagyoPrintColor.ink, lineWidth: 1))
+                        .overlay {
+                            Circle().stroke(YagyoPrintColor.indigo, lineWidth: 1.5)
+                            Circle()
+                                .inset(by: 4)
+                                .stroke(YagyoPrintColor.paperMuted, lineWidth: 1)
+                        }
                 }
                 .disabled(!library.hasTracks)
+                .accessibilityLabel("次の曲")
             }
             .font(.title2.weight(.semibold))
             .buttonStyle(.plain)
-            .foregroundStyle(YagyoPrintColor.ink)
+            .foregroundStyle(YagyoPrintColor.indigo)
             .opacity(library.hasTracks ? 1 : 0.45)
 
             VStack(spacing: 4) {
@@ -544,29 +550,24 @@ private struct LibrarySection: View {
         let duplicateTrackGroups = library.duplicateTrackGroups
 
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("行列")
-                        .font(.system(.headline, design: .serif))
-                        .tracking(4)
-                        .foregroundStyle(YagyoPrintColor.ink)
-                    Text("Library · Files copied into the app folder")
-                        .font(.caption)
-                        .foregroundStyle(YagyoPrintColor.inkMuted)
-                }
-                Spacer()
+            WoodblockSectionHeader(
+                title: "行列",
+                overline: "YŌKAI REGISTER",
+                detail: "この端末に納めた音源の番付",
+                accent: YagyoPrintColor.indigo
+            ) {
                 Button(action: importAction) {
                     Image(systemName: "plus")
                         .frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(YagyoPrintColor.ink)
-                .background(YagyoPrintColor.paperRaised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .foregroundStyle(YagyoPrintColor.indigo)
+                .background(YagyoPrintColor.paperRaised, in: WoodblockFrameShape(cut: 8))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(YagyoPrintColor.ink, lineWidth: 1)
+                    WoodblockFrameShape(cut: 8)
+                        .stroke(YagyoPrintColor.indigo, lineWidth: 1.5)
                 }
-                .accessibilityLabel("Import audio")
+                .accessibilityLabel("音源を納める")
             }
 
             libraryFeedback(duplicateTrackGroups: duplicateTrackGroups)
@@ -618,7 +619,7 @@ private struct LibrarySection: View {
                 icon: "square.and.arrow.down",
                 title: "取込中",
                 message: "\(count) 件の音源を行列へ納めています。",
-                accent: YagyoPrintColor.teal
+                accent: YagyoPrintColor.persimmon
             )
         case .finished(let summary) where summary.hasIssues:
             LibraryStatusBanner(
@@ -662,7 +663,7 @@ private struct LibrarySection: View {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(YagyoPrintColor.inkMuted)
-                TextField("Search title, artist, file, notes", text: $searchText)
+                TextField("曲名・作者・ファイル・覚え書きで探す", text: $searchText)
                     .textInputAutocapitalization(.never)
                     .disableAutocorrection(true)
                     .foregroundStyle(YagyoPrintColor.ink)
@@ -671,9 +672,9 @@ private struct LibrarySection: View {
             .font(.footnote)
             .padding(.horizontal, 11)
             .frame(minHeight: 44)
-            .background(YagyoPrintColor.paperRaised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(YagyoPrintColor.paperRaised, in: WoodblockFrameShape(cut: 8))
             .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                WoodblockFrameShape(cut: 8)
                     .stroke(YagyoPrintColor.ink, lineWidth: 1)
             }
 
@@ -705,7 +706,7 @@ private struct LibrarySection: View {
     }
 
     private var scopePicker: some View {
-        Picker("Scope", selection: $selectedPlaylistID) {
+        Picker("巻物範囲", selection: $selectedPlaylistID) {
             Text("行列すべて").tag(Playlist.ID?.none)
             ForEach(library.playlists) { playlist in
                 Text(playlist.name).tag(Optional(playlist.id))
@@ -714,11 +715,11 @@ private struct LibrarySection: View {
         .pickerStyle(.menu)
         .lineLimit(1)
         .fixedSize()
-        .frame(minHeight: 44)
+        .modifier(FilterPlaque())
     }
 
     private var sortPicker: some View {
-        Picker("Sort", selection: $sort) {
+        Picker("並び順", selection: $sort) {
             ForEach(availableSorts) { sort in
                 Text(sort.rawValue).tag(sort)
             }
@@ -726,7 +727,7 @@ private struct LibrarySection: View {
         .pickerStyle(.menu)
         .lineLimit(1)
         .fixedSize()
-        .frame(minHeight: 44)
+        .modifier(FilterPlaque())
     }
 
     private func trackCountText(visibleCount: Int) -> some View {
@@ -780,6 +781,20 @@ private struct LibrarySection: View {
     }
 }
 
+/// 絞り込みメニューを裸の文字列にせず、押せる「札」として紙面へ載せる。
+private struct FilterPlaque: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, 10)
+            .frame(minHeight: 44)
+            .background(YagyoPrintColor.paperRaised, in: WoodblockFrameShape(cut: 6))
+            .overlay {
+                WoodblockFrameShape(cut: 6)
+                    .stroke(YagyoPrintColor.indigoMuted, lineWidth: YagyoPrintMetrics.ruleWidth)
+            }
+    }
+}
+
 private struct LibraryStatusBanner: View {
     var icon: String
     var title: String
@@ -803,9 +818,9 @@ private struct LibraryStatusBanner: View {
             Spacer(minLength: 0)
         }
         .padding(10)
-        .background(YagyoPrintColor.paperRaised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(YagyoPrintColor.paperRaised, in: WoodblockFrameShape(cut: 8))
         .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            WoodblockFrameShape(cut: 8)
                 .stroke(accent, lineWidth: 1)
         }
     }
@@ -814,6 +829,7 @@ private struct LibraryStatusBanner: View {
 private struct TrackRow: View {
     @EnvironmentObject private var library: AudioLibraryStore
     @EnvironmentObject private var player: PlaybackController
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var track: AudioTrack
     var playbackContext: PlaybackContext = .library
@@ -828,6 +844,14 @@ private struct TrackRow: View {
 
     var body: some View {
         let sprite = YokaiGallery.sprite(for: track.id)
+        let woodblockGuardian = WoodblockYokaiGallery.asset(for: track.id)
+        let guardianImage = woodblockGuardian?.image ?? sprite.thumbnail.image
+        let guardianSealFill = sprite.id == "yuki"
+            // 雪女の正本は紙色の線が主体。小さな印章だけを濃紺にして線を残す。
+            ? YagyoPrintColor.indigo.opacity(isCurrent ? 0.92 : 0.82)
+            : (isCurrent
+                ? YagyoPrintColor.persimmon.opacity(0.22)
+                : YagyoPrintColor.brass.opacity(0.18))
 
         Button {
             if isCurrent {
@@ -842,51 +866,37 @@ private struct TrackRow: View {
         } label: {
             HStack(spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(isCurrent ? YagyoPrintColor.paper : YagyoPrintColor.paperRaised)
-                    sprite.thumbnail.image
+                    WoodblockFrameShape(cut: 7)
+                        .fill(guardianSealFill)
+                    guardianImage
                         .resizable()
                         .scaledToFit()
-                        .padding(5)
+                        .padding(woodblockGuardian == nil ? 5 : 2)
                         .accessibilityHidden(true)
                 }
                 .frame(width: 46, height: 46)
                 .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.paperMuted, lineWidth: 1)
+                    WoodblockFrameShape(cut: 7)
+                        .stroke(
+                            isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.indigoMuted,
+                            lineWidth: 1
+                        )
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(track.title)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.ink)
-                        .lineLimit(1)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
 
                     if let artist = track.artist, !artist.isEmpty {
                         Text(artist)
                             .font(.caption.weight(.medium))
-                            .foregroundStyle(YagyoPrintColor.teal)
-                            .lineLimit(1)
+                            .foregroundStyle(YagyoPrintColor.inkMuted)
+                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
                     }
 
-                    HStack(spacing: 4) {
-                        Text(sprite.name)
-                            .font(.system(size: 11, design: .serif))
-                            .foregroundStyle(isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.inkMuted)
-                        Text("· \(track.durationText) · \(track.importedDateText)")
-                            .font(.caption)
-                            .foregroundStyle(YagyoPrintColor.inkMuted)
-                        if track.notes != nil {
-                            Image(systemName: "note.text")
-                                .font(.caption2)
-                                .foregroundStyle(YagyoPrintColor.inkMuted)
-                        }
-                        if track.artworkFilename != nil {
-                            Image(systemName: "photo")
-                                .font(.caption2)
-                                .foregroundStyle(YagyoPrintColor.inkMuted)
-                        }
-                    }
+                    trackMetadata(sprite: sprite)
                 }
 
                 Spacer()
@@ -900,16 +910,19 @@ private struct TrackRow: View {
             .padding(.trailing, 4)
             .padding(.vertical, 8)
             .frame(minHeight: 64)
-            .background(isCurrent ? YagyoPrintColor.paperRaised : YagyoPrintColor.paper, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(isCurrent ? YagyoPrintColor.paperRaised : YagyoPrintColor.paper, in: WoodblockFrameShape(cut: 8))
             .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.paperMuted, lineWidth: 1)
+                WoodblockFrameShape(cut: 8)
+                    .stroke(
+                        isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.indigoMuted,
+                        lineWidth: 1
+                    )
             }
         }
         .buttonStyle(.plain)
         .contextMenu {
             Button(action: editAction) {
-                Label("Edit metadata", systemImage: "pencil")
+                Label("札を直す", systemImage: "pencil")
             }
 
             Button(action: tobariAction) {
@@ -937,14 +950,14 @@ private struct TrackRow: View {
                         .disabled(alreadyInPlaylist)
                     }
                 } label: {
-                    Label("Add to playlist", systemImage: "text.badge.plus")
+                    Label("巻物へ綴じる", systemImage: "text.badge.plus")
                 }
             }
 
             Button(role: .destructive) {
                 isDeleteConfirmationPresented = true
             } label: {
-                Label("Delete from app folder", systemImage: "trash")
+                Label("行列から外す", systemImage: "trash")
             }
         }
         .confirmationDialog(
@@ -959,6 +972,49 @@ private struct TrackRow: View {
             Button("キャンセル", role: .cancel) {}
         } message: {
             Text("消えるのはアプリ内にコピーされた音源だけです。取込元のファイルには影響しません。")
+        }
+    }
+
+    @ViewBuilder
+    private func trackMetadata(sprite: YokaiSprite) -> some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(sprite.name)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.inkMuted)
+                Text("\(track.durationText) · \(track.importedDateText)")
+                    .font(.caption)
+                    .foregroundStyle(YagyoPrintColor.inkMuted)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 4) {
+                    metadataIcons
+                }
+            }
+        } else {
+            HStack(spacing: 4) {
+                Text(sprite.name)
+                    .font(.system(size: 11, design: .serif))
+                    .foregroundStyle(isCurrent ? YagyoPrintColor.vermillionInk : YagyoPrintColor.inkMuted)
+                Text("· \(track.durationText) · \(track.importedDateText)")
+                    .font(.caption)
+                    .foregroundStyle(YagyoPrintColor.inkMuted)
+                metadataIcons
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var metadataIcons: some View {
+        if track.notes != nil {
+            Image(systemName: "note.text")
+                .font(.caption2)
+                .foregroundStyle(YagyoPrintColor.inkMuted)
+        }
+        if track.artworkFilename != nil {
+            Image(systemName: "photo")
+                .font(.caption2)
+                .foregroundStyle(YagyoPrintColor.inkMuted)
         }
     }
 }
@@ -987,19 +1043,19 @@ private struct TrackMetadataEditor: View {
         NavigationStack {
             Form {
                 Section("音源の札") {
-                    TextField("Title", text: $title)
-                    TextField("Artist", text: $artist)
-                    TextField("Artwork filename or reference", text: $artworkFilename)
+                    TextField("曲名", text: $title)
+                    TextField("作者", text: $artist)
+                    TextField("絵の名または参照", text: $artworkFilename)
                         .textInputAutocapitalization(.never)
                         .disableAutocorrection(true)
                 }
 
-                Section("Notes") {
+                Section("覚え書き") {
                     TextEditor(text: $notes)
                         .frame(minHeight: 120)
                 }
 
-                Section("Stored copy") {
+                Section("納めた写し") {
                     Text(track.storedFilename)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -1009,10 +1065,10 @@ private struct TrackMetadataEditor: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("やめる") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button("保存") {
                         let didSave = library.updateMetadata(
                             for: track.id,
                             title: title,
@@ -1038,7 +1094,10 @@ private struct EmptyLibraryView: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            (YokaiGallery.sprite(withID: "kitsune") ?? YokaiGallery.parade[0]).thumbnail.image
+            (
+                WoodblockYokaiGallery.asset(withID: "kitsune")?.image
+                    ?? (YokaiGallery.sprite(withID: "kitsune") ?? YokaiGallery.parade[0]).thumbnail.image
+            )
                 .resizable()
                 .scaledToFit()
                 .frame(width: 54, height: 54)
@@ -1049,7 +1108,7 @@ private struct EmptyLibraryView: View {
                     .font(.system(.headline, design: .serif))
                     .tracking(3)
                     .foregroundStyle(YagyoPrintColor.ink)
-                Text("Choose MP3, M4A, WAV, AIFF, AAC, CAF, or FLAC files. They will be copied into this app.")
+                Text("MP3・M4A・WAV・AIFF・AAC・CAF・FLAC を選ぶと、写しがこのアプリへ納められます。")
                     .font(.footnote)
                     .foregroundStyle(YagyoPrintColor.inkMuted)
                     .multilineTextAlignment(.center)
@@ -1067,12 +1126,12 @@ private struct EmptyLibraryView: View {
                 }
                 .padding(.horizontal, 17)
                 .frame(minHeight: 44)
-                .background(YagyoPrintColor.persimmon, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(YagyoPrintColor.ink, lineWidth: 1))
+                .background(YagyoPrintColor.persimmon, in: WoodblockFrameShape(cut: 8))
+                .overlay(WoodblockFrameShape(cut: 8).stroke(YagyoPrintColor.ink, lineWidth: 1))
                 .foregroundStyle(YagyoPrintColor.ink)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Import audio")
+            .accessibilityLabel("音源を納める")
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 18)
@@ -1101,35 +1160,24 @@ private struct EmptyFilteredLibraryView: View {
                 .foregroundStyle(YagyoPrintColor.vermillionInk)
                 .padding(.horizontal, 14)
                 .frame(minHeight: 44)
-                .background(YagyoPrintColor.paperRaised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(YagyoPrintColor.vermillionInk, lineWidth: 1))
+                .background(YagyoPrintColor.paperRaised, in: WoodblockFrameShape(cut: 8))
+                .overlay(WoodblockFrameShape(cut: 8).stroke(YagyoPrintColor.vermillionInk, lineWidth: 1))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
     }
 }
 
+/// 開発者向けの説明パネルは置かず、一枚摺の欄外注として最小限だけ残す。
 private struct PlatformNote: View {
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "music.note.list")
-                .foregroundStyle(YagyoPrintColor.ink)
-            Text("Built for iOS 26+. Local files stay inside the app folder; Apple Music catalog features can be layered on later with MusicKit.")
-                .font(.caption)
-                .foregroundStyle(YagyoPrintColor.inkMuted)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .modernRetroPanel(tone: .paper, radius: 12, padding: 12)
+        RetroMarginalNote(text: "注　音源の写しはこのアプリの内にだけ納められる · iOS 26以上")
     }
 }
 
 private struct FooterView: View {
     var body: some View {
-        Text("絵巻は右から左へ流れる")
-            .font(.system(size: 11, design: .serif))
-            .tracking(3)
-            .foregroundStyle(YagyoPrintColor.inkMuted)
-            .frame(maxWidth: .infinity, alignment: .trailing)
+        RetroMarginalNote(text: "注　音の足跡は直近の響き・短冊は曲の位置")
             .padding(.top, 2)
     }
 }
@@ -1148,9 +1196,9 @@ private struct AnnouncementToast: View {
                     .foregroundStyle(YagyoPrintColor.ink)
                     .padding(.horizontal, 18)
                     .padding(.vertical, 12)
-                    .background(YagyoPrintColor.paperRaised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .background(YagyoPrintColor.paperRaised, in: WoodblockFrameShape(cut: 8))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        WoodblockFrameShape(cut: 8)
                             .stroke(YagyoPrintColor.vermillionInk, lineWidth: 1)
                     }
                     .padding(.bottom, 26)
@@ -1237,16 +1285,16 @@ struct MiniAkariBar: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(YagyoPrintColor.vermillionInk)
-            .accessibilityLabel(isPlaying ? "Pause" : "Play")
+            .accessibilityLabel(isPlaying ? "一時停止" : "再生")
         }
         .padding(.leading, 14)
         .padding(.trailing, 6)
         .padding(.vertical, 6)
-        .background(YagyoPrintColor.paperRaised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(YagyoPrintColor.paperRaised, in: WoodblockFrameShape(cut: 8))
         .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            WoodblockFrameShape(cut: 8)
                 .stroke(YagyoPrintColor.ink, lineWidth: 1)
-            RoundedRectangle(cornerRadius: 5, style: .continuous)
+            WoodblockFrameShape(cut: 6)
                 .inset(by: 4)
                 .stroke(YagyoPrintColor.paperMuted, lineWidth: 1)
         }

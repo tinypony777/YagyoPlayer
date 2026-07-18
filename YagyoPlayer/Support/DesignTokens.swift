@@ -38,14 +38,19 @@ enum YagyoColor {
 }
 
 /// 生成り紙へ限定色を刷る、画面表層専用のDayモード色。
+/// `teal` は分析値と分析状態に限定し、通常メタデータや広い面へ使わない。
 enum YagyoPrintColor {
     static let canvas = Color(yagyoHex: 0xf2e6cb)
     static let paper = Color(yagyoHex: 0xe8d7b5)
     static let paperRaised = Color(yagyoHex: 0xf5ecd8)
     static let paperMuted = Color(yagyoHex: 0xb9a98c)
+    /// 丑三つ時など、局所的に紙面が暮れる状態だけで使う。
     static let stage = Color(yagyoHex: 0x554c46)
     static let ink = Color(yagyoHex: 0x35241e)
     static let inkMuted = Color(yagyoHex: 0x6b5748)
+    /// 藍摺。大面積の背景にはせず、版木枠・外題・細い色版へ限定する。
+    static let indigo = Color(yagyoHex: 0x283b4a)
+    static let indigoMuted = Color(yagyoHex: 0x647983)
     static let vermillion = Color(yagyoHex: 0xc94f35)
     static let vermillionInk = Color(yagyoHex: 0xa43d27)
     static let persimmon = Color(yagyoHex: 0xd77a3d)
@@ -59,10 +64,11 @@ enum YagyoPrintMetrics {
     static let innerRuleInset: CGFloat = 4
     static let panelRadius: CGFloat = 12
     static let rowRadius: CGFloat = 8
+    static let frameCut: CGFloat = 8
     static let controlHitTarget: CGFloat = 44
 }
 
-/// 夜行絵巻の舞台色 — 通常の紙面から局所的に夜へ入る。
+/// 妖怪欄間の色。Dayは紙上、丑三つ時だけ局所的に夜へ入る。
 struct ParadePalette {
     let skyTop: Color
     let skyBottom: Color
@@ -71,20 +77,61 @@ struct ParadePalette {
     let fog: Color
 
     static let day = ParadePalette(
-        skyTop: YagyoPrintColor.stage,
-        skyBottom: YagyoPrintColor.stage,
+        skyTop: YagyoPrintColor.paperRaised,
+        skyBottom: YagyoPrintColor.paper,
         moon: YagyoPrintColor.persimmon,
-        halo: YagyoPrintColor.persimmon.opacity(0.14),
-        fog: YagyoPrintColor.paper.opacity(0.05)
+        halo: YagyoPrintColor.persimmon.opacity(0.10),
+        fog: YagyoPrintColor.inkMuted.opacity(0.055)
     )
 
     static let ushimitsu = ParadePalette(
-        skyTop: Color(yagyoHex: 0x160a1c),
-        skyBottom: Color(yagyoHex: 0x2a1035),
+        // 紫黒へ落とし切らず、木版の墨線と限定色が読める温かい暮色に留める。
+        skyTop: Color(yagyoHex: 0x493f3f),
+        skyBottom: Color(yagyoHex: 0x6b5d53),
         moon: YagyoColor.akaMoon,
         halo: YagyoColor.akaMoon.opacity(0.16),
-        fog: Color(yagyoHex: 0xc878a0).opacity(0.06)
+        fog: YagyoPrintColor.paperRaised.opacity(0.07)
     )
+}
+
+/// 浮世絵の版木枠と引札の外郭を共通化する切り角形。
+/// `InsettableShape` なので、主役面だけは同じ形の二重罫を安全に重ねられる。
+struct WoodblockFrameShape: InsettableShape {
+    var cut: CGFloat = YagyoPrintMetrics.frameCut
+    private var insetAmount: CGFloat = 0
+
+    /// Xcode 26.5 / Swift 6.2でもprivate stored propertyに左右されず同じAPIを公開する。
+    init(cut: CGFloat = YagyoPrintMetrics.frameCut) {
+        self.cut = cut
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let insetRect = rect.insetBy(dx: insetAmount, dy: insetAmount)
+        guard insetRect.width > 0, insetRect.height > 0 else { return Path() }
+
+        let resolvedCut = min(
+            max(0, cut - insetAmount * 0.35),
+            min(insetRect.width, insetRect.height) / 3
+        )
+
+        var path = Path()
+        path.move(to: CGPoint(x: insetRect.minX + resolvedCut, y: insetRect.minY))
+        path.addLine(to: CGPoint(x: insetRect.maxX - resolvedCut, y: insetRect.minY))
+        path.addLine(to: CGPoint(x: insetRect.maxX, y: insetRect.minY + resolvedCut))
+        path.addLine(to: CGPoint(x: insetRect.maxX, y: insetRect.maxY - resolvedCut))
+        path.addLine(to: CGPoint(x: insetRect.maxX - resolvedCut, y: insetRect.maxY))
+        path.addLine(to: CGPoint(x: insetRect.minX + resolvedCut, y: insetRect.maxY))
+        path.addLine(to: CGPoint(x: insetRect.minX, y: insetRect.maxY - resolvedCut))
+        path.addLine(to: CGPoint(x: insetRect.minX, y: insetRect.minY + resolvedCut))
+        path.closeSubpath()
+        return path
+    }
+
+    func inset(by amount: CGFloat) -> WoodblockFrameShape {
+        var copy = self
+        copy.insetAmount += amount
+        return copy
+    }
 }
 
 enum ModernRetroPanelTone: Equatable, Sendable {
@@ -99,7 +146,10 @@ enum ModernRetroPanelTone: Equatable, Sendable {
     }
 
     fileprivate var outerRule: Color {
-        YagyoPrintColor.ink
+        switch self {
+        case .paper: YagyoPrintColor.indigo
+        case .stage: YagyoPrintColor.ink
+        }
     }
 
     fileprivate var innerRule: Color {
@@ -110,23 +160,21 @@ enum ModernRetroPanelTone: Equatable, Sendable {
     }
 }
 
-/// 単色面と二重罫だけで階層を作る。glass/material/shadowは使わない。
+/// 支えとなる紙面。主役の版木枠と競合しないよう単罫に留める。
+/// glass/material/shadowは使わない。
 struct ModernRetroPanel: ViewModifier {
     var tone: ModernRetroPanelTone = .paper
     var radius: CGFloat = YagyoPrintMetrics.panelRadius
     var padding: CGFloat = 16
 
     func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        let shape = WoodblockFrameShape(cut: min(radius, YagyoPrintMetrics.frameCut))
 
         content
             .padding(padding)
             .background(tone.fill, in: shape)
             .overlay {
                 shape.stroke(tone.outerRule, lineWidth: YagyoPrintMetrics.ruleWidth)
-                shape
-                    .inset(by: YagyoPrintMetrics.innerRuleInset)
-                    .stroke(tone.innerRule, lineWidth: YagyoPrintMetrics.ruleWidth)
             }
     }
 }
@@ -180,8 +228,7 @@ struct RetroPlaque<Content: View>: View {
     }
 
     var body: some View {
-        let radius = YagyoPrintMetrics.rowRadius
-        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        let shape = WoodblockFrameShape(cut: YagyoPrintMetrics.frameCut)
 
         content()
             .foregroundStyle(tone.foreground)
@@ -189,7 +236,10 @@ struct RetroPlaque<Content: View>: View {
             .padding(.vertical, verticalPadding)
             .background(tone.fill, in: shape)
             .overlay {
-                shape.stroke(YagyoPrintColor.ink, lineWidth: YagyoPrintMetrics.ruleWidth)
+                shape.stroke(
+                    tone == .paper ? YagyoPrintColor.indigo : YagyoPrintColor.ink,
+                    lineWidth: YagyoPrintMetrics.ruleWidth
+                )
                 shape
                     .inset(by: YagyoPrintMetrics.innerRuleInset)
                     .stroke(tone.innerRule, lineWidth: YagyoPrintMetrics.ruleWidth)
@@ -206,9 +256,14 @@ struct RetroDivider: View {
             Rectangle()
                 .fill(color)
                 .frame(height: YagyoPrintMetrics.ruleWidth)
-            Circle()
+            Rectangle()
+                .rotation(.degrees(45))
                 .fill(YagyoPrintColor.canvas)
-                .overlay(Circle().stroke(color, lineWidth: YagyoPrintMetrics.ruleWidth))
+                .overlay(
+                    Rectangle()
+                        .rotation(.degrees(45))
+                        .stroke(color, lineWidth: YagyoPrintMetrics.ruleWidth)
+                )
                 .frame(width: 7, height: 7)
             Rectangle()
                 .fill(color)
@@ -234,12 +289,14 @@ enum RetroIconButtonShape: Equatable, Sendable {
 struct RetroIconButton: View {
     var systemImage: String
     var accessibilityLabel: String
-    var accent: Color = YagyoPrintColor.ink
+    var accent: Color = YagyoPrintColor.indigo
     var shape: RetroIconButtonShape = .circle
     var action: () -> Void
 
     var body: some View {
-        let outline = RoundedRectangle(cornerRadius: shape.radius, style: .continuous)
+        let outline = shape == .circle
+            ? AnyShape(Circle())
+            : AnyShape(WoodblockFrameShape(cut: YagyoPrintMetrics.frameCut))
 
         Button(action: action) {
             Image(systemName: systemImage)
@@ -252,9 +309,6 @@ struct RetroIconButton: View {
                 .background(YagyoPrintColor.paperRaised, in: outline)
                 .overlay {
                     outline.stroke(accent, lineWidth: YagyoPrintMetrics.ruleWidth)
-                    outline
-                        .inset(by: YagyoPrintMetrics.innerRuleInset)
-                        .stroke(YagyoPrintColor.paperMuted, lineWidth: YagyoPrintMetrics.ruleWidth)
                 }
         }
         .buttonStyle(.plain)
