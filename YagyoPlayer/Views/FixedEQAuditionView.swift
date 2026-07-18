@@ -88,7 +88,7 @@ private struct FixedEQAuditionPanel: View {
         WoodblockSectionHeader(
             title: "一本の耳",
             overline: "FIXED EQ AUDITION",
-            detail: "iOS 27 · Same-track preview",
+            detail: "iOS 27 · 同じ曲での聴き比べ",
             accent: YagyoPrintColor.indigo
         ) {
             RetroIconButton(

@@ -137,7 +137,7 @@ final class PlaybackController: ObservableObject {
             try auditionBackend.requestFixedEQAuditionMode(mode)
             fixedEQAuditionErrorMessage = nil
         } catch {
-            fixedEQAuditionErrorMessage = "Fixed EQ preview could not switch: \(error.localizedDescription)"
+            fixedEQAuditionErrorMessage = "Fixed EQ試聴を切り替えられませんでした: \(error.localizedDescription)"
         }
         syncFixedEQAuditionState()
     }
@@ -207,7 +207,7 @@ final class PlaybackController: ObservableObject {
                 try activateAudioSession()
                 play()
             } catch {
-                playbackErrorMessage = "Playback could not resume after the interruption: \(error.localizedDescription)"
+                playbackErrorMessage = "割り込みのあと再生を再開できませんでした: \(error.localizedDescription)"
             }
 
         @unknown default:
@@ -340,7 +340,7 @@ final class PlaybackController: ObservableObject {
             } else {
                 invalidatePlaybackStateForScheduleMismatch(reason: .loadFailure)
             }
-            playbackErrorMessage = "\(track.title) could not be played: \(error.localizedDescription)"
+            playbackErrorMessage = "\(track.title) を再生できませんでした: \(error.localizedDescription)"
             syncFixedEQAuditionState()
             resetParadeSignal(reason: .loadFailure, isPlaying: false)
         }
@@ -366,7 +366,7 @@ final class PlaybackController: ObservableObject {
     func play() {
         guard hasAlignedBackendSchedule else {
             invalidatePlaybackStateForScheduleMismatch(reason: .playFailure)
-            playbackErrorMessage = "No track is loaded yet."
+            playbackErrorMessage = "まだ曲が読み込まれていません。"
             return
         }
 
@@ -426,7 +426,7 @@ final class PlaybackController: ObservableObject {
             if backendReturnedFromSeek || !hasAlignedBackendSchedule {
                 invalidatePlaybackStateForScheduleMismatch(reason: .seek)
             }
-            playbackErrorMessage = "Playback could not seek: \(error.localizedDescription)"
+            playbackErrorMessage = "再生位置を動かせませんでした: \(error.localizedDescription)"
             syncFixedEQAuditionState()
         }
     }
@@ -506,7 +506,7 @@ final class PlaybackController: ObservableObject {
             fixedEQAuditionErrorMessage = nil
         } catch {
             pause()
-            fixedEQAuditionErrorMessage = "Fixed EQ preview could not return to Original: \(error.localizedDescription)"
+            fixedEQAuditionErrorMessage = "Fixed EQ試聴を原音へ戻せませんでした: \(error.localizedDescription)"
         }
         syncFixedEQAuditionState()
     }
